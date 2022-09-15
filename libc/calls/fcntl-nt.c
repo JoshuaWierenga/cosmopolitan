@@ -24,21 +24,14 @@
 #include "libc/calls/syscall_support-nt.internal.h"
 #include "libc/calls/wincrash.internal.h"
 #include "libc/errno.h"
-#include "libc/intrin/cmpxchg.h"
-#include "libc/macros.internal.h"
-#include "libc/nt/createfile.h"
-#include "libc/nt/enum/accessmask.h"
-#include "libc/nt/enum/fileflagandattributes.h"
+#include "libc/intrin/weaken.h"
+#include "libc/log/backtrace.internal.h"
 #include "libc/nt/enum/filelockflags.h"
-#include "libc/nt/enum/filesharemode.h"
-#include "libc/nt/enum/formatmessageflags.h"
 #include "libc/nt/errors.h"
 #include "libc/nt/files.h"
-#include "libc/nt/process.h"
 #include "libc/nt/runtime.h"
 #include "libc/nt/struct/byhandlefileinformation.h"
 #include "libc/nt/struct/overlapped.h"
-#include "libc/nt/synchronization.h"
 #include "libc/sysv/consts/f.h"
 #include "libc/sysv/consts/fd.h"
 #include "libc/sysv/consts/o.h"
@@ -105,7 +98,6 @@ static textwindows int sys_fcntl_nt_lock(struct Fd *f, int cmd, uintptr_t arg) {
     if (l->l_type == F_WRLCK) {
       flags |= kNtLockfileExclusiveLock;
     }
-    e = errno;
     ok = LockFileEx(f->handle, flags, 0, len, len >> 32, &ov);
     if (cmd == F_GETLK) {
       if (ok) {
@@ -118,10 +110,7 @@ static textwindows int sys_fcntl_nt_lock(struct Fd *f, int cmd, uintptr_t arg) {
         ok = true;
       }
     }
-    if (ok) {
-      return 0;
-    } else if (__force_sqlite_to_work_until_we_can_fix_it) {
-      errno = e;
+    if (ok || __force_sqlite_to_work_until_we_can_fix_it) {
       return 0;
     } else {
       return -1;

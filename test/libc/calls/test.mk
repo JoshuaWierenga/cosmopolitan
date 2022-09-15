@@ -38,6 +38,7 @@ TEST_LIBC_CALLS_DIRECTDEPS =						\
 	LIBC_MEM							\
 	LIBC_NEXGEN32E							\
 	LIBC_STDIO							\
+	LIBC_NT_KERNEL32						\
 	LIBC_SYSV_CALLS							\
 	LIBC_RUNTIME							\
 	LIBC_STR							\

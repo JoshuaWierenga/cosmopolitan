@@ -30,7 +30,28 @@
 #include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/sig.h"
 #include "libc/testlib/testlib.h"
+#include "libc/thread/thread.h"
 #include "libc/x/x.h"
+
+int Lock(int fd, int type, long start, long len) {
+  int e;
+  struct flock lock = {
+      .l_type = type,
+      .l_whence = SEEK_SET,
+      .l_start = start,
+      .l_len = len,
+  };
+  e = errno;
+  while (fcntl(fd, F_SETLK, &lock)) {
+    if (errno == EAGAIN || errno == EACCES) {
+      errno = e;
+      continue;
+    } else {
+      return -1;
+    }
+  }
+  return 0;
+}
 
 char testlib_enable_tmp_setup_teardown;
 
@@ -67,6 +88,14 @@ TEST(fcntl, getfd) {
   ASSERT_SYS(0, 4, open("/dev/null", O_RDWR | O_CLOEXEC));
   ASSERT_SYS(0, FD_CLOEXEC, fcntl(4, F_GETFD));
   ASSERT_SYS(0, 0, close(4));
+  ASSERT_SYS(0, 0, close(3));
+}
+
+TEST(fcntl, F_DUPFD_CLOEXEC) {
+  ASSERT_SYS(0, 3, open("/dev/null", O_RDWR));
+  ASSERT_SYS(0, 5, fcntl(3, F_DUPFD_CLOEXEC, 5));
+  ASSERT_SYS(0, FD_CLOEXEC, fcntl(5, F_GETFD));
+  ASSERT_SYS(0, 0, close(5));
   ASSERT_SYS(0, 0, close(3));
 }
 

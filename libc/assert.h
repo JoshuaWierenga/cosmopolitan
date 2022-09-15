@@ -7,10 +7,9 @@ extern bool __assert_disable;
 void __assert_fail(const char *, const char *, int) hidden relegated;
 
 #ifdef NDEBUG
-#define assert(EXPR) ((void)0)
+#define assert(x) ((void)0)
 #else
-#define assert(EXPR) \
-  ((void)((EXPR) || (__assert_fail(#EXPR, __FILE__, __LINE__), 0)))
+#define assert(x) ((void)((x) || (__assert_fail(#x, __FILE__, __LINE__), 0)))
 #endif
 
 #ifndef __cplusplus
