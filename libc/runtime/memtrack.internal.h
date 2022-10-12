@@ -108,7 +108,7 @@ forceinline pureconst bool IsNsyncFrame(int x) {
 }
 
 forceinline pureconst bool IsShadowFrame(int x) {
-  return 0x7fff <= x && x < 0x10008000;
+  return 0x7fff <= x && x < _kMemVista(0x10008000, 0x01008000);
 }
 
 forceinline pureconst bool IsArenaFrame(int x) {
