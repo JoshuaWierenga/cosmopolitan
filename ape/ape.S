@@ -1002,8 +1002,8 @@ ape_pe:	.ascin	"PE",4
 	.short	0			# MinorOperatingSystemVersion
 	.short	0			# MajorImageVersion
 	.short	0			# MinorImageVersion
-	.short	v_ntsubversion		# MajorSubsystemVersion
-	.short	0			# MinorSubsystemVersion
+	.short	v_majorntsubversion	# MajorSubsystemVersion
+	.short	v_minorntsubversion	# MinorSubsystemVersion
 	.long	0			# Win32VersionValue
 	.long	RVA(_end)		# SizeOfImage
 	.long	RVA(_ehead)		# SizeOfHeaders
