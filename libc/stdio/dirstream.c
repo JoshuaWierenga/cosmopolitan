@@ -31,6 +31,8 @@
 #include "libc/nt/enum/fileflagandattributes.h"
 #include "libc/nt/enum/filetype.h"
 #include "libc/nt/files.h"
+#include "libc/nt/nt/file.h"
+#include "libc/nt/struct/filenameinformation.h"
 #include "libc/nt/struct/win32finddata.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/dt.h"
@@ -178,14 +180,24 @@ static textwindows dontinline DIR *opendir_nt(const char *path) {
 }
 
 static textwindows dontinline DIR *fdopendir_nt(int fd) {
+  struct NtIoStatusBlock ntstatusblock;
+  struct NtFileNameInformation fni;
   DIR *res;
   char16_t *name;
   if (__isfdkind(fd, kFdFile)) {
     if ((name = malloc(PATH_MAX * 2))) {
+      // This is not the same as GetFinalPathNameByHandle as it doesn't give a
+      // normalised name and FileNormalizedNameInformation was added in windows 8.
+      NtQueryInformationFile(g_fds.p[fd].handle, &ntstatusblock, &fni,
+          sizeof(fni), kNtFileNameInformation);
+      // NtFileNameInformation says that FileName is 1 char long but documentation
+      // says that the rest of the string follows it in memory
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+      memmove(name, fni.FileName, PATH_MAX);
+#pragma GCC diagnostic pop
       if ((res = opendir_nt_impl(
-               name, GetFinalPathNameByHandle(
-                         g_fds.p[fd].handle, name, PATH_MAX,
-                         kNtFileNameNormalized | kNtVolumeNameDos)))) {
+               name, fni.FileNameLength / sizeof(*fni.FileName)))) {
         res->name = name;
         close(fd);
         return res;

@@ -192,15 +192,6 @@ bool32 WriteFileGather(int64_t hFileOpenedWithOverlappedAndNoBuffering,
                        uint32_t nNumberOfBytesToWrite, uint32_t *lpReserved,
                        struct NtOverlapped inout_lpOverlapped) paramsnonnull();
 
-#define kNtFileNameNormalized 0x0
-#define kNtFileNameOpened     0x8
-#define kNtVolumeNameDos      0x0 /* e.g. \\?\C:\Users\jart */
-#define kNtVolumeNameGuid     0x1 /* e.g. \\?\Volume{ea38-etc.}\Users\jart */
-#define kNtVolumeNameNt       0x2 /* e.g. \Device\HarddiskVolume4\Users\jart */
-#define kNtVolumeNameNone     0x4 /* e.g. \Users\jart */
-uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
-                                  uint32_t arraylen, uint32_t flags);
-
 uint32_t GetFullPathName(const char16_t *lpFileName, uint32_t nBufferLength,
                          char16_t *lpBuffer, char16_t **lpFilePart);
 

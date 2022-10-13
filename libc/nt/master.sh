@@ -410,7 +410,6 @@ imp	'GetFileSize'						GetFileSize						kernel32	0	2
 imp	'GetFileSizeEx'						GetFileSizeEx						kernel32	0	2
 imp	'GetFileTime'						GetFileTime						kernel32	0	4
 imp	'GetFileType'						GetFileType						kernel32	0	1
-imp	'GetFinalPathNameByHandle'				GetFinalPathNameByHandleW				kernel32	0	4
 imp	'GetFirmwareEnvironmentVariable'			GetFirmwareEnvironmentVariableW				kernel32	600
 imp	'GetFirmwareEnvironmentVariableEx'			GetFirmwareEnvironmentVariableExW			kernel32	599
 imp	'GetFirmwareType'					GetFirmwareType						kernel32	601
