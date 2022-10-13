@@ -404,7 +404,6 @@ imp	'GetFileAttributesEx'					GetFileAttributesExW					kernel32	0	3
 imp	'GetFileAttributesTransacted'				GetFileAttributesTransactedW				kernel32	584
 imp	'GetFileBandwidthReservation'				GetFileBandwidthReservation				kernel32	586
 imp	'GetFileInformationByHandle'				GetFileInformationByHandle				kernel32	0	2
-imp	'GetFileInformationByHandleEx'				GetFileInformationByHandleEx				kernel32	0	4
 imp	'GetFileMUIInfo'					GetFileMUIInfo						kernel32	0
 imp	'GetFileMUIPath'					GetFileMUIPath						kernel32	0
 imp	'GetFileSize'						GetFileSize						kernel32	0	2

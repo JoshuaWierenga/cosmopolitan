@@ -82,11 +82,6 @@ bool32 GetHandleInformation(int64_t hObject, uint32_t *out_lpdwFlags);
 bool32 SetHandleInformation(int64_t hObject, uint32_t dwMask, uint32_t dwFlags);
 int GetFileType(int64_t hFile);
 
-bool32 GetFileInformationByHandleEx(int64_t hFile,
-                                    uint32_t FileInformationClass,
-                                    void *out_lpFileInformation,
-                                    uint32_t dwBufferSize);
-
 bool32 GetFileInformationByHandle(
     int64_t hFile, struct NtByHandleFileInformation *lpFileInformation);
 

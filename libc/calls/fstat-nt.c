@@ -29,6 +29,7 @@
 #include "libc/nt/enum/filetype.h"
 #include "libc/nt/enum/fsctl.h"
 #include "libc/nt/files.h"
+#include "libc/nt/nt/file.h"
 #include "libc/nt/runtime.h"
 #include "libc/nt/struct/byhandlefileinformation.h"
 #include "libc/nt/struct/filecompressioninfo.h"
@@ -72,6 +73,7 @@ static textwindows uint32_t GetSizeOfReparsePoint(int64_t fh) {
 textwindows int sys_fstat_nt(int64_t handle, struct stat *st) {
   int filetype;
   uint64_t actualsize;
+  struct NtIoStatusBlock ntstatusblock;
   struct NtFileCompressionInfo fci;
   struct NtByHandleFileInformation wst;
   if (!st) return efault();
@@ -115,8 +117,9 @@ textwindows int sys_fstat_nt(int64_t handle, struct stat *st) {
           } else {
             actualsize = st->st_size;
             if (S_ISREG(st->st_mode) &&
-                GetFileInformationByHandleEx(handle, kNtFileCompressionInfo,
-                                             &fci, sizeof(fci))) {
+                NtQueryInformationFile(handle, &ntstatusblock, &fci, sizeof(fci),
+                kNtFileCompressionInformation) == kNtStatusSuccess) {
+
               actualsize = fci.CompressedFileSize;
             }
             st->st_blocks = ROUNDUP(actualsize, PAGESIZE) / 512;

@@ -28,6 +28,7 @@
 #include "libc/limits.h"
 #include "libc/nt/enum/fileinfobyhandleclass.h"
 #include "libc/nt/files.h"
+#include "libc/nt/nt/file.h"
 #include "libc/nt/struct/filestandardinformation.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/zipos/zipos.internal.h"
@@ -49,6 +50,7 @@ ssize_t getfiledescriptorsize(int fd) {
   int e;
   ssize_t rc;
   union metastat st;
+  struct NtIoStatusBlock ntstatusblock;
   struct NtFileStandardInformation info;
   e = errno;
   if (__isfdkind(fd, kFdZip)) {
@@ -68,8 +70,8 @@ ssize_t getfiledescriptorsize(int fd) {
       rc = -1;
     }
   } else if (__isfdopen(fd)) {
-    if (GetFileInformationByHandleEx(g_fds.p[fd].handle, kNtFileStandardInfo,
-                                     &info, sizeof(info))) {
+    if (NtQueryInformationFile(g_fds.p[fd].handle, &ntstatusblock, &info,
+        sizeof(info), kNtFileStandardInformation) == kNtStatusSuccess) {
       rc = info.EndOfFile;
     } else {
       rc = ebadf();
