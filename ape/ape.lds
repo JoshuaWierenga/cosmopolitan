@@ -681,7 +681,8 @@ HIDDEN(ape_idata = LINK_WINDOWS ? RVA(ape_idata_idt) : 0);
 HIDDEN(ape_idata_idtsize = LINK_WINDOWS ? ape_idata_idtend - ape_idata_idt : 0);
 HIDDEN(v_ntversion = LINK_WINDOWS ? 6 : 1);
 HIDDEN(v_ntdllchar = LINK_WINDOWS ? 288 : 0);
-HIDDEN(v_ntsubversion = LINK_WINDOWS ? 6 : 5);
+HIDDEN(v_majorntsubversion = 5);
+HIDDEN(v_minorntsubversion = LINK_WINDOWS ? 2 : 0);
 HIDDEN(v_ntsubsystem = (LINK_WINDOWS
                         ? (DEFINED(GetMessage)
                            ? kNtImageSubsystemWindowsGui
