@@ -1,0 +1,13 @@
+DESCRIPTION
+
+	Backport of modern windows apis to older versions of windows.
+
+ORIGIN
+
+	win-polyfill
+	https://github.com/win-polyfill/win-polyfill
+	8a66b17b946d79d7f40c0fb3e187b45caeb21a70
+
+LOCAL CHANGES
+
+	None.
