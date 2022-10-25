@@ -1,3 +1,4 @@
+// clang-format off
 ﻿
 
 #define _WP_APPLY_TO_LATE_BOUND_MODULES(_APPLY)                                                    \
@@ -28,7 +29,7 @@
     _APPLY(api_ms_win_core_path_l1_1_0, "api-ms-win-core-path-l1-1-0", 0)                          \
     _APPLY(api_ms_win_core_synch_l1_2_0, "api-ms-win-core-synch-l1-2-0", 0)
 
-#include "win-polyfill.h"
+#include "third_party/win-polyfill/src/win-polyfill.h"
 
 /* Basic function getter */
 #define __wp_expand_function(_MODULE, _FUNCTION, _SIZE)                                            \
@@ -36,7 +37,7 @@
         wp_get_,                                                                                   \
         _FUNCTION)() noexcept WP_GET_FUNCTION_APPLY(_MODULE, _FUNCTION, decltype(_FUNCTION) *)
 
-#include "polyfill/basic.hpp"
+#include "third_party/win-polyfill/src/polyfill/basic.hpp"
 
 #undef __wp_expand_function
 
@@ -201,7 +202,7 @@ static UINT __fastcall GetDpiForSystemDownlevel();
         WP_GET_FUNCTION_APPLY(_MODULE, _FUNCTION, _CRT_CONCATENATE(wp_function_, _FUNCTION));      \
     WP_EXTERN_C _RETURN_ _CONVENTION_ _CRT_CONCATENATE(wp_, _FUNCTION)(__VA_ARGS__)
 
-#include "win-polyfill-list.inc.h"
+// MISSING #include "win-polyfill-list.inc.h"
 
 #undef __DEFINE_THUNK
 #undef WP_Thunks_Implemented

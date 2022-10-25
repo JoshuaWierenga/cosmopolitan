@@ -1,9 +1,10 @@
+// clang-format off
 ﻿#pragma once
 
-#include "win-polyfill-export.h"
+// MISSING #include "win-polyfill-export.h"
 
 #define _Disallow_WP_KM_Namespace
-#include "win-polyfill-km.h"
+#include "third_party/win-polyfill/src/win-polyfill-km.h"
 
 #ifdef __WP_Thunks_Unit_Test
 #define __APPLY_UNIT_TEST_BOOL(_FUNCTION)                                                          \

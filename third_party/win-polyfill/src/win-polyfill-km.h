@@ -1,3 +1,4 @@
+// clang-format off
 ﻿#pragma once
 
 #ifndef _WIN_POLYFILL_KM_H_
