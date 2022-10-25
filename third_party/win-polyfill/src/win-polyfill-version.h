@@ -1,5 +1,6 @@
+// clang-format off
 ﻿#pragma once
-#include <sdkddkver.h>
+// MISSING #include <sdkddkver.h>
 
 #ifndef WP_SUPPORT_VERSION
 #define WP_SUPPORT_VERSION NTDDI_WINXP

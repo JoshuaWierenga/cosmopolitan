@@ -1,9 +1,10 @@
+// clang-format off
 #ifndef _WIN_POLYFILL_EXPORT_H_
 #define _WIN_POLYFILL_EXPORT_H_
 
 #pragma once
 
-#include "win-polyfill-export-shared.h"
+#include "third_party/win-polyfill/src/win-polyfill-export-shared.h"
 
 /* 展开函数的所有的 声明 以及 wp_get_ 函数 */
 #define __DEFINE_THUNK(_MODULE, _SIZE, _RETURN_, _CONVENTION_, _FUNCTION, ...)                     \

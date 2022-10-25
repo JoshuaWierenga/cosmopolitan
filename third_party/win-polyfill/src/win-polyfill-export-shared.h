@@ -1,3 +1,4 @@
+// clang-format off
 ﻿#ifndef _WIN_POLYFILL_EXPORT_SHARED_H_
 #define _WIN_POLYFILL_EXPORT_SHARED_H_
 
@@ -32,52 +33,70 @@
 #define UMDF_USING_NTSTATUS
 #endif
 
-#include "win-polyfill-version.h"
+#include "third_party/win-polyfill/src/win-polyfill-version.h"
 
-#include <crtdbg.h>
-#include <intrin.h>
+// MISSING #include <crtdbg.h>
+// MISSING #include <intrin.h>
 
 #if !defined(WIN_POLYFILL_DISABLE_SOCKET)
-#include <winsock2.h>
-#include <ws2def.h>
-#include <ws2tcpip.h>
+// MISSING #include <winsock2.h>
+// MISSING #include <ws2def.h>
+// MISSING #include <ws2tcpip.h>
 #endif
 
-#include <windows.h>
+#include "libc/nt/accounting.h"
+#include "libc/nt/automation.h"
+#include "libc/nt/console.h"
+#include "libc/nt/debug.h"
+#include "libc/nt/dll.h"
+#include "libc/nt/enum/keyaccess.h"
+#include "libc/nt/enum/regtype.h"
+#include "libc/nt/errors.h"
+#include "libc/nt/events.h"
+#include "libc/nt/files.h"
+#include "libc/nt/ipc.h"
+#include "libc/nt/memory.h"
+#include "libc/nt/paint.h"
+#include "libc/nt/process.h"
+#include "libc/nt/registry.h"
+#include "libc/nt/synchronization.h"
+#include "libc/nt/thread.h"
+#include "libc/nt/windows.h"
+#include "libc/nt/winsock.h"
 
 #if !defined(_WIN_POLYFILL_WINDOWS_ALREADY_INCLUDED)
-#include <ntstatus.h>
-#include <winnt.h>
+// MISSING #include <ntstatus.h>
+// MISSING #include <winnt.h>
 #endif
 
-#include <d3d11.h>
-#include <d3d9.h>
-#include <dbghelp.h>
-#include <dwmapi.h>
-#include <dxgi.h>
-#include <evntprov.h>
-#include <ncrypt.h>
-#include <pathcch.h>
-#include <psapi.h>
-#include <roapi.h>
-#include <roerrorapi.h>
-#include <setupapi.h>
-#include <shellapi.h>
-#include <shellscalingapi.h>
-#include <shlobj.h>
-#include <shlwapi.h>
-#include <strsafe.h>
-#include <threadpoolapiset.h>
-#include <timezoneapi.h>
-#include <uxtheme.h>
-#include <winnls.h>
-#include <winstring.h>
+// MISSING #include <d3d11.h>
+// MISSING #include <d3d9.h>
+// MISSING #include <dbghelp.h>
+// MISSING #include <dwmapi.h>
+// MISSING #include <dxgi.h>
+// MISSING #include <evntprov.h>
+// MISSING #include <ncrypt.h>
+// MISSING #include <pathcch.h>
+// MISSING #include <psapi.h>
+// MISSING #include <roapi.h>
+// MISSING #include <roerrorapi.h>
+// MISSING #include <setupapi.h>
+// MISSING #include <shellapi.h>
+// MISSING #include <shellscalingapi.h>
+// MISSING #include <shlobj.h>
+// MISSING #include <shlwapi.h>
+// MISSING #include <strsafe.h>
+// MISSING #include <threadpoolapiset.h>
+// MISSING #include <timezoneapi.h>
+// MISSING #include <uxtheme.h>
+// MISSING #include <winnls.h>
+// MISSING #include <winstring.h>
 
 /* iphlpapi should after them all */
-#include <iphlpapi.h>
+// MISSING #include <iphlpapi.h>
 
 #ifdef __cplusplus
-#include <dwrite.h>
+// MISSING #include <dwrite.h>
 #endif
 
 #if !defined(WIN_POLYFILL_EXPORT_SHARED) && !defined(WIN_POLYFILL_EXPORT_STATIC)

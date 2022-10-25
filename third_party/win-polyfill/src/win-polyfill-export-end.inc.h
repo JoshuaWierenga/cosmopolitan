@@ -1,3 +1,4 @@
+// clang-format off
 #undef __DEFINE_THUNK
 #pragma pop_macro("InterlockedCompareExchange64")
 
