@@ -38,7 +38,7 @@ textwindows int ioctl_tiocgwinsz_nt(struct Fd *fd, struct winsize *ws) {
   uint32_t mode;
   struct Fd *fds[3];
   struct NtStartupInfo startinfo;
-  struct NtConsoleScreenBufferInfoEx sbinfo;
+  struct NtConsoleScreenBufferInfo sbinfo;
   rc = -1;
   e = errno;
   if (ws) {
@@ -49,8 +49,7 @@ textwindows int ioctl_tiocgwinsz_nt(struct Fd *fd, struct winsize *ws) {
       if (fds[i]->kind == kFdFile || fds[i]->kind == kFdConsole) {
         if (GetConsoleMode(__getfdhandleactual(i), &mode)) {
           bzero(&sbinfo, sizeof(sbinfo));
-          sbinfo.cbSize = sizeof(sbinfo);
-          if (GetConsoleScreenBufferInfoEx(__getfdhandleactual(i), &sbinfo)) {
+          if (GetConsoleScreenBufferInfo(__getfdhandleactual(i), &sbinfo)) {
             ws->ws_col = sbinfo.srWindow.Right - sbinfo.srWindow.Left + 1;
             ws->ws_row = sbinfo.srWindow.Bottom - sbinfo.srWindow.Top + 1;
             ws->ws_xpixel = 0;

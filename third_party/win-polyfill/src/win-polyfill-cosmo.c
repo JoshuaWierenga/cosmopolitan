@@ -208,7 +208,7 @@ uint32_t (*wp_get_GetFinalPathNameByHandleW())(int64_t hFile, char16_t *out_path
                                   uint32_t arraylen, uint32_t flags)
 {
     // What is this set to if the function is found to not exist at runtime?
-    //return &GGetFinalPathNameByHandleW;
+    //return &GetFinalPathNameByHandleW;
 
 	const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
     uint32_t (*fun_GetFinalPathNameByHandleW)(int64_t hFile, char16_t *out_path,
@@ -216,6 +216,21 @@ uint32_t (*wp_get_GetFinalPathNameByHandleW())(int64_t hFile, char16_t *out_path
 
 	FreeLibrary(nt_dll);
 	return fun_GetFinalPathNameByHandleW;
+}
+
+// TODO Use libc/nt/kernel32/CreateSymbolicLinkW.s
+bool32 (*wp_get_CreateSymbolicLinkW())(const char16_t *lpSymlinkFileName,
+                          const char16_t *lpTargetPathName, uint32_t dwFlags)
+{
+    // What is this set to if the function is found to not exist at runtime?
+    //return &CreateSymbolicLinkW;
+
+	const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
+    bool32 (*fun_CreateSymbolicLinkW)(const char16_t *lpSymlinkFileName,
+                          const char16_t *lpTargetPathName, uint32_t dwFlags) = GetProcAddress(nt_dll, "CreateSymbolicLinkW");
+
+	FreeLibrary(nt_dll);
+	return fun_CreateSymbolicLinkW;
 }
 
 
@@ -671,4 +686,19 @@ __Exit:
     {
         return cchReturn;
     }
+}
+
+
+bool32 wp_CreateSymbolicLink(const char16_t *lpSymlinkFileName,
+                          const char16_t *lpTargetPathName, uint32_t dwFlags) {
+    bool32 (*const pCreateSymbolicLinkW)(const char16_t *lpSymlinkFileName,
+                          const char16_t *lpTargetPathName, uint32_t dwFlags) = wp_get_CreateSymbolicLinkW();
+    if (pCreateSymbolicLinkW != NULL)
+    {
+        return pCreateSymbolicLinkW(lpSymlinkFileName, lpTargetPathName, dwFlags);
+    }
+
+    SetLastError(kNtErrorInvalidFunction);
+
+    return FALSE;
 }

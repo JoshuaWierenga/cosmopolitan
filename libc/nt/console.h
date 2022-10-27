@@ -71,9 +71,10 @@ int32_t SetConsoleTitle(const char16_t *lpConsoleTitle);
 bool32 GetConsoleScreenBufferInfo(
     int64_t hConsoleOutput,
     struct NtConsoleScreenBufferInfo *out_lpConsoleScreenBufferInfo);
+/* Not available on xp and I have yet to find a polyfill
 bool32 GetConsoleScreenBufferInfoEx(
     int64_t hConsoleOutput,
-    struct NtConsoleScreenBufferInfoEx *in_out_lpConsoleScreenBufferInfo);
+    struct NtConsoleScreenBufferInfoEx *in_out_lpConsoleScreenBufferInfo);*/
 bool32 SetConsoleScreenBufferInfoEx(
     int64_t hConsoleOutput,
     const struct NtConsoleScreenBufferInfoEx *lpConsoleScreenBufferInfo);

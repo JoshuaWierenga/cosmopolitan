@@ -133,6 +133,7 @@ bool32 CreateHardLink(const char16_t *lpFileName,
                       const char16_t *lpExistingFileName,
                       struct NtSecurityAttributes *reserved)
     paramsnonnull((1, 2));
+#define CreateSymbolicLink wp_CreateSymbolicLink
 bool32 CreateSymbolicLink(const char16_t *lpSymlinkFileName,
                           const char16_t *lpTargetPathName, uint32_t dwFlags)
     paramsnonnull();
