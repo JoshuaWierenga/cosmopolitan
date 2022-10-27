@@ -118,8 +118,8 @@ include libc/intrin/intrin.mk			# │  You can use the stack
 include libc/linux/linux.mk			# │  You can manipulate arrays
 include libc/tinymath/tinymath.mk		# │  You can issue raw system calls
 include third_party/compiler_rt/compiler_rt.mk	# │
-include third_party/win-polyfill/win-polyfill.mk	# │
 include libc/str/str.mk				# │
+include third_party/win-polyfill/win-polyfill.mk	# │
 include third_party/xed/xed.mk			# │
 include third_party/zlib/zlib.mk		# │
 include libc/elf/elf.mk				# │

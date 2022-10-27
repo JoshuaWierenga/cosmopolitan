@@ -204,6 +204,7 @@ bool32 WriteFileGather(int64_t hFileOpenedWithOverlappedAndNoBuffering,
 #define kNtVolumeNameGuid     0x1 /* e.g. \\?\Volume{ea38-etc.}\Users\jart */
 #define kNtVolumeNameNt       0x2 /* e.g. \Device\HarddiskVolume4\Users\jart */
 #define kNtVolumeNameNone     0x4 /* e.g. \Users\jart */
+#define GetFinalPathNameByHandle wp_GetFinalPathNameByHandle
 uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
                                   uint32_t arraylen, uint32_t flags);
 

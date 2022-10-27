@@ -31,10 +31,13 @@ THIRD_PARTY_WIN_POLYFILL_A_CHECKS =					\
 	$(THIRD_PARTY_WIN_POLYFILL_A).pkg				\
 	$(THIRD_PARTY_WIN_POLYFILL_A_HDRS:%=o/$(MODE)/%.ok)
 
-THIRD_PARTY_WIN_POLYFILL_A_DIRECTDEPS =				\
-	LIBC_NEXGEN32E					                \
-    LIBC_NT_NTDLL					                \
-    LIBC_NT_KERNEL32
+THIRD_PARTY_WIN_POLYFILL_A_DIRECTDEPS =             \
+	LIBC_INTRIN                                     \
+	LIBC_NEXGEN32E                                  \
+	LIBC_NT_NTDLL                                   \
+	LIBC_NT_KERNEL32                                \
+	LIBC_STR
+
 
 THIRD_PARTY_WIN_POLYFILL_A_DEPS :=					\
 	$(call uniq,$(foreach x,$(THIRD_PARTY_WIN_POLYFILL_A_DIRECTDEPS),$($(x))))
