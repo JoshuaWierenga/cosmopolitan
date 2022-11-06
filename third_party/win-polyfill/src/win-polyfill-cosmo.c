@@ -16,30 +16,21 @@
 #include "libc/nt/struct/objectnameinformation.h"
 #include "libc/nt/struct/peb.h"
 #include "libc/nt/struct/teb.h"
+#include "libc/nt/version.h"
 #include "libc/str/str.h"
 
-// This is very similar to NtFileBothDirectoryInformation/FILE_BOTH_DIR_INFORMATION but that is missing FileId
-struct NtFileIoBothDirectoryInformation {
-    DWORD         NextEntryOffset;
-  DWORD         FileIndex;
-  LARGE_INTEGER CreationTime;
-  LARGE_INTEGER LastAccessTime;
-  LARGE_INTEGER LastWriteTime;
-  LARGE_INTEGER ChangeTime;
-  LARGE_INTEGER EndOfFile;
-  LARGE_INTEGER AllocationSize;
-  DWORD         FileAttributes;
-  DWORD         FileNameLength;
-  DWORD         EaSize;
-  CCHAR         ShortNameLength;
-  WCHAR         ShortName[12];
-  LARGE_INTEGER FileId;
-  WCHAR         FileName[1];
-};
+#define MAX_PATH 260
 
-// TODO Add FileRemoteProtocolInformation to libc/nt/enum/fileinformationclass.h
+// TODO Add to libc/nt/version.h
+#define IsAtLeastWindowsVista() (GetNtMajorVersion() >= 6)
+
+// TODO Add to libc/nt/enum/status.h
+#define kNtStatusBufferOverflow           0x80000005
+
+// TODO Add to libc/nt/enum/fileinformationclass.h
 #define kNtFileRemoteProtocolInformation 55
 
+// TODO Create libc/nt/struct/fileremoteprotocolinfomation.h and move this to it
 struct NtFileRemoteProtocolInformation {
   USHORT StructureVersion;
   USHORT StructureSize;
@@ -70,6 +61,26 @@ struct NtFileRemoteProtocolInformation {
   } ProtocolSpecific;
 };
 
+// This is very similar to NtFileBothDirectoryInformation/FILE_BOTH_DIR_INFORMATION but that is missing FileId
+// TODO Create libc/nt/struct/fileiobothdirectoryinformation.h and move this to it
+struct NtFileIoBothDirectoryInformation {
+    DWORD         NextEntryOffset;
+  DWORD         FileIndex;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER EndOfFile;
+  LARGE_INTEGER AllocationSize;
+  DWORD         FileAttributes;
+  DWORD         FileNameLength;
+  DWORD         EaSize;
+  CCHAR         ShortNameLength;
+  WCHAR         ShortName[12];
+  LARGE_INTEGER FileId;
+  WCHAR         FileName[1];
+};
+
 
 static DWORD NtStatusToDosError(NTSTATUS Status)
 {
@@ -93,43 +104,12 @@ static DWORD BaseSetLastNTError(NTSTATUS Status)
     return lStatus;
 }
 
-#define MAX_PATH 260
-
-// For some reason the cosmo version gives a not defined by direct deps error despite kernel32 being listed as a dep
-DWORD GetLongPathName(LPCWSTR lpszShortPath, LPWSTR lpszLongPath, DWORD cchBuffer) {
-    const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
-    BOOL (*fun_GetLongPathName)(LPCWSTR lpszShortPath, LPWSTR lpszLongPath, DWORD cchBuffer) = GetProcAddress(nt_dll, "GetLongPathName");
-
-	FreeLibrary(nt_dll);
-
-    return fun_GetLongPathName(lpszShortPath, lpszLongPath, cchBuffer);
-}
-
-// For some reason the cosmo version gives a not defined by direct deps error despite kernel32 being listed as a dep
-BOOL GetVolumeNameForVolumeMountPointW(LPCWSTR lpszVolumeMountPoint, LPWSTR lpszVolumeName, DWORD cchBufferLength) {
-    const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
-    BOOL (*fun_GetVolumeNameForVolumeMountPointW)(LPCWSTR lpszVolumeMountPoint, LPWSTR lpszVolumeName, DWORD cchBufferLength) = GetProcAddress(nt_dll, "GetVolumeNameForVolumeMountPointW");
-
-	FreeLibrary(nt_dll);
-
-    return fun_GetVolumeNameForVolumeMountPointW(lpszVolumeMountPoint, lpszVolumeName, cchBufferLength);
-}
-
-// For some reason the cosmo version gives a not defined by direct deps error despite kernel32 being listed as a dep
-BOOL GetVolumePathNamesForVolumeNameW(LPCWSTR lpszVolumeName, LPWCH lpszVolumePathNames, DWORD cchBufferLength, PDWORD lpcchReturnLength) {
-	const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
-    BOOL (*fun_GetVolumePathNamesForVolumeNameW)(LPCWSTR lpszVolumeName, LPWCH lpszVolumePathNames, DWORD cchBufferLength, PDWORD lpcchReturnLength) = GetProcAddress(nt_dll, "GetVolumePathNamesForVolumeNameW");
-
-	FreeLibrary(nt_dll);
-
-    return fun_GetVolumePathNamesForVolumeNameW(lpszVolumeName, lpszVolumePathNames, cchBufferLength, lpcchReturnLength);
-}
 
 static BOOL BasepGetVolumeGUIDFromNTName(
     const UNICODE_STRING *NtName,
     char16_t szVolumeGUID[MAX_PATH])
 {
-#define __szVolumeMountPointPrefix__ L"\\\\?\\GLOBALROOT"
+#define __szVolumeMountPointPrefix__ u"\\\\?\\GLOBALROOT"
 
     // 一个设备名称 512 长度够多了吧？
     char16_t szVolumeMountPoint[512];
@@ -153,9 +133,9 @@ static BOOL BasepGetVolumeGUIDFromNTName(
         NtName->Data,
         NtName->Length);
 
-    szVolumeMountPoint[cbBufferNeed / 2 - 1] = L'\0';
+    szVolumeMountPoint[cbBufferNeed / 2 - 1] = u'\0';
 
-    return GetVolumeNameForVolumeMountPointW(szVolumeMountPoint, szVolumeGUID, MAX_PATH);
+    return GetVolumeNameForVolumeMountPoint(szVolumeMountPoint, szVolumeGUID, MAX_PATH);
 
 #undef __szVolumeMountPointPrefix__
 }
@@ -166,84 +146,128 @@ static BOOL BasepGetVolumeDosLetterNameFromNTName(
 {
     char16_t szVolumeName[MAX_PATH];
 
+    // GetVolumeNameForVolumeMountPoint and hence GetVolumePathNamesForVolumeName only work if NtName doesn't represent a UNC path
     if (!BasepGetVolumeGUIDFromNTName(NtName, szVolumeName))
-    {
-        return FALSE;
+	{
+		if (GetLastError() == kNtErrorNotEnoughMemory)
+		{
+			return FALSE;
+		}
+
+		szVolumeDosLetter[4] = u'U';
+		szVolumeDosLetter[5] = u'N';
+		szVolumeDosLetter[6] = u'C';
+		szVolumeDosLetter[7] = u'\\';
+	}
+	else
+	{
+		DWORD cchVolumePathName = 0;
+
+		if (!GetVolumePathNamesForVolumeName(
+		    szVolumeName, szVolumeDosLetter + 4, MAX_PATH - 4, &cchVolumePathName))
+		{
+			return FALSE;
+		}
     }
 
-    DWORD cchVolumePathName = 0;
-
-    if (!GetVolumePathNamesForVolumeNameW(
-            szVolumeName, szVolumeDosLetter + 4, MAX_PATH - 4, &cchVolumePathName))
-    {
-        return FALSE;
-    }
-
-    szVolumeDosLetter[0] = L'\\';
-    szVolumeDosLetter[1] = L'\\';
-    szVolumeDosLetter[2] = L'?';
-    szVolumeDosLetter[3] = L'\\';
+    szVolumeDosLetter[0] = u'\\';
+    szVolumeDosLetter[1] = u'\\';
+    szVolumeDosLetter[2] = u'?';
+    szVolumeDosLetter[3] = u'\\';
 
     return TRUE;
 }
 
-// TODO Add to libc/nt/enum/status.h
-#define kNtStatusBufferOverflow           0x80000005
 
-// TODO Use libc/nt/kernel32/GetFileInformationByHandleEx.s
-bool32 (*wp_get_GetFileInformationByHandleEx())()
+typedef bool32 __attribute__((__ms_abi__)) (*GetFileInformationByHandleExFunc)(int64_t hFile,
+                                                                               uint32_t FileInformationClass,
+                                                                               void *out_lpFileInformation,
+                                                                               uint32_t dwBufferSize);
+
+typedef uint32_t __attribute__((__ms_abi__)) (*GetFinalPathNameByHandleWFunc)(int64_t hFile, char16_t *out_path,
+                                                                              uint32_t arraylen, uint32_t flags);
+
+typedef uint32_t __attribute__((__ms_abi__)) (*CreateSymbolicLinkWFunc)(const char16_t *lpSymlinkFileName,
+                                                                   const char16_t *lpTargetPathName, uint32_t dwFlags);
+
+GetFileInformationByHandleExFunc pGetFileInformationByHandleEx = NULL;
+
+GetFinalPathNameByHandleWFunc pGetFinalPathNameByHandleW = NULL;
+
+CreateSymbolicLinkWFunc pCreateSymbolicLinkW = NULL;
+
+GetFileInformationByHandleExFunc get_GetFileInformationByHandleEx()
 {
-    // What is this set to if the function is found to not exist at runtime?
-    //return &GetFileInformationByHandleEx;
-    
-	const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
-    bool32 (*fun_GetFileInformationByHandleEx)() = GetProcAddress(nt_dll, "GetFileInformationByHandleEx");
+	if (pGetFileInformationByHandleEx)
+	{
+		return pGetFileInformationByHandleEx;
+	}
 
-	FreeLibrary(nt_dll);
-	return fun_GetFileInformationByHandleEx;
+	HINSTANCE kernel32Dll = LoadLibrary(u"Kernel32.dll");
+	if (kernel32Dll == NULL)
+	{
+		return NULL;
+	}
+
+	pGetFileInformationByHandleEx = GetProcAddress(kernel32Dll, "GetFileInformationByHandleEx");
+
+	FreeLibrary(kernel32Dll);
+	return pGetFileInformationByHandleEx;
 }
 
-// TODO Use libc/nt/kernel32/GetFinalPathNameByHandleW.s
-uint32_t (*wp_get_GetFinalPathNameByHandleW())(int64_t hFile, char16_t *out_path,
-                                  uint32_t arraylen, uint32_t flags)
+GetFinalPathNameByHandleWFunc get_GetFinalPathNameByHandleW()
 {
-    // What is this set to if the function is found to not exist at runtime?
-    //return &GetFinalPathNameByHandleW;
+	if (pGetFinalPathNameByHandleW)
+	{
+		return pGetFinalPathNameByHandleW;
+	}
 
-	const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
-    uint32_t (*fun_GetFinalPathNameByHandleW)(int64_t hFile, char16_t *out_path,
-                                  uint32_t arraylen, uint32_t flags) = GetProcAddress(nt_dll, "GetFinalPathNameByHandleW");
+	HINSTANCE kernel32Dll = LoadLibrary(u"Kernel32.dll");
+	if (kernel32Dll == NULL)
+	{
+		return NULL;
+	}
 
-	FreeLibrary(nt_dll);
-	return fun_GetFinalPathNameByHandleW;
+	pGetFinalPathNameByHandleW = GetProcAddress(kernel32Dll, "GetFinalPathNameByHandleW");
+
+	FreeLibrary(kernel32Dll);
+	return pGetFinalPathNameByHandleW;
 }
 
-// TODO Use libc/nt/kernel32/CreateSymbolicLinkW.s
-bool32 (*wp_get_CreateSymbolicLinkW())(const char16_t *lpSymlinkFileName,
-                          const char16_t *lpTargetPathName, uint32_t dwFlags)
+CreateSymbolicLinkWFunc get_CreateSymbolicLinkW()
 {
-    // What is this set to if the function is found to not exist at runtime?
-    //return &CreateSymbolicLinkW;
+	if (pCreateSymbolicLinkW)
+	{
+		return pCreateSymbolicLinkW;
+	}
 
-	const HINSTANCE nt_dll = LoadLibrary(u"ntdll");
-    bool32 (*fun_CreateSymbolicLinkW)(const char16_t *lpSymlinkFileName,
-                          const char16_t *lpTargetPathName, uint32_t dwFlags) = GetProcAddress(nt_dll, "CreateSymbolicLinkW");
+	HINSTANCE kernel32Dll = LoadLibrary(u"Kernel32.dll");
+	if (kernel32Dll == NULL)
+	{
+		return NULL;
+	}
 
-	FreeLibrary(nt_dll);
-	return fun_CreateSymbolicLinkW;
+	pCreateSymbolicLinkW = GetProcAddress(kernel32Dll, "CreateSymbolicLinkW");
+
+	FreeLibrary(kernel32Dll);
+	return pCreateSymbolicLinkW;
 }
 
 
-bool32 wp_GetFileInformationByHandleEx(int64_t hFile,
+bool32 GetFileInformationByHandleEx(int64_t hFile,
                                     uint32_t FileInformationClass,
                                     void *out_lpFileInformation,
                                     uint32_t dwBufferSize) {
-    bool32 (*const pGetFileInformationByHandleEx)() = wp_get_GetFileInformationByHandleEx();
-    if (pGetFileInformationByHandleEx != NULL)
+    if (IsAtLeastWindowsVista()) 
     {
-        return pGetFileInformationByHandleEx(
-            hFile, FileInformationClass, out_lpFileInformation, dwBufferSize);
+        GetFileInformationByHandleExFunc pGetFileInformationByHandleEx = get_GetFileInformationByHandleEx();
+        if (pGetFileInformationByHandleEx != NULL)
+        {
+            return pGetFileInformationByHandleEx(hFile, FileInformationClass, out_lpFileInformation, dwBufferSize);
+        }
+        return 0;
     }
+
     uint32_t NtFileInformationClass;
     DWORD cbMinBufferSize;
     bool bNtQueryDirectoryFile = false;
@@ -353,13 +377,16 @@ bool32 wp_GetFileInformationByHandleEx(int64_t hFile,
     }
 }
 
-uint32_t wp_GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
+uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
                                   uint32_t arraylen, uint32_t flags) {
-    uint32_t (*const pGetFinalPathNameByHandleW)(int64_t hFile, char16_t *out_path,
-                                  uint32_t arraylen, uint32_t flags) = wp_get_GetFinalPathNameByHandleW();
-    if (pGetFinalPathNameByHandleW != NULL)
+    if (IsAtLeastWindowsVista()) 
     {
-        return pGetFinalPathNameByHandleW(hFile, out_path, arraylen, flags);
+        GetFinalPathNameByHandleWFunc pGetFinalPathNameByHandleW = get_GetFinalPathNameByHandleW();
+        if (pGetFinalPathNameByHandleW != NULL)
+        {
+            return pGetFinalPathNameByHandleW(hFile, out_path, arraylen, flags);
+        }
+        return 0;
     }
 
     // 参数检查
@@ -385,17 +412,16 @@ uint32_t wp_GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
         break;
     }
 
-    UNICODE_STRING VolumeNtName = {};
+    UNICODE_STRING VolumeNtName = {0, 0, 0};
 
-    char16_t szVolumeRoot[MAX_PATH];
-    szVolumeRoot[0] = L'\0';
+    char16_t szVolumeRoot[MAX_PATH] = {0};
 
     char16_t *szLongPathNameBuffer = NULL;
 
     // 目标所需的分区名称，不包含最后的 '\\'
-    UNICODE_STRING TargetVolumeName = {};
+    UNICODE_STRING TargetVolumeName = {0, 0, 0};
     // 目标所需的文件名，开始包含 '\\'
-    UNICODE_STRING TargetFileName = {};
+    UNICODE_STRING TargetFileName = {0, 0, 0};
 
     const uint64_t ProcessHeap = ((struct NtPeb *)NtGetPeb())->ProcessHeap;
     uint32_t lStatus = ERROR_SUCCESS;
@@ -562,7 +588,7 @@ uint32_t wp_GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
 
         DWORD cbszVolumeRoot = TargetVolumeName.Length;
 
-        if (szVolumeRoot[0] == L'\0')
+        if (szVolumeRoot[0] == u'\0')
         {
             // 转换分区信息
 
@@ -600,7 +626,7 @@ uint32_t wp_GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
             pFileNameInfo->FileName,
             pFileNameInfo->FileNameLength);
         szLongPathNameBuffer[(cbszVolumeRoot + pFileNameInfo->FileNameLength) / sizeof(char16_t)] =
-            L'\0';
+            u'\0';
 
         for (;;)
         {
@@ -666,7 +692,7 @@ uint32_t wp_GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
             TargetFileName.Data,
             TargetFileName.Length);
         // 保证字符串 '\0' 截断
-        out_path[cchReturn] = L'\0';
+        out_path[cchReturn] = u'\0';
     }
 
 __Exit:
@@ -688,14 +714,16 @@ __Exit:
     }
 }
 
-
-bool32 wp_CreateSymbolicLink(const char16_t *lpSymlinkFileName,
+bool32 CreateSymbolicLink(const char16_t *lpSymlinkFileName,
                           const char16_t *lpTargetPathName, uint32_t dwFlags) {
-    bool32 (*const pCreateSymbolicLinkW)(const char16_t *lpSymlinkFileName,
-                          const char16_t *lpTargetPathName, uint32_t dwFlags) = wp_get_CreateSymbolicLinkW();
-    if (pCreateSymbolicLinkW != NULL)
+    if (IsAtLeastWindowsVista()) 
     {
-        return pCreateSymbolicLinkW(lpSymlinkFileName, lpTargetPathName, dwFlags);
+        CreateSymbolicLinkWFunc pCreateSymbolicLinkW = get_CreateSymbolicLinkW();
+        if (pCreateSymbolicLinkW != NULL)
+        {
+            return pCreateSymbolicLinkW(lpSymlinkFileName, lpTargetPathName, dwFlags);
+        }
+        return 0;
     }
 
     SetLastError(kNtErrorInvalidFunction);

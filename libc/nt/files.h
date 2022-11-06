@@ -82,7 +82,6 @@ bool32 GetHandleInformation(int64_t hObject, uint32_t *out_lpdwFlags);
 bool32 SetHandleInformation(int64_t hObject, uint32_t dwMask, uint32_t dwFlags);
 int GetFileType(int64_t hFile);
 
-#define GetFileInformationByHandleEx wp_GetFileInformationByHandleEx
 bool32 GetFileInformationByHandleEx(int64_t hFile,
                                     uint32_t FileInformationClass,
                                     void *out_lpFileInformation,
@@ -133,7 +132,6 @@ bool32 CreateHardLink(const char16_t *lpFileName,
                       const char16_t *lpExistingFileName,
                       struct NtSecurityAttributes *reserved)
     paramsnonnull((1, 2));
-#define CreateSymbolicLink wp_CreateSymbolicLink
 bool32 CreateSymbolicLink(const char16_t *lpSymlinkFileName,
                           const char16_t *lpTargetPathName, uint32_t dwFlags)
     paramsnonnull();
@@ -205,12 +203,16 @@ bool32 WriteFileGather(int64_t hFileOpenedWithOverlappedAndNoBuffering,
 #define kNtVolumeNameGuid     0x1 /* e.g. \\?\Volume{ea38-etc.}\Users\jart */
 #define kNtVolumeNameNt       0x2 /* e.g. \Device\HarddiskVolume4\Users\jart */
 #define kNtVolumeNameNone     0x4 /* e.g. \Users\jart */
-#define GetFinalPathNameByHandle wp_GetFinalPathNameByHandle
 uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
                                   uint32_t arraylen, uint32_t flags);
 
+
 uint32_t GetFullPathName(const char16_t *lpFileName, uint32_t nBufferLength,
                          char16_t *lpBuffer, char16_t **lpFilePart);
+
+uint32_t GetLongPathName(const char16_t *lpszShortPath, char16_t *lpszLongPath,
+                         uint32_t cchBuffer);
+
 
 bool32 GetOverlappedResult(int64_t hFile, struct NtOverlapped *lpOverlapped,
                            uint32_t *lpNumberOfBytesTransferred, bool32 bWait);
@@ -230,6 +232,24 @@ bool32 GetVolumeInformationByHandle(int64_t hFile,
                                     uint32_t *opt_out_lpFileSystemFlags,
                                     char16_t *opt_out_lpFileSystemNameBuffer,
                                     uint32_t nFileSystemNameSize);
+
+bool32 GetVolumeInformation(const char16_t *lpRootPathName,
+                            char16_t *opt_out_lpVolumeNameBuffer,
+                            uint32_t nVolumeNameSize,
+                            uint32_t *opt_out_lpVolumeSerialNumber,
+                            uint32_t *opt_out_lpMaximumComponentLength,
+                            uint32_t *opt_out_lpFileSystemFlags,
+                            char16_t *opt_out_lpFileSystemNameBuffer,
+                            uint32_t nFileSystemNameSize);
+
+bool32 GetVolumeNameForVolumeMountPoint(const char16_t *lpszVolumeMountPoint,
+                                        char16_t *lpszVolumeName,
+                                        uint32_t cchBufferLength);
+
+bool32 GetVolumePathNamesForVolumeName(const char16_t *lpszVolumeName,
+                                       char16_t *lpszVolumePathNames,
+                                       uint32_t cchBufferLength,
+                                       uint32_t *lpcchReturnLength);
 
 #if ShouldUseMsabiAttribute()
 #include "libc/nt/thunk/files.inc"

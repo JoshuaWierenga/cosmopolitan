@@ -404,14 +404,14 @@ imp	'GetFileAttributesEx'					GetFileAttributesExW					kernel32	0	3
 imp	'GetFileAttributesTransacted'				GetFileAttributesTransactedW				kernel32	584
 imp	'GetFileBandwidthReservation'				GetFileBandwidthReservation				kernel32	586
 imp	'GetFileInformationByHandle'				GetFileInformationByHandle				kernel32	0	2
-imp	'GetFileInformationByHandleEx'				GetFileInformationByHandleEx				kernel32	0	4
+#imp'GetFileInformationByHandleEx'				GetFileInformationByHandleEx				kernel32	0	4
 imp	'GetFileMUIInfo'					GetFileMUIInfo						kernel32	0
 imp	'GetFileMUIPath'					GetFileMUIPath						kernel32	0
 imp	'GetFileSize'						GetFileSize						kernel32	0	2
 imp	'GetFileSizeEx'						GetFileSizeEx						kernel32	0	2
 imp	'GetFileTime'						GetFileTime						kernel32	0	4
 imp	'GetFileType'						GetFileType						kernel32	0	1
-imp	'GetFinalPathNameByHandle'				GetFinalPathNameByHandleW				kernel32	0	4
+#imp'GetFinalPathNameByHandle'					GetFinalPathNameByHandleW				kernel32	0	4
 imp	'GetFirmwareEnvironmentVariable'			GetFirmwareEnvironmentVariableW				kernel32	600
 imp	'GetFirmwareEnvironmentVariableEx'			GetFirmwareEnvironmentVariableExW			kernel32	599
 imp	'GetFirmwareType'					GetFirmwareType						kernel32	601
@@ -429,7 +429,7 @@ imp	'GetLogicalDriveStrings'				GetLogicalDriveStringsW					kernel32	0
 imp	'GetLogicalDrives'					GetLogicalDrives					kernel32	0	0
 imp	'GetLogicalProcessorInformation'			GetLogicalProcessorInformation				kernel32	0
 imp	'GetLogicalProcessorInformationEx'			GetLogicalProcessorInformationEx			kernel32	0
-imp	'GetLongPathName'					GetLongPathNameW					kernel32	0
+imp	'GetLongPathName'					GetLongPathNameW					kernel32	0   3
 imp	'GetLongPathNameTransacted'				GetLongPathNameTransactedW				kernel32	624
 imp	'GetMailslotInfo'					GetMailslotInfo						kernel32	626
 imp	'GetMaximumProcessorCount'				GetMaximumProcessorCount				kernel32	627	1	# Windows 7+
@@ -579,11 +579,11 @@ imp	'GetUserPreferredUILanguages'				GetUserPreferredUILanguages				kernel32	0
 imp	'GetVDMCurrentDirectories'				GetVDMCurrentDirectories				kernel32	798
 imp	'GetVersion'						GetVersion						kernel32	0
 imp	'GetVersionEx'						GetVersionExW						kernel32	0	1
-imp	'GetVolumeInformation'					GetVolumeInformationW					kernel32	0
+imp	'GetVolumeInformation'					GetVolumeInformationW					kernel32	0   8
 imp	'GetVolumeInformationByHandle'				GetVolumeInformationByHandleW				kernel32	0	8
-imp	'GetVolumeNameForVolumeMountPoint'			GetVolumeNameForVolumeMountPointW			kernel32	0
+imp	'GetVolumeNameForVolumeMountPoint'			GetVolumeNameForVolumeMountPointW			kernel32	0   3
 imp	'GetVolumePathName'					GetVolumePathNameW					kernel32	0	3
-imp	'GetVolumePathNamesForVolumeName'			GetVolumePathNamesForVolumeNameW			kernel32	0
+imp	'GetVolumePathNamesForVolumeName'			GetVolumePathNamesForVolumeNameW			kernel32	0   4
 imp	'GetWindowsDirectory'					GetWindowsDirectoryW					kernel32	0	2
 imp	'GetWindowsDirectoryA'					GetWindowsDirectoryA					kernel32	0	2
 imp	'GetWriteWatch'						GetWriteWatch						kernel32	0
@@ -1106,7 +1106,7 @@ imp	'__CreateFileMappingNuma'				CreateFileMappingNumaW					kernel32	0	7
 imp	'__CreateNamedPipe'					CreateNamedPipeW					kernel32	0	8
 imp	'__CreatePipe'						CreatePipe						kernel32	0	4
 imp	'__CreateProcess'					CreateProcessW						kernel32	0	10
-imp	'__CreateSymbolicLink'					CreateSymbolicLinkW					kernel32	0	3
+#imp'__CreateSymbolicLink'					CreateSymbolicLinkW					kernel32	0	3
 imp	'__CreateThread'					CreateThread						kernel32	0	6
 imp	'__DeleteFile'						DeleteFileW						kernel32	0	1
 imp	'__DeviceIoControl'					DeviceIoControl						kernel32	0	8
