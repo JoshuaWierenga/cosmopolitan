@@ -36,6 +36,8 @@ THIRD_PARTY_WIN_POLYFILL_A_DIRECTDEPS =             \
 	LIBC_NEXGEN32E                                  \
 	LIBC_NT_NTDLL                                   \
 	LIBC_NT_KERNEL32                                \
+	LIBC_NT_WS2_32                                  \
+	LIBC_SYSV                                       \
 	LIBC_STR
 
 
