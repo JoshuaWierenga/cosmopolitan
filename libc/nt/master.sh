@@ -580,7 +580,7 @@ imp	'GetVDMCurrentDirectories'				GetVDMCurrentDirectories				kernel32	798
 imp	'GetVersion'						GetVersion						kernel32	0
 imp	'GetVersionEx'						GetVersionExW						kernel32	0	1
 imp	'GetVolumeInformation'					GetVolumeInformationW					kernel32	0   8
-imp	'GetVolumeInformationByHandle'				GetVolumeInformationByHandleW				kernel32	0	8
+#imp'GetVolumeInformationByHandle'				GetVolumeInformationByHandleW				kernel32	0	8
 imp	'GetVolumeNameForVolumeMountPoint'			GetVolumeNameForVolumeMountPointW			kernel32	0   3
 imp	'GetVolumePathName'					GetVolumePathNameW					kernel32	0	3
 imp	'GetVolumePathNamesForVolumeName'			GetVolumePathNamesForVolumeNameW			kernel32	0   4
@@ -3241,7 +3241,7 @@ imp	'WSALookupServiceBegin'					WSALookupServiceBeginW					ws2_32		81	3
 imp	'WSALookupServiceEnd'					WSALookupServiceEnd					ws2_32		82	1
 imp	'WSALookupServiceNext'					WSALookupServiceNextW					ws2_32		84	4
 imp	'WSANSPIoctl'						WSANSPIoctl						ws2_32		85	8
-imp	'WSAPoll'						WSAPoll							ws2_32		88	3
+#imp'WSAPoll'						WSAPoll							ws2_32		88	3
 imp	'WSAProviderCompleteAsyncCall'				WSAProviderCompleteAsyncCall				ws2_32		89
 imp	'WSAProviderConfigChange'				WSAProviderConfigChange					ws2_32		90	3
 imp	'WSARecvDisconnect'					WSARecvDisconnect					ws2_32		92	2

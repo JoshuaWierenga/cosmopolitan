@@ -1,13 +1,19 @@
 /* clang-format off */
 
-#include "libc/isystem/windows.h"
-#include "libc/nt/ntdll.h"
+#include "libc/intrin/safemacros.internal.h"
+#include "libc/nt/dll.h"
 #include "libc/nt/enum/fileinfobyhandleclass.h"
 #include "libc/nt/enum/fileinformationclass.h"
 #include "libc/nt/enum/objectinformationclass.h"
 #include "libc/nt/enum/status.h"
+#include "libc/nt/errors.h"
+#include "libc/nt/files.h"
+#include "libc/nt/memory.h"
 #include "libc/nt/nt/file.h"
+#include "libc/nt/ntdll.h"
+#include "libc/nt/process.h"
 #include "libc/nt/runtime.h"
+#include "libc/nt/struct/fdset.h"
 #include "libc/nt/struct/fileattributetaginformation.h"
 #include "libc/nt/struct/filecompressioninfo.h"
 #include "libc/nt/struct/filenameinformation.h"
@@ -15,14 +21,25 @@
 #include "libc/nt/struct/filestreaminformation.h"
 #include "libc/nt/struct/objectnameinformation.h"
 #include "libc/nt/struct/peb.h"
+#include "libc/nt/struct/pollfd.h"
 #include "libc/nt/struct/teb.h"
+#include "libc/nt/struct/timeval.h"
+#include "libc/nt/synchronization.h"
 #include "libc/nt/version.h"
+#include "libc/nt/winsock.h"
 #include "libc/str/str.h"
+#include "libc/sysv/consts/poll.h"
 
 #define MAX_PATH 260
 
+#define INVALID_SOCKET -1ULL
+#define WAIT_FAILED -1U
+
 // TODO Add to libc/nt/version.h
 #define IsAtLeastWindowsVista() (GetNtMajorVersion() >= 6)
+
+// I have no clue if this is correct, windows currently has a function instead of a macro which was added in vista
+#define FD_ISSET(FD, SET) (((SET)->fd_array[(FD) >> 6] >> ((FD)&63)) & 1)
 
 // TODO Add to libc/nt/enum/status.h
 #define kNtStatusBufferOverflow           0x80000005
@@ -32,57 +49,57 @@
 
 // TODO Create libc/nt/struct/fileremoteprotocolinfomation.h and move this to it
 struct NtFileRemoteProtocolInformation {
-  USHORT StructureVersion;
-  USHORT StructureSize;
-  ULONG  Protocol;
-  USHORT ProtocolMajorVersion;
-  USHORT ProtocolMinorVersion;
-  USHORT ProtocolRevision;
-  USHORT Reserved;
-  ULONG  Flags;
+  unsigned short StructureVersion;
+  unsigned short StructureSize;
+  uint32_t  Protocol;
+  unsigned short ProtocolMajorVersion;
+  unsigned short ProtocolMinorVersion;
+  unsigned short ProtocolRevision;
+  unsigned short Reserved;
+  uint32_t  Flags;
   struct {
-    ULONG Reserved[8];
+    uint32_t Reserved[8];
   } GenericReserved;
   struct {
-    ULONG Reserved[16];
+    uint32_t Reserved[16];
   } ProtocolSpecificReserved;
   union {
     struct {
       struct {
-        ULONG Capabilities;
+        uint32_t Capabilities;
       } Server;
       struct {
-        ULONG Capabilities;
-        ULONG ShareFlags;
-        ULONG CachingFlags;
+        uint32_t Capabilities;
+        uint32_t ShareFlags;
+        uint32_t CachingFlags;
       } Share;
     } Smb2;
-    ULONG Reserved[16];
+    uint32_t Reserved[16];
   } ProtocolSpecific;
 };
 
 // This is very similar to NtFileBothDirectoryInformation/FILE_BOTH_DIR_INFORMATION but that is missing FileId
 // TODO Create libc/nt/struct/fileiobothdirectoryinformation.h and move this to it
 struct NtFileIoBothDirectoryInformation {
-    DWORD         NextEntryOffset;
-  DWORD         FileIndex;
-  LARGE_INTEGER CreationTime;
-  LARGE_INTEGER LastAccessTime;
-  LARGE_INTEGER LastWriteTime;
-  LARGE_INTEGER ChangeTime;
-  LARGE_INTEGER EndOfFile;
-  LARGE_INTEGER AllocationSize;
-  DWORD         FileAttributes;
-  DWORD         FileNameLength;
-  DWORD         EaSize;
-  CCHAR         ShortNameLength;
-  WCHAR         ShortName[12];
-  LARGE_INTEGER FileId;
-  WCHAR         FileName[1];
+  uint32_t NextEntryOffset;
+  uint32_t FileIndex;
+  int64_t CreationTime;
+  int64_t LastAccessTime;
+  int64_t LastWriteTime;
+  int64_t ChangeTime;
+  int64_t EndOfFile;
+  int64_t AllocationSize;
+  uint32_t FileAttributes;
+  uint32_t FileNameLength;
+  uint32_t EaSize;
+  char ShortNameLength;
+  char16_t ShortName[12];
+  int64_t FileId;
+  char16_t FileName[1];
 };
 
 
-static DWORD NtStatusToDosError(NTSTATUS Status)
+static uint32_t NtStatusToDosError(int32_t Status)
 {
     if (kNtStatusTimeout == Status)
     {
@@ -97,16 +114,16 @@ static DWORD NtStatusToDosError(NTSTATUS Status)
     return RtlNtStatusToDosError(Status);
 }
 
-static DWORD BaseSetLastNTError(NTSTATUS Status)
+static uint32_t BaseSetLastNTError(int32_t Status)
 {
-    NTSTATUS lStatus = RtlNtStatusToDosError(Status);
+    int32_t lStatus = RtlNtStatusToDosError(Status);
     SetLastError(lStatus);
     return lStatus;
 }
 
 
-static BOOL BasepGetVolumeGUIDFromNTName(
-    const UNICODE_STRING *NtName,
+static bool32 BasepGetVolumeGUIDFromNTName(
+    const struct NtUnicodeString *NtName,
     char16_t szVolumeGUID[MAX_PATH])
 {
 #define __szVolumeMountPointPrefix__ u"\\\\?\\GLOBALROOT"
@@ -140,8 +157,8 @@ static BOOL BasepGetVolumeGUIDFromNTName(
 #undef __szVolumeMountPointPrefix__
 }
 
-static BOOL BasepGetVolumeDosLetterNameFromNTName(
-    const UNICODE_STRING *NtName,
+static bool32 BasepGetVolumeDosLetterNameFromNTName(
+    const struct NtUnicodeString *NtName,
     char16_t szVolumeDosLetter[MAX_PATH])
 {
     char16_t szVolumeName[MAX_PATH];
@@ -161,7 +178,7 @@ static BOOL BasepGetVolumeDosLetterNameFromNTName(
 	}
 	else
 	{
-		DWORD cchVolumePathName = 0;
+		uint32_t cchVolumePathName = 0;
 
 		if (!GetVolumePathNamesForVolumeName(
 		    szVolumeName, szVolumeDosLetter + 4, MAX_PATH - 4, &cchVolumePathName))
@@ -179,134 +196,105 @@ static BOOL BasepGetVolumeDosLetterNameFromNTName(
 }
 
 
-typedef bool32 __attribute__((__ms_abi__)) (*GetFileInformationByHandleExFunc)(int64_t hFile,
+#define SetupNativeWindowsFunction(library, returnType, funcName, ...) \
+typedef returnType __attribute__((__ms_abi__)) (*funcName##Func)(__VA_ARGS__);\
+funcName##Func p##funcName = NULL;\
+\
+funcName##Func get_##funcName() {\
+	if (p##funcName) {\
+		return p##funcName;\
+	}\
+\
+	int64_t libraryDll = LoadLibrary(u"" #library);\
+	if (!libraryDll) {\
+		return NULL;\
+	}\
+\
+	p##funcName = (funcName##Func)GetProcAddress(libraryDll, #funcName);\
+\
+	FreeLibrary(libraryDll);\
+	return p##funcName;\
+}
+
+
+#define CallNativeWindowsFunction(check, funcName, ...) \
+    if (check) {\
+        funcName##Func p##funcName = get_##funcName();\
+        if (p##funcName != NULL) {\
+		    return p##funcName(__VA_ARGS__);\
+        }\
+        return 0;\
+    }
+
+
+SetupNativeWindowsFunction(Kernel32.dll, bool32, GetFileInformationByHandleEx, int64_t hFile,
                                                                                uint32_t FileInformationClass,
                                                                                void *out_lpFileInformation,
-                                                                               uint32_t dwBufferSize);
+                                                                               uint32_t dwBufferSize)
 
-typedef uint32_t __attribute__((__ms_abi__)) (*GetFinalPathNameByHandleWFunc)(int64_t hFile, char16_t *out_path,
-                                                                              uint32_t arraylen, uint32_t flags);
+SetupNativeWindowsFunction(Kernel32.dll, uint32_t, GetFinalPathNameByHandleW, int64_t hFile, char16_t *out_path,
+                                                                              uint32_t arraylen, uint32_t flags)
 
-typedef uint32_t __attribute__((__ms_abi__)) (*CreateSymbolicLinkWFunc)(const char16_t *lpSymlinkFileName,
-                                                                   const char16_t *lpTargetPathName, uint32_t dwFlags);
+SetupNativeWindowsFunction(Kernel32.dll, uint32_t, CreateSymbolicLinkW, const char16_t *lpSymlinkFileName,
+                                                                        const char16_t *lpTargetPathName, uint32_t dwFlags)
 
-GetFileInformationByHandleExFunc pGetFileInformationByHandleEx = NULL;
+SetupNativeWindowsFunction(Kernel32.dll, bool32, GetVolumeInformationByHandleW, int64_t hFile,
+                                                                                char16_t *opt_out_lpVolumeNameBuffer,
+                                                                                uint32_t nVolumeNameSize,
+                                                                                uint32_t *opt_out_lpVolumeSerialNumber,
+                                                                                uint32_t *opt_out_lpMaximumComponentLength,
+                                                                                uint32_t *opt_out_lpFileSystemFlags,
+                                                                                char16_t *opt_out_lpFileSystemNameBuffer,
+                                                                                uint32_t nFileSystemNameSize)
 
-GetFinalPathNameByHandleWFunc pGetFinalPathNameByHandleW = NULL;
-
-CreateSymbolicLinkWFunc pCreateSymbolicLinkW = NULL;
-
-GetFileInformationByHandleExFunc get_GetFileInformationByHandleEx()
-{
-	if (pGetFileInformationByHandleEx)
-	{
-		return pGetFileInformationByHandleEx;
-	}
-
-	HINSTANCE kernel32Dll = LoadLibrary(u"Kernel32.dll");
-	if (kernel32Dll == NULL)
-	{
-		return NULL;
-	}
-
-	pGetFileInformationByHandleEx = GetProcAddress(kernel32Dll, "GetFileInformationByHandleEx");
-
-	FreeLibrary(kernel32Dll);
-	return pGetFileInformationByHandleEx;
-}
-
-GetFinalPathNameByHandleWFunc get_GetFinalPathNameByHandleW()
-{
-	if (pGetFinalPathNameByHandleW)
-	{
-		return pGetFinalPathNameByHandleW;
-	}
-
-	HINSTANCE kernel32Dll = LoadLibrary(u"Kernel32.dll");
-	if (kernel32Dll == NULL)
-	{
-		return NULL;
-	}
-
-	pGetFinalPathNameByHandleW = GetProcAddress(kernel32Dll, "GetFinalPathNameByHandleW");
-
-	FreeLibrary(kernel32Dll);
-	return pGetFinalPathNameByHandleW;
-}
-
-CreateSymbolicLinkWFunc get_CreateSymbolicLinkW()
-{
-	if (pCreateSymbolicLinkW)
-	{
-		return pCreateSymbolicLinkW;
-	}
-
-	HINSTANCE kernel32Dll = LoadLibrary(u"Kernel32.dll");
-	if (kernel32Dll == NULL)
-	{
-		return NULL;
-	}
-
-	pCreateSymbolicLinkW = GetProcAddress(kernel32Dll, "CreateSymbolicLinkW");
-
-	FreeLibrary(kernel32Dll);
-	return pCreateSymbolicLinkW;
-}
-
+SetupNativeWindowsFunction(Ws2_32.dll, int, WSAPoll, struct sys_pollfd_nt *inout_fdArray, uint32_t nfds,
+                                                     signed timeout_ms)
 
 bool32 GetFileInformationByHandleEx(int64_t hFile,
                                     uint32_t FileInformationClass,
                                     void *out_lpFileInformation,
                                     uint32_t dwBufferSize) {
-    if (IsAtLeastWindowsVista()) 
-    {
-        GetFileInformationByHandleExFunc pGetFileInformationByHandleEx = get_GetFileInformationByHandleEx();
-        if (pGetFileInformationByHandleEx != NULL)
-        {
-            return pGetFileInformationByHandleEx(hFile, FileInformationClass, out_lpFileInformation, dwBufferSize);
-        }
-        return 0;
-    }
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetFileInformationByHandleEx, hFile, FileInformationClass, out_lpFileInformation, dwBufferSize)
 
     uint32_t NtFileInformationClass;
-    DWORD cbMinBufferSize;
+    uint32_t cbMinBufferSize;
     bool bNtQueryDirectoryFile = false;
-    BOOLEAN RestartScan = false;
+    bool32 RestartScan = false;
 
     switch (FileInformationClass)
     {
-    case FileBasicInfo:
+    case kNtFileBasicInfo:
         NtFileInformationClass = kNtFileBasicInformation;
-        cbMinBufferSize = sizeof(FILE_BASIC_INFO);
+        cbMinBufferSize = sizeof(struct NtFileBasicInformation);
         break;
-    case FileStandardInfo:
+    case kNtFileStandardInfo:
         NtFileInformationClass = kNtFileStandardInformation;
-        cbMinBufferSize = sizeof(FILE_STANDARD_INFO);
+        cbMinBufferSize = sizeof(struct NtFileStandardInformation);
         break;
-    case FileNameInfo:
+    case kNtFileNameInfo:
         NtFileInformationClass = kNtFileNameInformation;
-        cbMinBufferSize = sizeof(FILE_NAME_INFORMATION);
+        cbMinBufferSize = sizeof(struct NtFileNameInformation);
         break;
-    case FileStreamInfo:
+    case kNtFileStreamInfo:
         NtFileInformationClass = kNtFileStreamInformation;
-        cbMinBufferSize = sizeof(FILE_STREAM_INFORMATION);
+        cbMinBufferSize = sizeof(struct NtFileStreamInformation);
         break;
-    case FileCompressionInfo:
+    case kNtFileCompressionInfo:
         NtFileInformationClass = kNtFileCompressionInformation;
         cbMinBufferSize = sizeof(struct NtFileCompressionInfo);
         break;
-    case FileAttributeTagInfo:
+    case kNtFileAttributeTagInfo:
         NtFileInformationClass = kNtFileAttributeTagInformation;
-        cbMinBufferSize = sizeof(FILE_ATTRIBUTE_TAG_INFORMATION);
+        cbMinBufferSize = sizeof(struct NtFileAttributeTagInformation);
         break;
-    case FileIdBothDirectoryRestartInfo:
+    case kNtFileIdBothDirectoryRestartInfo:
         RestartScan = true;
-    case FileIdBothDirectoryInfo:
+    case kNtFileIdBothDirectoryInfo:
         NtFileInformationClass = kNtFileIdBothDirectoryInformation;
         cbMinBufferSize = sizeof(struct NtFileIoBothDirectoryInformation);
         bNtQueryDirectoryFile = true;
         break;
-    case FileRemoteProtocolInfo:
+    case kNtFileRemoteProtocolInfo:
         NtFileInformationClass = kNtFileRemoteProtocolInformation;
         cbMinBufferSize = sizeof(struct NtFileRemoteProtocolInformation);
         break;
@@ -323,7 +311,7 @@ bool32 GetFileInformationByHandleEx(int64_t hFile,
     }
 
     struct NtIoStatusBlock IoStatusBlock;
-    NTSTATUS Status;
+    int32_t Status;
 
     if (bNtQueryDirectoryFile)
     {
@@ -359,7 +347,7 @@ bool32 GetFileInformationByHandleEx(int64_t hFile,
 
     if (Status >= kNtStatusSuccess)
     {
-        if (FileStreamInfo == FileInformationClass && IoStatusBlock.Information == 0)
+        if (kNtFileStreamInfo == FileInformationClass && IoStatusBlock.Information == 0)
         {
             SetLastError(kNtErrorHandleEof);
             return FALSE;
@@ -379,18 +367,10 @@ bool32 GetFileInformationByHandleEx(int64_t hFile,
 
 uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
                                   uint32_t arraylen, uint32_t flags) {
-    if (IsAtLeastWindowsVista()) 
-    {
-        GetFinalPathNameByHandleWFunc pGetFinalPathNameByHandleW = get_GetFinalPathNameByHandleW();
-        if (pGetFinalPathNameByHandleW != NULL)
-        {
-            return pGetFinalPathNameByHandleW(hFile, out_path, arraylen, flags);
-        }
-        return 0;
-    }
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetFinalPathNameByHandleW, hFile, out_path, arraylen, flags)
 
     // 参数检查
-    if (INVALID_HANDLE_VALUE == hFile)
+    if (kNtInvalidHandleValue == hFile)
     {
         SetLastError(kNtErrorInvalidHandle);
         return 0;
@@ -412,33 +392,33 @@ uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
         break;
     }
 
-    UNICODE_STRING VolumeNtName = {0, 0, 0};
+    struct NtUnicodeString VolumeNtName = {0, 0, 0};
 
     char16_t szVolumeRoot[MAX_PATH] = {0};
 
     char16_t *szLongPathNameBuffer = NULL;
 
     // 目标所需的分区名称，不包含最后的 '\\'
-    UNICODE_STRING TargetVolumeName = {0, 0, 0};
+    struct NtUnicodeString TargetVolumeName = {0, 0, 0};
     // 目标所需的文件名，开始包含 '\\'
-    UNICODE_STRING TargetFileName = {0, 0, 0};
+    struct NtUnicodeString TargetFileName = {0, 0, 0};
 
     const uint64_t ProcessHeap = ((struct NtPeb *)NtGetPeb())->ProcessHeap;
-    uint32_t lStatus = ERROR_SUCCESS;
-    DWORD cchReturn = 0;
+    uint32_t lStatus = kNtErrorSuccess;
+    uint32_t cchReturn = 0;
 
-    OBJECT_NAME_INFORMATION *pObjectName = NULL;
-    ULONG cbObjectName = 528;
+    struct NtObjectNameInformation *pObjectName = NULL;
+    uint32_t cbObjectName = 528;
 
-    FILE_NAME_INFORMATION *pFileNameInfo = NULL;
-    ULONG cbFileNameInfo = 528;
+    struct NtFileNameInformation *pFileNameInfo = NULL;
+    uint32_t cbFileNameInfo = 528;
 
     for (;;)
     {
         if (pObjectName)
         {
-            OBJECT_NAME_INFORMATION* pNewBuffer =
-                (OBJECT_NAME_INFORMATION *)HeapReAlloc(ProcessHeap, 0, pObjectName, cbObjectName);
+            struct NtObjectNameInformation* pNewBuffer =
+                (struct NtObjectNameInformation *)HeapReAlloc(ProcessHeap, 0, pObjectName, cbObjectName);
 
             if (!pNewBuffer)
             {
@@ -450,7 +430,7 @@ uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
         }
         else
         {
-            pObjectName = (OBJECT_NAME_INFORMATION *)HeapAlloc(ProcessHeap, 0, cbObjectName);
+            pObjectName = (struct NtObjectNameInformation *)HeapAlloc(ProcessHeap, 0, cbObjectName);
 
             if (!pObjectName)
             {
@@ -483,8 +463,8 @@ uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
     {
         if (pFileNameInfo)
         {
-            FILE_NAME_INFORMATION* pNewBuffer =
-                (FILE_NAME_INFORMATION *)HeapReAlloc(ProcessHeap, 0, pFileNameInfo, cbFileNameInfo);
+            struct NtFileNameInformation* pNewBuffer =
+                (struct NtFileNameInformation *)HeapReAlloc(ProcessHeap, 0, pFileNameInfo, cbFileNameInfo);
             if (!pNewBuffer)
             {
                 lStatus = kNtErrorNotEnoughMemory;
@@ -495,7 +475,7 @@ uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
         }
         else
         {
-            pFileNameInfo = (FILE_NAME_INFORMATION *)HeapAlloc(ProcessHeap, 0, cbFileNameInfo);
+            pFileNameInfo = (struct NtFileNameInformation *)HeapAlloc(ProcessHeap, 0, cbFileNameInfo);
 
             if (!pFileNameInfo)
             {
@@ -512,7 +492,7 @@ uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
 
         if (kNtStatusBufferOverflow == Status)
         {
-            cbFileNameInfo = pFileNameInfo->FileNameLength + sizeof(FILE_NAME_INFORMATION);
+            cbFileNameInfo = pFileNameInfo->FileNameLength + sizeof(struct NtFileNameInformation);
             continue;
         }
         else if (Status < 0)
@@ -586,7 +566,7 @@ uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
         // 由于 Windows XP不支持 FileNormalizedNameInformation，所以我们直接调用 GetLongPathNameW
         // 获取完整路径。
 
-        DWORD cbszVolumeRoot = TargetVolumeName.Length;
+        uint32_t cbszVolumeRoot = TargetVolumeName.Length;
 
         if (szVolumeRoot[0] == u'\0')
         {
@@ -630,7 +610,7 @@ uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
 
         for (;;)
         {
-            DWORD result = GetLongPathName(
+            uint32_t result = GetLongPathName(
                 szLongPathNameBuffer, szLongPathNameBuffer, cchLongPathNameBufferSize);
 
             if (result == 0)
@@ -703,7 +683,7 @@ __Exit:
     if (szLongPathNameBuffer)
         HeapFree(ProcessHeap, 0, szLongPathNameBuffer);
 
-    if (lStatus != ERROR_SUCCESS)
+    if (lStatus != kNtErrorSuccess)
     {
         SetLastError(lStatus);
         return 0;
@@ -716,17 +696,253 @@ __Exit:
 
 bool32 CreateSymbolicLink(const char16_t *lpSymlinkFileName,
                           const char16_t *lpTargetPathName, uint32_t dwFlags) {
-    if (IsAtLeastWindowsVista()) 
-    {
-        CreateSymbolicLinkWFunc pCreateSymbolicLinkW = get_CreateSymbolicLinkW();
-        if (pCreateSymbolicLinkW != NULL)
-        {
-            return pCreateSymbolicLinkW(lpSymlinkFileName, lpTargetPathName, dwFlags);
-        }
-        return 0;
-    }
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), CreateSymbolicLinkW, lpSymlinkFileName, lpTargetPathName, dwFlags)
 
     SetLastError(kNtErrorInvalidFunction);
 
     return FALSE;
+}
+
+// This is not actually from win-polyfill, I just needed somewhere to put this.
+// It is based on GetFinalPathNameByHandle anyway.
+bool32 GetVolumeInformationByHandle(int64_t hFile,
+                                    char16_t *opt_out_lpVolumeNameBuffer,
+                                    uint32_t nVolumeNameSize,
+                                    uint32_t *opt_out_lpVolumeSerialNumber,
+                                    uint32_t *opt_out_lpMaximumComponentLength,
+                                    uint32_t *opt_out_lpFileSystemFlags,
+                                    char16_t *opt_out_lpFileSystemNameBuffer,
+                                    uint32_t nFileSystemNameSize) {
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetVolumeInformationByHandleW, hFile,
+                                                                                      opt_out_lpVolumeNameBuffer,
+                                                                                      nVolumeNameSize,
+                                                                                      opt_out_lpVolumeSerialNumber,
+                                                                                      opt_out_lpMaximumComponentLength,
+                                                                                      opt_out_lpFileSystemFlags,
+                                                                                      opt_out_lpFileSystemNameBuffer,
+                                                                                      nFileSystemNameSize)
+
+    struct NtUnicodeString VolumeNtName = {0, 0, 0};
+
+    char16_t szVolumePathName[MAX_PATH] = {0};
+
+    const uint64_t ProcessHeap = ((struct NtPeb *)NtGetPeb())->ProcessHeap;
+    uint32_t lStatus = kNtErrorSuccess;
+    bool32 result = false;
+
+    struct NtObjectNameInformation *pObjectName = NULL;
+    uint32_t cbObjectName = 528;
+
+    for (;;)
+    {
+        if (pObjectName)
+        {
+            struct NtObjectNameInformation* pNewBuffer =
+                (struct NtObjectNameInformation *)HeapReAlloc(ProcessHeap, 0, pObjectName, cbObjectName);
+
+            if (!pNewBuffer)
+            {
+                lStatus = kNtErrorNotEnoughMemory;
+                goto __Exit;
+            }
+
+            pObjectName = pNewBuffer;
+        }
+        else
+        {
+            pObjectName = (struct NtObjectNameInformation *)HeapAlloc(ProcessHeap, 0, cbObjectName);
+
+            if (!pObjectName)
+            {
+                // 内存不足？
+                lStatus = kNtErrorNotEnoughMemory;
+                goto __Exit;
+            }
+        }
+
+        NtStatus Status =
+            NtQueryObject((void*)hFile, kNtObjectNameInformation, pObjectName, cbObjectName, &cbObjectName);
+
+        if (kNtStatusBufferOverflow == Status)
+        {
+            continue;
+        }
+        else if (Status < 0)
+        {
+            lStatus = NtStatusToDosError(Status);
+
+            goto __Exit;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    GetVolumePathName(pObjectName->Name.Data, szVolumePathName, MAX_PATH);
+
+    result = GetVolumeInformation(szVolumePathName,
+	                              opt_out_lpVolumeNameBuffer,
+	                              nVolumeNameSize,
+	                              opt_out_lpVolumeSerialNumber,
+	                              opt_out_lpMaximumComponentLength,
+	                              opt_out_lpFileSystemFlags,
+	                              opt_out_lpFileSystemNameBuffer,
+	                              nFileSystemNameSize);
+
+	if (!result)
+	{
+		lStatus = GetLastError();
+	}
+
+__Exit:
+    if (pObjectName)
+        HeapFree(ProcessHeap, 0, pObjectName);
+
+    if (lStatus != kNtErrorSuccess)
+    {
+        SetLastError(lStatus);
+        return false;
+    }
+    else
+    {
+        return result;
+    }
+}
+
+static int poll_win32_select(struct sys_pollfd_nt* fdArray, uint32_t fds, int timeout)
+{
+    uintptr_t *fd_set_memory = NULL;
+    uint32_t i = 0;
+    int count = 0;
+    struct NtFdSet *readfds = NULL;
+    struct NtFdSet *writefds = NULL;
+    struct NtFdSet *exceptfds = NULL;
+    struct NtTimeval *__ptimeout = NULL;
+    struct NtTimeval time_out;
+    int result = -1;
+
+    for (count = 0; count < 2; ++count)
+    {
+        int read_count = 0;
+        int write_count = 0;
+        int except_count = 0;
+        for (i = 0; i < fds; i++)
+        {
+            struct sys_pollfd_nt *fd = fdArray + i;
+            if (fd->handle == -1ULL)
+            {
+                continue;
+            }
+
+            // Read (in) socket
+            if (fd->events & (POLLRDNORM | POLLRDBAND | POLLPRI))
+            {
+                if (readfds != NULL)
+                {
+                    readfds->fd_array[read_count] = fd->handle;
+                }
+                ++read_count;
+            }
+
+            // Write (out) socket
+            if (fd->events & (POLLWRNORM | POLLWRBAND))
+            {
+                if (writefds != NULL)
+                {
+                    writefds->fd_array[write_count] = fd->handle;
+                }
+                ++write_count;
+            }
+
+            // Exception
+            if (fd->events & (POLLERR | POLLHUP | POLLNVAL))
+            {
+                if (exceptfds != NULL)
+                {
+                    exceptfds->fd_array[except_count] = fd->handle;
+                }
+                ++except_count;
+            }
+        }
+
+        if (fd_set_memory == NULL)
+        {
+            size_t mem_size = 0;
+            read_count = max(64, read_count);
+            write_count = max(64, write_count);
+            except_count = max(64, except_count);
+            mem_size = ((read_count + write_count + except_count) + 3) * sizeof(uintptr_t);
+            fd_set_memory = (uintptr_t *)HeapAlloc(GetProcessHeap(), 0, mem_size);
+        }
+        else
+        {
+            readfds->fd_count = read_count;
+            writefds->fd_count = write_count;
+            exceptfds->fd_count = except_count;
+            break;
+        }
+        if (fd_set_memory == NULL)
+        {
+            return -1;
+        }
+        readfds = (struct NtFdSet *)fd_set_memory;
+        writefds = (struct NtFdSet *)(fd_set_memory + (read_count + 1));
+        exceptfds = (struct NtFdSet *)(fd_set_memory + (read_count + 1) + (write_count + 1));
+    }
+
+    /*
+    timeout  < 0 , infinite
+    timeout == 0 , nonblock
+    timeout  > 0 , the time to wait
+    */
+    if (timeout >= 0)
+    {
+        time_out.tv_sec = timeout / 1000;
+        time_out.tv_usec = (timeout % 1000) * 1000;
+        __ptimeout = &time_out;
+    }
+
+    result = __sys_select_nt(1, readfds, writefds, exceptfds, __ptimeout);
+
+    if (result > 0)
+    {
+        for (i = 0; i < fds; i++)
+        {
+            struct sys_pollfd_nt *fd = fdArray + i;
+            fd->revents = 0;
+            if (fd->handle == INVALID_SOCKET)
+            {
+                continue;
+            }
+            if (FD_ISSET(fd->handle, readfds))
+            {
+                fd->revents |= fd->events & // NOLINT
+                               (POLLRDNORM | POLLRDBAND | POLLPRI);
+            }
+
+            if (FD_ISSET(fd->handle, writefds))
+            {
+                fd->revents |= fd->events & // NOLINT
+                               (POLLWRNORM | POLLWRBAND);
+            }
+
+            if (FD_ISSET(fd->handle, exceptfds))
+            {
+                fd->revents |= fd->events & // NOLINT
+                               (POLLERR | POLLHUP | POLLNVAL);
+            }
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, fd_set_memory);
+    return result;
+}
+
+int32_t WSAPoll(struct sys_pollfd_nt *inout_fdArray, uint32_t nfds,
+                signed timeout_ms)
+{
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), WSAPoll, inout_fdArray, nfds, timeout_ms)
+
+    return poll_win32_select(inout_fdArray, nfds, timeout_ms);
 }
