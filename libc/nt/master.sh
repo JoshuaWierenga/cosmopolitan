@@ -429,7 +429,7 @@ imp	'GetLogicalDriveStrings'				GetLogicalDriveStringsW					kernel32	0
 imp	'GetLogicalDrives'					GetLogicalDrives					kernel32	0	0
 imp	'GetLogicalProcessorInformation'			GetLogicalProcessorInformation				kernel32	0
 imp	'GetLogicalProcessorInformationEx'			GetLogicalProcessorInformationEx			kernel32	0
-imp	'GetLongPathName'					GetLongPathNameW					kernel32	0   3
+imp	'GetLongPathName'					GetLongPathNameW					kernel32	0	3
 imp	'GetLongPathNameTransacted'				GetLongPathNameTransactedW				kernel32	624
 imp	'GetMailslotInfo'					GetMailslotInfo						kernel32	626
 imp	'GetMaximumProcessorCount'				GetMaximumProcessorCount				kernel32	627	1	# Windows 7+
@@ -579,11 +579,11 @@ imp	'GetUserPreferredUILanguages'				GetUserPreferredUILanguages				kernel32	0
 imp	'GetVDMCurrentDirectories'				GetVDMCurrentDirectories				kernel32	798
 imp	'GetVersion'						GetVersion						kernel32	0
 imp	'GetVersionEx'						GetVersionExW						kernel32	0	1
-imp	'GetVolumeInformation'					GetVolumeInformationW					kernel32	0   8
+imp	'GetVolumeInformation'					GetVolumeInformationW					kernel32	0	8
 #imp'GetVolumeInformationByHandle'				GetVolumeInformationByHandleW				kernel32	0	8
-imp	'GetVolumeNameForVolumeMountPoint'			GetVolumeNameForVolumeMountPointW			kernel32	0   3
+imp	'GetVolumeNameForVolumeMountPoint'			GetVolumeNameForVolumeMountPointW			kernel32	0	3
 imp	'GetVolumePathName'					GetVolumePathNameW					kernel32	0	3
-imp	'GetVolumePathNamesForVolumeName'			GetVolumePathNamesForVolumeNameW			kernel32	0   4
+imp	'GetVolumePathNamesForVolumeName'			GetVolumePathNamesForVolumeNameW			kernel32	0	4
 imp	'GetWindowsDirectory'					GetWindowsDirectoryW					kernel32	0	2
 imp	'GetWindowsDirectoryA'					GetWindowsDirectoryA					kernel32	0	2
 imp	'GetWriteWatch'						GetWriteWatch						kernel32	0
