@@ -61,8 +61,12 @@ textwindows struct DirectMap sys_mmap_nt(void *addr, size_t size, int prot,
     if ((flags & MAP_TYPE) != MAP_SHARED) {
       // windows has cow pages but they can't propagate across fork()
       // that means we only get copy-on-write for the root process :(
-      fl = (struct ProtectNt){kNtPageExecuteWritecopy,
-                              kNtFileMapCopy | kNtFileMapExecute};
+      // CreateFileMapping only started supporting kNtPageExecuteWritecopy
+      // on vista sp1 but for it kNtPageExecuteRead is equivalent
+      // I kept kNtFileMapCopy so that MapViewOfFileEx still uses it as
+      // it still works under kNtPageExecuteRead
+      fl = (struct ProtectNt){kNtPageExecuteRead,
+                              kNtFileMapRead | kNtFileMapCopy | kNtFileMapExecute};
       iscow = true;
     } else {
       if ((g_fds.p[fd].flags & O_ACCMODE) == O_RDONLY) {

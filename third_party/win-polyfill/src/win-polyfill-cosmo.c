@@ -33,13 +33,11 @@
 #define MAX_PATH 260
 
 #define INVALID_SOCKET -1ULL
+#define SOCKET_ERROR -1
 #define WAIT_FAILED -1U
 
 // TODO Add to libc/nt/version.h
 #define IsAtLeastWindowsVista() (GetNtMajorVersion() >= 6)
-
-// I have no clue if this is correct, windows currently has a function instead of a macro which was added in vista
-#define FD_ISSET(FD, SET) (((SET)->fd_array[(FD) >> 6] >> ((FD)&63)) & 1)
 
 // TODO Add to libc/nt/enum/status.h
 #define kNtStatusBufferOverflow           0x80000005
@@ -217,14 +215,18 @@ funcName##Func get_##funcName() {\
 }
 
 
-#define CallNativeWindowsFunction(check, funcName, ...) \
-    if (check) {\
-        funcName##Func p##funcName = get_##funcName();\
-        if (p##funcName != NULL) {\
-		    return p##funcName(__VA_ARGS__);\
-        }\
-        return 0;\
-    }
+#define CallNativeWindowsFunction(check, funcName, setLastErrorAndReturn, returnValue, ...) \
+if (check) {\
+    funcName##Func p##funcName = get_##funcName();\
+    if (p##funcName != NULL) {\
+        return p##funcName(__VA_ARGS__);\
+    }\
+\
+    if (setLastErrorAndReturn) {\
+        SetLastError(kNtErrorProcNotFound);\
+        return returnValue;\
+    }\
+}
 
 
 SetupNativeWindowsFunction(Kernel32.dll, bool32, GetFileInformationByHandleEx, int64_t hFile,
@@ -250,11 +252,17 @@ SetupNativeWindowsFunction(Kernel32.dll, bool32, GetVolumeInformationByHandleW, 
 SetupNativeWindowsFunction(Ws2_32.dll, int, WSAPoll, struct sys_pollfd_nt *inout_fdArray, uint32_t nfds,
                                                      signed timeout_ms)
 
+SetupNativeWindowsFunction(Ws2_32.dll, int, __WSAFDIsSet, uint64_t unnamedParam1,
+                                                          struct NtFdSet *unnamedParam2)
+// Kernel32.dll polyfills
+
 bool32 GetFileInformationByHandleEx(int64_t hFile,
                                     uint32_t FileInformationClass,
                                     void *out_lpFileInformation,
                                     uint32_t dwBufferSize) {
-    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetFileInformationByHandleEx, hFile, FileInformationClass, out_lpFileInformation, dwBufferSize)
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetFileInformationByHandleEx,
+                              true, false,
+                              hFile, FileInformationClass, out_lpFileInformation, dwBufferSize)
 
     uint32_t NtFileInformationClass;
     uint32_t cbMinBufferSize;
@@ -367,7 +375,9 @@ bool32 GetFileInformationByHandleEx(int64_t hFile,
 
 uint32_t GetFinalPathNameByHandle(int64_t hFile, char16_t *out_path,
                                   uint32_t arraylen, uint32_t flags) {
-    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetFinalPathNameByHandleW, hFile, out_path, arraylen, flags)
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetFinalPathNameByHandleW,
+                              true, 0,
+                              hFile, out_path, arraylen, flags)
 
     // 参数检查
     if (kNtInvalidHandleValue == hFile)
@@ -696,7 +706,9 @@ __Exit:
 
 bool32 CreateSymbolicLink(const char16_t *lpSymlinkFileName,
                           const char16_t *lpTargetPathName, uint32_t dwFlags) {
-    CallNativeWindowsFunction(IsAtLeastWindowsVista(), CreateSymbolicLinkW, lpSymlinkFileName, lpTargetPathName, dwFlags)
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), CreateSymbolicLinkW,
+                              true, false,
+                              lpSymlinkFileName, lpTargetPathName, dwFlags)
 
     SetLastError(kNtErrorInvalidFunction);
 
@@ -713,14 +725,16 @@ bool32 GetVolumeInformationByHandle(int64_t hFile,
                                     uint32_t *opt_out_lpFileSystemFlags,
                                     char16_t *opt_out_lpFileSystemNameBuffer,
                                     uint32_t nFileSystemNameSize) {
-    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetVolumeInformationByHandleW, hFile,
-                                                                                      opt_out_lpVolumeNameBuffer,
-                                                                                      nVolumeNameSize,
-                                                                                      opt_out_lpVolumeSerialNumber,
-                                                                                      opt_out_lpMaximumComponentLength,
-                                                                                      opt_out_lpFileSystemFlags,
-                                                                                      opt_out_lpFileSystemNameBuffer,
-                                                                                      nFileSystemNameSize)
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), GetVolumeInformationByHandleW,
+                              true, false,
+                              hFile,
+                              opt_out_lpVolumeNameBuffer,
+                              nVolumeNameSize,
+                              opt_out_lpVolumeSerialNumber,
+                              opt_out_lpMaximumComponentLength,
+                              opt_out_lpFileSystemFlags,
+                              opt_out_lpFileSystemNameBuffer,
+                              nFileSystemNameSize)
 
     struct NtUnicodeString VolumeNtName = {0, 0, 0};
 
@@ -810,6 +824,9 @@ __Exit:
     }
 }
 
+
+// Ws2_32.dll polyfills
+
 static int poll_win32_select(struct sys_pollfd_nt* fdArray, uint32_t fds, int timeout)
 {
     uintptr_t *fd_set_memory = NULL;
@@ -830,7 +847,7 @@ static int poll_win32_select(struct sys_pollfd_nt* fdArray, uint32_t fds, int ti
         for (i = 0; i < fds; i++)
         {
             struct sys_pollfd_nt *fd = fdArray + i;
-            if (fd->handle == -1ULL)
+            if (fd->handle == INVALID_SOCKET)
             {
                 continue;
             }
@@ -915,19 +932,19 @@ static int poll_win32_select(struct sys_pollfd_nt* fdArray, uint32_t fds, int ti
             {
                 continue;
             }
-            if (FD_ISSET(fd->handle, readfds))
+            if (p__WSAFDIsSet(fd->handle, readfds))
             {
                 fd->revents |= fd->events & // NOLINT
                                (POLLRDNORM | POLLRDBAND | POLLPRI);
             }
 
-            if (FD_ISSET(fd->handle, writefds))
+            if (p__WSAFDIsSet(fd->handle, writefds))
             {
                 fd->revents |= fd->events & // NOLINT
                                (POLLWRNORM | POLLWRBAND);
             }
 
-            if (FD_ISSET(fd->handle, exceptfds))
+            if (p__WSAFDIsSet(fd->handle, exceptfds))
             {
                 fd->revents |= fd->events & // NOLINT
                                (POLLERR | POLLHUP | POLLNVAL);
@@ -942,7 +959,15 @@ static int poll_win32_select(struct sys_pollfd_nt* fdArray, uint32_t fds, int ti
 int32_t WSAPoll(struct sys_pollfd_nt *inout_fdArray, uint32_t nfds,
                 signed timeout_ms)
 {
-    CallNativeWindowsFunction(IsAtLeastWindowsVista(), WSAPoll, inout_fdArray, nfds, timeout_ms)
+    CallNativeWindowsFunction(IsAtLeastWindowsVista(), WSAPoll,
+                              false, 0,
+                              inout_fdArray, nfds, timeout_ms)
+    if (IsAtLeastWindowsVista() || !get___WSAFDIsSet()) {
+        // If we get here then the above call failed or are on xp and
+        // are unable to find __WSAFDIsSet()
+        WSASetLastError(WSASYSNOTREADY);
+        return SOCKET_ERROR;
+    }
 
     return poll_win32_select(inout_fdArray, nfds, timeout_ms);
 }

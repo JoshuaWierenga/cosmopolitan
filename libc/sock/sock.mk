@@ -44,7 +44,8 @@ LIBC_SOCK_A_DIRECTDEPS =			\
 	LIBC_STUBS				\
 	LIBC_SYSV_CALLS				\
 	LIBC_TIME				\
-	LIBC_SYSV
+	LIBC_SYSV				\
+	THIRD_PARTY_WIN_POLYFILL
 
 LIBC_SOCK_A_DEPS :=				\
 	$(call uniq,$(foreach x,$(LIBC_SOCK_A_DIRECTDEPS),$($(x))))
