@@ -16,11 +16,6 @@ TOOL_NET_BINS =									\
 
 TOOL_NET_COMS =									\
 	o/$(MODE)/tool/net/dig.com						\
-	o/$(MODE)/tool/net/redbean.com						\
-	o/$(MODE)/tool/net/redbean-demo.com					\
-	o/$(MODE)/tool/net/redbean-static.com					\
-	o/$(MODE)/tool/net/redbean-unsecure.com					\
-	o/$(MODE)/tool/net/redbean-original.com					\
 	o/$(MODE)/tool/net/wb.com
 
 TOOL_NET_CHECKS =								\
@@ -109,26 +104,6 @@ TOOL_NET_REDBEAN_STANDARD_ASSETS_ZIP =						\
 	$(COMPILE) -AZIP -T$@							\
 	$(VM) o/$(MODE)/third_party/zip/zip.com -b$(TMPDIR) -9qj $@		\
 	$(TOOL_NET_REDBEAN_STANDARD_ASSETS)
-
-o/$(MODE)/tool/net/redbean.com.dbg:						\
-		$(TOOL_NET_DEPS)						\
-		o/$(MODE)/tool/net/redbean.o					\
-		$(TOOL_NET_REDBEAN_LUA_MODULES)					\
-		o/$(MODE)/tool/net/net.pkg					\
-		$(CRT)								\
-		$(APE_NO_MODIFY_SELF)
-	@$(APELINK)
-
-o/$(MODE)/tool/net/redbean.com:							\
-		o/$(MODE)/tool/net/redbean.com.dbg				\
-		o/$(MODE)/third_party/zip/zip.com				\
-		o/$(MODE)/tool/build/symtab.com					\
-		$(TOOL_NET_REDBEAN_STANDARD_ASSETS)				\
-		$(VM)
-	@$(MAKE_OBJCOPY)
-	@$(MAKE_SYMTAB_CREATE)
-	@$(MAKE_SYMTAB_ZIP)
-	@$(TOOL_NET_REDBEAN_STANDARD_ASSETS_ZIP)
 
 o/$(MODE)/tool/net/lsqlite3.o: private						\
 		OVERRIDE_CFLAGS +=						\

@@ -62,21 +62,6 @@ o/$(MODE)/test/libc/calls/calls.pkg:					\
 		$(TEST_LIBC_CALLS_OBJS)					\
 		$(foreach x,$(TEST_LIBC_CALLS_DIRECTDEPS),$($(x)_A).pkg)
 
-o/$(MODE)/test/libc/calls/%.com.dbg:					\
-		$(TEST_LIBC_CALLS_DEPS)					\
-		o/$(MODE)/test/libc/calls/%.o				\
-		o/$(MODE)/test/libc/calls/life-nomod.com.zip.o		\
-		o/$(MODE)/test/libc/calls/life-classic.com.zip.o	\
-		o/$(MODE)/test/libc/calls/tiny64.elf.zip.o		\
-		o/$(MODE)/test/libc/mem/prog/life.elf.zip.o		\
-		o/$(MODE)/test/libc/mem/prog/sock.elf.zip.o		\
-		o/$(MODE)/third_party/python/Lib/test/tokenize_tests-latin1-coding-cookie-and-utf8-bom-sig.txt.zip.o	\
-		o/$(MODE)/test/libc/calls/calls.pkg			\
-		$(LIBC_TESTMAIN)					\
-		$(CRT)							\
-		$(APE_NO_MODIFY_SELF)
-	@$(APELINK)
-
 o/$(MODE)/test/libc/calls/life-classic.com.dbg:				\
 		$(LIBC_RUNTIME)						\
 		o/$(MODE)/test/libc/calls/life.o			\
@@ -87,19 +72,6 @@ o/$(MODE)/test/libc/calls/life-classic.com.dbg:				\
 o/$(MODE)/test/libc/calls/life-nomod.com.dbg:				\
 		$(LIBC_RUNTIME)						\
 		o/$(MODE)/test/libc/calls/life.o			\
-		$(CRT)							\
-		$(APE_NO_MODIFY_SELF)
-	@$(APELINK)
-
-o/$(MODE)/test/libc/calls/fexecve_test.com.dbg:				\
-		$(TEST_LIBC_CALLS_DEPS)					\
-		o/$(MODE)/test/libc/calls/fexecve_test.o		\
-		o/$(MODE)/test/libc/calls/calls.pkg			\
-		o/$(MODE)/test/libc/mem/prog/life.elf.zip.o		\
-		o/$(MODE)/tool/build/echo.zip.o				\
-		o/$(MODE)/test/libc/calls/life-nomod.com.zip.o		\
-		o/$(MODE)/test/libc/calls/zipread.com.zip.o		\
-		$(LIBC_TESTMAIN)					\
 		$(CRT)							\
 		$(APE_NO_MODIFY_SELF)
 	@$(APELINK)

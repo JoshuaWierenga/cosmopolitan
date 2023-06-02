@@ -49,16 +49,6 @@ o/$(MODE)/test/libc/runtime/runtime.pkg:			\
 		$(TEST_LIBC_RUNTIME_OBJS)			\
 		$(foreach x,$(TEST_LIBC_RUNTIME_DIRECTDEPS),$($(x)_A).pkg)
 
-o/$(MODE)/test/libc/runtime/%.com.dbg:				\
-		$(TEST_LIBC_RUNTIME_DEPS)			\
-		o/$(MODE)/test/libc/mem/prog/life.elf.zip.o			\
-		o/$(MODE)/test/libc/runtime/%.o			\
-		o/$(MODE)/test/libc/runtime/runtime.pkg		\
-		$(LIBC_TESTMAIN)				\
-		$(CRT)						\
-		$(APE_NO_MODIFY_SELF)
-	@$(APELINK)
-
 o/$(MODE)/test/libc/runtime/ape_test.com.dbg:			\
 		$(TEST_LIBC_RUNTIME_DEPS)			\
 		o/$(MODE)/test/libc/runtime/ape_test.o		\

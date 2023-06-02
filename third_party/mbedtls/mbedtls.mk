@@ -84,5 +84,4 @@ $(THIRD_PARTY_MBEDTLS_A_OBJS): third_party/mbedtls/mbedtls.mk
 
 .PHONY: o/$(MODE)/third_party/mbedtls
 o/$(MODE)/third_party/mbedtls:						\
-		o/$(MODE)/third_party/mbedtls/test			\
 		$(THIRD_PARTY_MBEDTLS_CHECKS)

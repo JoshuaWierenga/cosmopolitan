@@ -11,5 +11,4 @@ o/$(MODE)/tool:			\
 	o/$(MODE)/tool/hello	\
 	o/$(MODE)/tool/lambda	\
 	o/$(MODE)/tool/net	\
-	o/$(MODE)/tool/plinko	\
-	o/$(MODE)/tool/viz
+	o/$(MODE)/tool/plinko

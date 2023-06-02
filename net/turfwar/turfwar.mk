@@ -9,8 +9,7 @@ NET_TURFWAR_OBJS =					\
 	$(NET_TURFWAR_SRCS:%.c=o/$(MODE)/%.o)
 
 NET_TURFWAR_COMS =					\
-	$(NET_TURFWAR_SRCS:%.c=o/$(MODE)/%.com)		\
-	o/$(MODE)/net/turfwar/turfbean.com
+	$(NET_TURFWAR_SRCS:%.c=o/$(MODE)/%.com)
 
 NET_TURFWAR_BINS =					\
 	$(NET_TURFWAR_COMS)				\

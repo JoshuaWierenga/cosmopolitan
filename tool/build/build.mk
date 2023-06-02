@@ -12,13 +12,11 @@ TOOL_BUILD_BINS =					\
 	$(TOOL_BUILD_COMS)				\
 	$(TOOL_BUILD_COMS:%=%.dbg)			\
 	o/$(MODE)/tool/build/mkdir			\
-	o/$(MODE)/tool/build/chmod			\
 	o/$(MODE)/tool/build/cp				\
 	o/$(MODE)/tool/build/mv				\
 	o/$(MODE)/tool/build/echo			\
 	o/$(MODE)/tool/build/false			\
 	o/$(MODE)/tool/build/gzip			\
-	o/$(MODE)/tool/build/printf			\
 	o/$(MODE)/tool/build/dd
 
 TOOL_BUILD_CALCULATOR = o/$(MODE)/tool/build/calculator.com
@@ -95,20 +93,10 @@ o/$(MODE)/tool/build/%.com.dbg:				\
 		$(APE_NO_MODIFY_SELF)
 	@$(APELINK)
 
-o/$(MODE)/tool/build/blinkenlights.com:				\
-		o/$(MODE)/tool/build/blinkenlights.com.dbg	\
-		o/$(MODE)/third_party/zip/zip.com		\
-		o/$(MODE)/tool/build/symtab.com			\
-		$(VM)
-	@$(MAKE_OBJCOPY)
-	@$(MAKE_SYMTAB_CREATE)
-	@$(MAKE_SYMTAB_ZIP)
-
 o/$(MODE)/tool/build/emulator.o: private		\
 		OVERRIDE_COPTS +=			\
 			-fno-sanitize=pointer-overflow
 
-o/$(MODE)/tool/build/dso/sandbox.so.zip.o		\
 o/$(MODE)/tool/build/mkdir.zip.o			\
 o/$(MODE)/tool/build/chmod.zip.o			\
 o/$(MODE)/tool/build/cp.zip.o				\
@@ -138,30 +126,6 @@ o/$(MODE)/tool/build/dso/sandbox.o:			\
 		libc/calls/pledge.internal.h		\
 		libc/intrin/promises.internal.h		\
 		tool/build/build.mk
-
-o/$(MODE)/tool/build/dso/sandbox.so:			\
-		o/$(MODE)/tool/build/dso/sandbox.o	\
-		o/$(MODE)/libc/calls/pledge-linux.o	\
-		o/$(MODE)/libc/sysv/restorert.o
-	@$(COMPILE) -ALINK.so				\
-		$(CC)					\
-		-s					\
-		-shared					\
-		-nostdlib				\
-		-Wl,--gc-sections			\
-		o/$(MODE)/tool/build/dso/sandbox.o	\
-		o/$(MODE)/libc/calls/pledge-linux.o	\
-		o/$(MODE)/libc/sysv/restorert.o		\
-		$(OUTPUT_OPTION)
-
-o/$(MODE)/tool/build/pledge.com.dbg:			\
-		$(TOOL_BUILD_DEPS)			\
-		o/$(MODE)/tool/build/build.pkg		\
-		o/$(MODE)/tool/build/dso/sandbox.so.zip.o \
-		o/$(MODE)/tool/build/pledge.o		\
-		$(CRT)					\
-		$(APE_NO_MODIFY_SELF)
-	@$(APELINK)
 
 .PHONY: o/$(MODE)/tool/build
 o/$(MODE)/tool/build:					\

@@ -158,15 +158,6 @@ o/$(MODE)/examples/nesemu1.com.dbg:						\
 # 		$(EXAMPLES_BOOTLOADER)
 # 	@$(APELINK)
 
-# modify .com so it can read the symbol table without needing the .com.dbg file
-o/$(MODE)/examples/symtab.com:							\
-		o/$(MODE)/examples/symtab.com.dbg				\
-		o/$(MODE)/third_party/zip/zip.com				\
-		o/$(MODE)/tool/build/symtab.com
-	@$(MAKE_OBJCOPY)
-	@$(MAKE_SYMTAB_CREATE)
-	@$(MAKE_SYMTAB_ZIP)
-
 o/$(MODE)/examples/picol.o: private				\
 		OVERRIDE_CPPFLAGS +=				\
 			-DSTACK_FRAME_UNLIMITED
@@ -194,6 +185,4 @@ o/$(MODE)/usr/share/dict/words:					\
 .PHONY: o/$(MODE)/examples
 o/$(MODE)/examples:								\
 		o/$(MODE)/examples/package					\
-		o/$(MODE)/examples/pylife					\
-		o/$(MODE)/examples/pyapp					\
 		$(EXAMPLES_BINS)
