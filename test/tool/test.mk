@@ -4,4 +4,6 @@
 .PHONY:		o/$(MODE)/test/tool
 o/$(MODE)/test/tool:				\
 		o/$(MODE)/test/tool/args	\
+		o/$(MODE)/test/tool/build	\
+		o/$(MODE)/test/tool/net		\
 		o/$(MODE)/test/tool/viz

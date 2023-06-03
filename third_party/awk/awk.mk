@@ -46,7 +46,6 @@ $(THIRD_PARTY_AWK_A).pkg:				\
 o/$(MODE)/third_party/awk/awk.com.dbg:			\
 		$(THIRD_PARTY_AWK)			\
 		o/$(MODE)/third_party/awk/cmd.o		\
-		o/$(MODE)/third_party/awk/README.zip.o	\
 		$(CRT)					\
 		$(APE_NO_MODIFY_SELF)
 	@$(APELINK)

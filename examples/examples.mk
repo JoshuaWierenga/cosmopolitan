@@ -114,6 +114,15 @@ o/$(MODE)/examples/%.com.dbg:							\
 		$(EXAMPLES_BOOTLOADER)
 	@$(APELINK)
 
+# modify .com so it can read the symbol table without needing the .com.dbg file
+0/$(MODE)/examples/symtab.com:							\
+o/$(MODE)/examples/symtab.com.dbg				\
+		o/$(MODE)/third_party/zip/zip.com				\
+		o/$(MODE)/tool/build/symtab.com
+	@$(MAKE_OBJCOPY)
+	@$(MAKE_SYMTAB_CREATE)
+	@$(MAKE_SYMTAB_ZIP)
+
 o/$(MODE)/examples/nomodifyself.com.dbg:					\
 		$(EXAMPLES_DEPS)						\
 		o/$(MODE)/examples/nomodifyself.o				\

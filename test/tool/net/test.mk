@@ -5,7 +5,7 @@ PKGS += TEST_TOOL_NET
 
 TEST_TOOL_NET = $(TOOL_NET_A_DEPS) $(TOOL_NET_A)
 TEST_TOOL_NET_A = o/$(MODE)/test/tool/net/net.a
-TEST_TOOL_NET_FILES := $(wildcard test/tool/net/*)
+TEST_TOOL_NET_FILES = test/tool/net/sqlite_test.c
 TEST_TOOL_NET_SRCS = $(filter %.c,$(TEST_TOOL_NET_FILES))
 TEST_TOOL_NET_SRCS_TEST = $(filter %_test.c,$(TEST_TOOL_NET_SRCS))
 TEST_TOOL_NET_LUAS_TEST = $(filter %_test.lua,$(TEST_TOOL_NET_FILES))
