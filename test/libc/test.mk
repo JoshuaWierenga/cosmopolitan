@@ -3,12 +3,15 @@
 
 .PHONY:		o/$(MODE)/test/libc
 o/$(MODE)/test/libc:					\
+		o/$(MODE)/test/libc/calls		\
 		o/$(MODE)/test/libc/dns			\
 		o/$(MODE)/test/libc/fmt			\
 		o/$(MODE)/test/libc/intrin		\
 		o/$(MODE)/test/libc/log			\
+		o/$(MODE)/test/libc/mem			\
 		o/$(MODE)/test/libc/nexgen32e		\
 		o/$(MODE)/test/libc/release		\
+		o/$(MODE)/test/libc/runtime		\
 		o/$(MODE)/test/libc/sock		\
 		o/$(MODE)/test/libc/stdio		\
 		o/$(MODE)/test/libc/str			\
