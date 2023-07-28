@@ -1,6 +1,62 @@
 ![Cosmopolitan Honeybadger](usr/share/img/honeybadger.png)
 
 [![build](https://github.com/jart/cosmopolitan/actions/workflows/build.yml/badge.svg)](https://github.com/jart/cosmopolitan/actions/workflows/build.yml)
+# Cosmopolitan (Build on Windows)
+
+**This is an (unsupported) fork that makes it possible to build Cosmopolitan natively on a Windows system.**  
+Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/build-on-windows) with the goal of having less changes and having it be easier to apply to future builds of Cosmopolitan.
+
+## Build instructions
+Note that you should be using the Command Prompt (`cmd.exe`) and not Windows PowerShell.
+```
+curl -LO https://github.com/mattx433/cosmopolitan/archive/refs/heads/build-on-windows.zip
+tar -xvf build-on-windows.zip
+REM Alternatively, assuming you have Git for Windows installed:
+REM git clone https://github.com/mattx433/cosmopolitan cosmopolitan-build-on-windows -b build-on-windows
+cd cosmopolitan-build-on-windows
+mkdir o\third_party\gcc
+cd o\third_party\gcc
+curl -LO https://github.com/ahgamut/musl-cross-make/releases/download/z0.0.0/gcc11.zip
+tar -xvf gcc11.zip
+del gcc11.zip
+cd bin
+REM This needs to be set for gcc to work
+set PATH=%PATH%;%CD%
+cd ..\..\..\..\
+build\bootstrap\make.com V=0 -j8
+```
+
+## Build notes
+- Building will take a while, as process creation and file operations are expensive on Windows.
+  Expect to wait at least 30 minutes, even if you have a fast processor.
+- CTRL+C during the build process is unreliable, so it's best not to use it. Issues include:
+  - Incomplete files being left on disk. This can be spotted with `file not recognized`, `file is truncated`, `file is empty` errors,
+    in which case you can delete the bad file with `del` or in worse situations, delete its directory with `rd /s`.
+  - `make.com` might get stuck after all processes have finished. In this case, open Task Manager and kill the make process.
+- `failed to move output file` errors often happen when running make with a high job count. Either try again or restart with `-j1`.
+- These warnings are safe to ignore:
+  - `Makefile:91: please run ape/apeinstall.sh if you intend to use landlock make`
+  - `make.com: sleep: command not found on $PATH: ENOENT`
+## Other notes
+- Remember that you should use backslashes when typing the path to a binary, and regular slashes when typing paths in arguments.
+  For example: `build\bootstrap\make.com o//tool/net/dig.com`
+- After running make or any Cosmopolitan program, your console window will probably work oddly:
+  - Arrow keys will output the escape sequence into the console.
+  - Opening the command history window with F7 won't work.
+  - Backspace will delete entire words, you can work around this by holding Ctrl.
+- The following modifications have been done to make the build work on Windows:
+  - `build/bootstrap` - Binaries have been updated to the latest as of July 28, 2023.
+    They can be download independently [here](https://justine.lol/cosmo-bootstrap.zip).
+  - `build/definitions.mk` - Build tool names have been adjusted for Actually Portable GCC.
+  - `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` - Disabled on windows as creating symlinks as a regular user is unreliable.
+    - Optionally, `libc/calls/symlinkat-nt.c` can be replaced with [this copy](https://justine.lol/symlinkat-nt.c) for some debugging.
+  - `test/libc/intrin/kprintf_test.c` - Some tests have been disabled on windows, need to figure out why they fail.
+  - `test/libc/mem/test.mk` - `assimilate.com` arguments have been changed to force assimilating one binary to ELF.
+  - ~~`test/libc/stdio/posix_spawn_test.c` - Removed, as the `wait4` system call implementation is messy on Windows and does not pass the test.~~ Currently readded since it doesn't appear to be causing errors.
+  - `test/tool/net/lunix_test.lua` - Disabled on windows as an assertion fails due to `chmod` and `stat` not returning consistent outputs.
+  - ~~`third_party/python/Lib/test/signalinterproctester.py` - Removed, for similar reasons as `posix_spawn_test.c`~~ Still disabled but the file exists again now.
+  - `third_party/python/python.mk` - Removed the above test as well as quite a few others from the list of tests to run as they timeout or error on windows.
+
 # Cosmopolitan
 
 [Cosmopolitan Libc](https://justine.lol/cosmopolitan/index.html) makes C
