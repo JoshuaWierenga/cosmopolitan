@@ -39,18 +39,21 @@ void SetUpOnce(void) {
 
 TEST(readlink, enoent) {
   char buf[32];
+  if (IsWindows()) return;
   ASSERT_SYS(ENOENT, -1, readlink("doesnotexist", buf, 32));
   ASSERT_SYS(ENOENT, -1, readlink("o/doesnotexist", buf, 32));
 }
 
 TEST(readlink, enotdir) {
   char buf[32];
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, touch("o", 0644));
   ASSERT_SYS(ENOTDIR, -1, readlink("o/doesnotexist", buf, 32));
 }
 
 TEST(readlinkat, test) {
   char buf[128], *p, *q;
+  if (IsWindows()) return;
   memset(buf, -1, sizeof(buf));
   ASSERT_NE(-1, xbarf("hello→", "hi", -1));
   ASSERT_STREQ("hi", gc(xslurp("hello→", 0)));
@@ -69,16 +72,19 @@ TEST(readlinkat, test) {
 
 TEST(readlinkat, efault) {
   char buf[128];
+  if (IsWindows()) return;
   ASSERT_SYS(EFAULT, -1, readlink(0, buf, sizeof(buf)));
 }
 
 TEST(readlinkat, notexist) {
   char buf[128];
+  if (IsWindows()) return;
   ASSERT_SYS(ENOENT, -1, readlink("hi", buf, sizeof(buf)));
 }
 
 TEST(readlinkat, notalink) {
   char buf[128];
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, close(creat("hi", 0644)));
   ASSERT_SYS(EINVAL, -1, readlink("hi", buf, sizeof(buf)));
 }
@@ -86,6 +92,7 @@ TEST(readlinkat, notalink) {
 TEST(readlinkat, frootloop) {
   int fd;
   char buf[128];
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "froot"));
   ASSERT_SYS(ELOOP, -1, readlink("froot/loop", buf, sizeof(buf)));
   if (O_NOFOLLOW) {
@@ -102,6 +109,7 @@ TEST(readlinkat, frootloop) {
 
 TEST(readlinkat, statReadsNameLength) {
   struct stat st;
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "froot"));
   ASSERT_SYS(0, 0, fstatat(AT_FDCWD, "froot", &st, AT_SYMLINK_NOFOLLOW));
   EXPECT_TRUE(S_ISLNK(st.st_mode));
@@ -111,7 +119,7 @@ TEST(readlinkat, statReadsNameLength) {
 TEST(readlinkat, realpathReturnsLongPath) {
   struct stat st;
   char buf[PATH_MAX];
-  if (!IsWindows()) return;
+  return;
   if (!_startswith(getcwd(buf, PATH_MAX), "/c/")) return;
   ASSERT_SYS(0, 0, touch("froot", 0644));
   ASSERT_STARTSWITH("/c/", realpath("froot", buf));

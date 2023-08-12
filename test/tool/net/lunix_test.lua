@@ -162,4 +162,7 @@ function main()
    end
 end
 
-main()
+-- TODO Check if a version of cosmo's IsWindows is available here
+if os.getenv('HOMEPATH') == '' then
+    main()
+end

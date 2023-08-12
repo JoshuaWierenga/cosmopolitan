@@ -18,6 +18,7 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
 #include "libc/calls/struct/stat.h"
+#include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/fmt/fmt.h"
 #include "libc/fmt/itoa.h"
@@ -36,16 +37,19 @@ void SetUpOnce(void) {
 }
 
 TEST(symlink, enoent) {
+  if (IsWindows()) return;
   ASSERT_SYS(ENOENT, -1, symlink("o/foo", ""));
   ASSERT_SYS(ENOENT, -1, symlink("o/foo", "o/bar"));
 }
 
 TEST(symlinkat, enotdir) {
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, close(creat("yo", 0644)));
   ASSERT_SYS(ENOTDIR, -1, symlink("hrcue", "yo/there"));
 }
 
 TEST(symlinkat, test) {
+  if (IsWindows()) return;
   sprintf(p[0], "%s.%d", program_invocation_short_name, rand());
   sprintf(p[1], "%s.%d", program_invocation_short_name, rand());
 

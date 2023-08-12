@@ -91,7 +91,7 @@ o/$(MODE)/test/libc/mem/prog/life.elf:				\
 		o/$(MODE)/test/libc/mem/prog/life.elf
 	@$(COMPILE) -wAASSIMILATE -T$@				\
 		$(VM)						\
-		o/$(MODE)/tool/build/assimilate.com -f		\
+		o/$(MODE)/tool/build/assimilate.com -fe		\
 		o/$(MODE)/test/libc/mem/prog/life.elf
 
 o/$(MODE)/test/libc/mem/prog/life.elf.zip.o: private		\
