@@ -3,7 +3,8 @@
 [![build](https://github.com/jart/cosmopolitan/actions/workflows/build.yml/badge.svg)](https://github.com/jart/cosmopolitan/actions/workflows/build.yml)
 # Cosmopolitan (Build on Windows)
 
-**This is an (unsupported) fork that makes it possible to build Cosmopolitan natively on a Windows system.**
+**This is an (unsupported) fork that makes it possible to build Cosmopolitan natively on a Windows system.**  
+Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/build-on-windows) with the goal of having less changes and having it be easier to apply to future builds of Cosmopolitan.
 
 ## Build instructions
 Note that you should be using the Command Prompt (`cmd.exe`) and not Windows PowerShell.
@@ -47,13 +48,13 @@ build\bootstrap\make.com V=0 -j8
   - `build/bootstrap` - Binaries have been updated to the latest as of July 28, 2023.
     They can be download independently [here](https://justine.lol/cosmo-bootstrap.zip).
   - `build/definitions.mk` - Build tool names have been adjusted for Actually Portable GCC.
-  - `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` - Removed as creating symlinks as a regular user is unreliable.
+  - `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` - Disabled on windows as creating symlinks as a regular user is unreliable.
     - Optionally, `libc/calls/symlinkat-nt.c` can be replaced with [this copy](https://justine.lol/symlinkat-nt.c) for some debugging.
   - `test/libc/mem/test.mk` - `assimilate.com` arguments have been changed to force assimilating one binary to ELF.
-  - `test/libc/stdio/posix_spawn_test.c` - Removed, as the `wait4` system call implementation is messy on Windows and does not pass the test.
-  - `test/tool/net/lunix_test.lua` - Removed, as an asseration fails due to `chmod` and `stat` not returning consistent outputs.
-  - `third_party/python/Lib/test/signalinterproctester.py` - Removed, for similar reasons as `posix_spawn_test.c`
-  - `third_party/python/python.mk` - Removed the above test from the list of tests to run.
+  - ~~`test/libc/stdio/posix_spawn_test.c` - Removed, as the `wait4` system call implementation is messy on Windows and does not pass the test.~~ Currently readded since it doesn't appear to be causing errors.
+  - `test/tool/net/lunix_test.lua` - Disabled on windows as an assertion fails due to `chmod` and `stat` not returning consistent outputs.
+  - ~~`third_party/python/Lib/test/signalinterproctester.py` - Removed, for similar reasons as `posix_spawn_test.c`~~ Still disabled but the file exists again now.
+  - `third_party/python/python.mk` - Removed the above test as well as quite a few others from the list of tests to run as they timeout or error on windows.
 
 # Cosmopolitan
 [Cosmopolitan Libc](https://justine.lol/cosmopolitan/index.html) makes C
