@@ -1762,6 +1762,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/test_gc.py					\
 	third_party/python/Lib/test/test_gzip.py				\
 	third_party/python/Lib/test/test_hash.py				\
+	third_party/python/Lib/test/test_marshal.py				\
 	third_party/python/Lib/test/test_modulefinder.py			\
 	third_party/python/Lib/test/test_parser.py				\
 	third_party/python/Lib/test/test_pkgimport.py				\
@@ -1921,7 +1922,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_listcomps.py				\
 	third_party/python/Lib/test/test_long.py				\
 	third_party/python/Lib/test/test_longexp.py				\
-	third_party/python/Lib/test/test_marshal.py				\
 	third_party/python/Lib/test/test_memoryio.py				\
 	third_party/python/Lib/test/test_memoryview.py				\
 	third_party/python/Lib/test/test_metaclass.py				\

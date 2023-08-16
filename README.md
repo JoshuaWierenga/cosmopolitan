@@ -9,10 +9,10 @@ Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/buil
 ## Build instructions
 Note that you should be using the Command Prompt (`cmd.exe`) and not Windows PowerShell.
 ```
-curl -LO https://github.com/mattx433/cosmopolitan/archive/refs/heads/build-on-windows.zip
+curl -LO https://github.com/JoshuaWierenga/cosmopolitan/archive/refs/heads/build-on-windows-3.zip
 tar -xvf build-on-windows.zip
 REM Alternatively, assuming you have Git for Windows installed:
-REM git clone https://github.com/mattx433/cosmopolitan cosmopolitan-build-on-windows -b build-on-windows
+REM git clone https://github.com/JoshuaWierenga/cosmopolitan cosmopolitan-build-on-windows -b build-on-windows-3
 cd cosmopolitan-build-on-windows
 mkdir o\third_party\gcc
 cd o\third_party\gcc
