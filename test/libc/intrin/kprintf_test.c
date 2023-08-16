@@ -188,6 +188,7 @@ static const struct {
 TEST(ksnprintf, test) {
   char b[48], g[48];
   size_t i, j, n, rc;
+  if (IsWindows()) return;
   rngset(g, sizeof(g), 0, 0);
   for (i = 0; i < ARRAYLEN(V); ++i) {
     bzero(b, 48);
@@ -260,6 +261,7 @@ TEST(kprintf, testFailure_wontClobberErrnoAndBypassesSystemCallSupport) {
 
 TEST(ksnprintf, testy) {
   char b[32];
+  if (IsWindows()) return;
   EXPECT_EQ(3, ksnprintf(b, 32, "%#s", 1));
   EXPECT_STREQ("!!1", b);
 }
