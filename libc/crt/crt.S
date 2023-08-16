@@ -67,16 +67,11 @@ _start:
 	lea	16(%rsp,%rbx,8),%rdx		// envp
 	mov	%rsp,__oldstack(%rip)
 
-//	setup a stack frame
-//	align stack to GetStackSize() so GetStackAddr() is fast
-	.weak	ape_stack_memsz
-	mov	$ape_stack_memsz,%r9d
-	mov	$16,%r8d
-	test	%r9d,%r9d
-	cmovnz	%r9,%r8
-	neg	%r8
-	and	%r8,%rsp
+//	setup backtraces
 	xor	%ebp,%ebp
+
+//	make process stack (8mb) follow thread stack (256kb) alignment
+	and	$-(256*1024),%rsp
 //	bofram	9f
 
 #if SupportsWindows()
@@ -126,16 +121,9 @@ _start:
 //	this is the first argument to cosmo() below
 	mov	x0,sp
 
-//	align stack to GetStackSize() so GetStackAddr() is fast
+//	make process stack (8mb) conform to thread stack (256kb) alignment
 	mov	x1,sp
-	.weak	ape_stack_memsz
-	ldr	x2,=ape_stack_memsz
-	neg	x2,x2
-	and	x1,x2,x1
-	mov	sp,x1
-
-//	setup backtraces
-	mov	x29,#0
+	and	sp,x1,-(256*1024)
 
 //	second arg shall be struct Syslib passed by ape-m1.c
 //	used to talk to apple's authoritarian libraries

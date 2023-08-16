@@ -2833,8 +2833,9 @@ o/$(MODE)/third_party/python/Lib/test/test_codecencodings_kr.py.runs: $(PYTHONTE
 o/$(MODE)/third_party/python/Lib/test/test_codecencodings_tw.py.runs: $(PYTHONTESTER)
 	@$(COMPILE) -ACHECK -wtT$@ $(PYHARNESSARGS) $(PYTHONTESTER) -m test.test_codecencodings_tw $(PYTESTARGS)
 
-o/$(MODE)/third_party/python/Lib/test/test_compile.py.runs: $(PYTHONTESTER)
-	@$(COMPILE) -ACHECK -wtT$@ $(PYHARNESSARGS) $(PYTHONTESTER) -m test.test_compile $(PYTESTARGS)
+# needs >256kb stack size to run
+#o/$(MODE)/third_party/python/Lib/test/test_compile.py.runs: $(PYTHONTESTER)
+#	@$(COMPILE) -ACHECK -wtT$@ $(PYHARNESSARGS) $(PYTHONTESTER) -m test.test_compile $(PYTESTARGS)
 
 o/$(MODE)/third_party/python/Lib/test/test_contextlib.py.runs: $(PYTHONTESTER)
 	@$(COMPILE) -ACHECK -wtT$@ $(PYHARNESSARGS) $(PYTHONTESTER) -m test.test_contextlib $(PYTESTARGS)

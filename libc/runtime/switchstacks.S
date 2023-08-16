@@ -1,7 +1,7 @@
-/*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
-│vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
+/*-*- mode:unix-assembly; indent-tabs-mode:t; tab-width:8; coding:utf-8     -*-│
+│vi: set et ft=asm ts=8 tw=8 fenc=utf-8                                     :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2022 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,22 +16,16 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/dce.h"
-#include "libc/intrin/asan.internal.h"
-#include "libc/intrin/asancodes.h"
-#include "libc/intrin/cmpxchg.h"
-#include "libc/str/str.h"
-#include "libc/thread/thread.h"
-#include "libc/runtime/zipos.internal.h"
+#include "libc/macros.internal.h"
 
-void __zipos_free(struct Zipos *z, struct ZiposHandle *h) {
-  if (IsAsan()) {
-    __asan_poison((char *)h + sizeof(struct ZiposHandle),
-                  h->mapsize - sizeof(struct ZiposHandle), kAsanHeapFree);
-  }
-  pthread_mutex_destroy(&h->lock);
-  __zipos_lock();
-  do h->next = z->freelist;
-  while (!_cmpxchg(&z->freelist, h->next, h));
-  __zipos_unlock();
-}
+__switch_stacks:
+#ifdef __x86_64__
+	int3
+#elif defined(__aarch64__)
+	mov	x29,0
+	mov	sp,x5
+	br	x4
+#else
+#error "unsupported architecture"
+#endif
+	.endfn	__switch_stacks,globl
