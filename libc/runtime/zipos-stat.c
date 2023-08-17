@@ -16,19 +16,22 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/calls/struct/stat.h"
 #include "libc/runtime/zipos.internal.h"
 #include "libc/sysv/errfuns.h"
 
 /**
  * Reads file metadata from αcτµαlly pδrταblε εxεcµταblε object store.
  *
- * @param uri is obtained via __zipos_parseuri()
+ * @param name is obtained via __zipos_parseuri()
  * @asyncsignalsafe
  */
 int __zipos_stat(struct ZiposUri *name, struct stat *st) {
   ssize_t cf;
   struct Zipos *zipos;
   if (!(zipos = __zipos_get())) return enoexec();
-  if ((cf = __zipos_find(zipos, name)) == -1) return enoent();
-  return __zipos_stat_impl(zipos, cf, st);
+  if ((cf = __zipos_find(zipos, name)) == -1) return -1;
+  if (__zipos_stat_impl(zipos, cf, st)) return -1;
+  st->st_ino = __zipos_inode(zipos, cf, name->path, name->len);
+  return 0;
 }

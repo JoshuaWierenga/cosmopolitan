@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2022 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,19 +16,27 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/calls.h"
-#include "libc/calls/struct/timespec.h"
-#include "libc/time/time.h"
+#include "libc/assert.h"
+#include "libc/limits.h"
+#include "libc/runtime/zipos.internal.h"
+#include "libc/stdio/stdio.h"
+#include "libc/zip.internal.h"
 
-/**
- * Returns nanoseconds since UNIX epoch.
- */
-int128_t _nanos(int timer) {
-  int128_t nanos;
-  struct timespec ts;
-  clock_gettime(timer, &ts);
-  nanos = ts.tv_sec;
-  nanos *= 1000000000;
-  nanos += ts.tv_nsec;
-  return nanos;
+static uint64_t __zipos_fnv(const char *s, int len) {
+  uint64_t hash = 0xcbf29ce484222325;
+  for (int i = 0; i < len; i++) {
+    hash *= 0x100000001b3;
+    hash ^= (unsigned char)s[i];
+  }
+  return hash;
+}
+
+uint64_t __zipos_inode(struct Zipos *zipos, int64_t cfile,  //
+                       const void *name, size_t namelen) {
+  unassert(cfile >= 0);
+  if (cfile == ZIPOS_SYNTHETIC_DIRECTORY) {
+    if (namelen && ((char *)name)[namelen - 1] == '/') --namelen;
+    cfile = INT64_MIN | __zipos_fnv(name, namelen);
+  }
+  return cfile;
 }

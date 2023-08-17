@@ -17,6 +17,7 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/internal.h"
+#include "libc/calls/struct/fd.internal.h"
 #include "libc/dce.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/sock/internal.h"
@@ -37,12 +38,16 @@
  */
 int listen(int fd, int backlog) {
   int rc;
-  if (!IsWindows()) {
+  if (fd < g_fds.n && g_fds.p[fd].kind == kFdZip) {
+    rc = enotsock();
+  } else if (!IsWindows()) {
     rc = sys_listen(fd, backlog);
+  } else if (!__isfdopen(fd)) {
+    rc = ebadf();
   } else if (__isfdkind(fd, kFdSocket)) {
     rc = sys_listen_nt(&g_fds.p[fd], backlog);
   } else {
-    rc = ebadf();
+    rc = enotsock();
   }
   STRACE("listen(%d, %d) → %d% lm", fd, backlog, rc);
   return rc;

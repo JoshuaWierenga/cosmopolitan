@@ -24,13 +24,11 @@
 #include "libc/errno.h"
 #include "libc/intrin/asan.internal.h"
 #include "libc/intrin/describeflags.internal.h"
-#include "libc/intrin/kprintf.h"
 #include "libc/intrin/likely.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/intrin/weaken.h"
 #include "libc/sock/internal.h"
 #include "libc/sysv/errfuns.h"
-#include "libc/runtime/zipos.internal.h"
 
 /**
  * Writes data from multiple buffers.
@@ -59,8 +57,7 @@ ssize_t writev(int fd, const struct iovec *iov, int iovlen) {
     if (IsAsan() && !__asan_is_valid_iov(iov, iovlen)) {
       rc = efault();
     } else if (fd < g_fds.n && g_fds.p[fd].kind == kFdZip) {
-      rc = _weaken(__zipos_write)(
-          (struct ZiposHandle *)(intptr_t)g_fds.p[fd].handle, iov, iovlen, -1);
+      rc = ebadf();
     } else if (!IsWindows() && !IsMetal()) {
       if (iovlen == 1) {
         rc = sys_write(fd, iov[0].iov_base, iov[0].iov_len);

@@ -17,6 +17,7 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
+#include "libc/calls/struct/stat.h"
 #include "libc/errno.h"
 #include "libc/limits.h"
 #include "libc/mem/gc.h"
@@ -39,7 +40,7 @@ int Worker(void *arg, int tid) {
   int i, fd;
   char *data;
   for (i = 0; i < 20; ++i) {
-    ASSERT_NE(-1, (fd = open("/zip/libc/testlib/hyperion.txt", O_RDONLY)));
+    ASSERT_NE(-1, (fd = open("/zip//./libc/testlib//hyperion.txt", O_RDONLY)));
     data = malloc(kHyperionSize);
     ASSERT_EQ(kHyperionSize, read(fd, data, kHyperionSize));
     ASSERT_EQ(0, memcmp(data, kHyperion, kHyperionSize));
@@ -57,30 +58,13 @@ TEST(zipos, test) {
   __print_maps();
 }
 
-TEST(zipos, normpath) {
-  {
-    char s[] = "";
-    __zipos_normpath(s);
-    ASSERT_STREQ("", s);
-  }
-  {
-    char s[] = "usr/";
-    __zipos_normpath(s);
-    ASSERT_STREQ("usr", s);
-  }
-  {
-    char s[] = "usr/./";
-    __zipos_normpath(s);
-    ASSERT_STREQ("usr", s);
-  }
+TEST(zipos, erofs) {
+  ASSERT_SYS(EROFS, -1, creat("/zip/foo.txt", 0644));
 }
 
-#if 0
-TEST(zipos_O_DIRECTORY, blocksOpeningOfNormalFiles) {
-  ASSERT_SYS(ENOTDIR, -1,
-             open("/zip/libc/testlib/hyperion.txt", O_RDONLY | O_DIRECTORY));
+TEST(zipos, enoent) {
+  ASSERT_SYS(ENOENT, -1, open("/zip/foo.txt", O_RDONLY));
 }
-#endif
 
 TEST(zipos, readPastEof) {
   char buf[512];
@@ -89,6 +73,22 @@ TEST(zipos, readPastEof) {
   EXPECT_SYS(0, 0, pread(3, buf, 512, INT64_MAX));
   EXPECT_SYS(EINVAL, -1, lseek(3, UINT64_MAX, SEEK_SET));
   EXPECT_SYS(0, INT64_MAX, lseek(3, INT64_MAX, SEEK_SET));
+  EXPECT_SYS(EBADF, -1, write(3, buf, 512));
+  EXPECT_SYS(EBADF, -1, pwrite(3, buf, 512, 0));
   EXPECT_SYS(0, 0, read(3, buf, 512));
   EXPECT_SYS(0, 0, close(3));
+}
+
+TEST(zipos_O_DIRECTORY, blocksOpeningOfNormalFiles) {
+  ASSERT_SYS(ENOTDIR, -1,
+             open("/zip/libc/testlib/hyperion.txt", O_RDONLY | O_DIRECTORY));
+}
+
+TEST(zipos, trailingComponents_willEnodirFile) {
+  struct stat st;
+  ASSERT_SYS(ENOTDIR, -1, open("/zip/libc/testlib/hyperion.txt/", O_RDONLY));
+  ASSERT_SYS(ENOTDIR, -1, open("/zip/libc/testlib/hyperion.txt/.", O_RDONLY));
+  ASSERT_SYS(ENOTDIR, -1, open("/zip/libc/testlib/hyperion.txt/./", O_RDONLY));
+  ASSERT_SYS(ENOTDIR, -1, open("/zip/libc/testlib/hyperion.txt/a/b", O_RDONLY));
+  ASSERT_SYS(ENOTDIR, -1, stat("/zip/libc/testlib/hyperion.txt/", &st));
 }
