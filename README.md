@@ -37,7 +37,6 @@ build\bootstrap\make.com V=0 -j8
 - These warnings are safe to ignore:
   - `Makefile:91: please run ape/apeinstall.sh if you intend to use landlock make`
   - `make.com: sleep: command not found on $PATH: ENOENT`
-  - `mkdeps.com`: out of memory, definitely needs to be fixed but it doesn't stop the build from completing.
 - It is recommended to disable windows defender as it has false positives for almost anything produced by cosmo's build system.
 ## Other notes
 - Remember that you should use backslashes when typing the path to a binary, and regular slashes when typing paths in arguments.
