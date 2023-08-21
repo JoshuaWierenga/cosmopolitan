@@ -67,6 +67,7 @@ int Worker(void *arg, int tid) {
 }
 
 TEST(makedirs, test) {
+  if (IsWindows()) return;  // todo: why won't long paths work on windows
   int i, n = 8;
   struct spawn *t = gc(malloc(sizeof(struct spawn) * n));
   if (IsWindows()) return;

@@ -959,9 +959,9 @@ syscon	pf	PF_X25					9			9			0			0			0			0			0			0
 #	msync() flags
 #
 #	group	name					GNU/Systemd		GNU/Systemd (Aarch64)	XNU's Not UNIX!		MacOS (Arm64)		FreeBSD			OpenBSD			NetBSD			The New Technology	Commentary
-syscon	ms	MS_SYNC					4			4			16			16			0			2			4			4			# faked nt
-syscon	ms	MS_ASYNC				1			1			1			1			1			1			1			1			# consensus (faked nt)
-syscon	ms	MS_INVALIDATE				2			2			2			2			2			4			2			0
+syscon	ms	MS_SYNC					4			4			16			16			1			2			4			4			# faked nt; actually 0 on freebsd
+syscon	ms	MS_ASYNC				1			1			1			1			2			1			1			1			# faked nt; actually 1 on freebsd
+syscon	ms	MS_INVALIDATE				2			2			2			2			4			4			2			0			# actually 2 on freebsd
 
 #	statfs() flags
 #
@@ -1045,7 +1045,7 @@ syscon	limits	MAX_INPUT				255			255			1024			1024			255			255			255			255			# w
 syscon	limits	SOMAXCONN				4096			4096			128			128			128			128			128			2147483647		# maximum backlog for listen()
 syscon	limits	_ARG_MAX				128*1024		128*1024		1024*1024		1024*1024		512*1024		512*1024		256*1024		32767*2			# bsd consensus
 syscon	limits	_NAME_MAX				255			255			255			255			255			255			511			255			# probably higher on windows?
-syscon	limits	_PATH_MAX				4096			4096			1024			1024			1024			1024			1024			32767			# win32 paths are 260 characters max. even with unc paths, cosmo wrappers won't go beyond 1024 chars
+syscon	limits	_PATH_MAX				4096			4096			1024			1024			1024			1024			1024			260			#
 syscon	limits	_NSIG					64			64			32			32			128			32			64			64			# _SIG_MAXSIG on FreeBSD
 
 #	unmount() flags
