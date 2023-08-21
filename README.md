@@ -41,6 +41,7 @@ build\bootstrap\make.com V=0 -j8
 - After running make or any Cosmopolitan program, your console window will probably work oddly:
   - Arrow keys will output the escape sequence into the console.
   - Opening the command history window with F7 won't work.
+  - Backspace will delete entire words, you can work around this by holding Ctrl.
 - The following modifications have been done to make the build work on Windows:
   - `build/bootstrap` - Binaries have been updated to the latest as of July 28, 2023.
     They can be download independently [here](https://justine.lol/cosmo-bootstrap.zip).
