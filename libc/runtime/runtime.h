@@ -83,6 +83,7 @@ extern char kTmpPath[];
 extern const char kNtSystemDirectory[];
 extern const char kNtWindowsDirectory[];
 extern size_t __virtualmax;
+extern size_t __stackmax;
 extern bool __isworker;
 /* utilities */
 void _intsort(int *, size_t);
@@ -109,9 +110,7 @@ axdx_t setlongerjmp(jmp_buf)
 libcesque returnstwice paramsnonnull();
 void longerjmp(jmp_buf, intptr_t) libcesque wontreturn paramsnonnull();
 void __warn_if_powersave(void);
-void _Exitr(int) libcesque wontreturn;
 void _Exit1(int) libcesque wontreturn;
-void _restorewintty(void);
 void __paginate(int, const char *);
 /* memory management */
 void _weakfree(void *);

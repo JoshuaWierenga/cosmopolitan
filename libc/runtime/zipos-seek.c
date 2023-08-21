@@ -22,10 +22,11 @@
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/thread.h"
+#include "libc/thread/tls.h"
 #include "libc/zip.internal.h"
 
-static int64_t __zipos_lseek_impl(struct ZiposHandle *h, int64_t offset,
-                                  unsigned whence) {
+static int64_t __zipos_seek_impl(struct ZiposHandle *h, int64_t offset,
+                                 unsigned whence) {
   int64_t pos;
   if (h->cfile == ZIPOS_SYNTHETIC_DIRECTORY ||
       S_ISDIR(GetZipCfileMode(h->zipos->map + h->cfile))) {
@@ -33,16 +34,28 @@ static int64_t __zipos_lseek_impl(struct ZiposHandle *h, int64_t offset,
   }
   switch (whence) {
     case SEEK_SET:
-      return offset;
+      if (offset >= 0) {
+        return offset;
+      } else {
+        return einval();
+      }
     case SEEK_CUR:
       if (!ckd_add(&pos, h->pos, offset)) {
-        return pos;
+        if (pos >= 0) {
+          return pos;
+        } else {
+          return einval();
+        }
       } else {
         return eoverflow();
       }
     case SEEK_END:
       if (!ckd_sub(&pos, h->size, offset)) {
-        return pos;
+        if (pos >= 0) {
+          return pos;
+        } else {
+          return einval();
+        }
       } else {
         return eoverflow();
       }
@@ -59,13 +72,10 @@ static int64_t __zipos_lseek_impl(struct ZiposHandle *h, int64_t offset,
  * @return new position relative to beginning, or -1 on error
  * @asyncsignalsafe
  */
-int64_t __zipos_lseek(struct ZiposHandle *h, int64_t offset, unsigned whence) {
+int64_t __zipos_seek(struct ZiposHandle *h, int64_t offset, unsigned whence) {
   int64_t pos;
-  if (offset < 0) return einval();
-  pthread_mutex_lock(&h->lock);
-  if ((pos = __zipos_lseek_impl(h, offset, whence)) != -1) {
+  if ((pos = __zipos_seek_impl(h, offset, whence)) != -1) {
     h->pos = pos;
   }
-  pthread_mutex_unlock(&h->lock);
   return pos;
 }

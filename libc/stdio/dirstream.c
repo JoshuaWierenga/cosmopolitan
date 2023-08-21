@@ -46,6 +46,7 @@
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/thread.h"
+#include "libc/thread/tls.h"
 #include "libc/zip.internal.h"
 
 /**
@@ -382,7 +383,7 @@ static struct dirent *readdir_zipos(DIR *dir) {
       while (p.len && p.path[p.len - 1] == '/') --p.len;
       p.path[p.len] = 0;
       ent->d_ino = __zipos_inode(
-          dir->zip.zipos, __zipos_find(dir->zip.zipos, &p), p.path, p.len);
+          dir->zip.zipos, __zipos_scan(dir->zip.zipos, &p), p.path, p.len);
     } else {
       uint8_t *s = ZIP_CFILE_NAME(dir->zip.zipos->map + dir->zip.offset);
       size_t n = ZIP_CFILE_NAMESIZE(dir->zip.zipos->map + dir->zip.offset);

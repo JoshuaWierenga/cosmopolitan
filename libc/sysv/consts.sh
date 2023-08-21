@@ -185,30 +185,28 @@ syscon	open	O_CREAT					0x00000040		0x00000040		0x00000200		0x00000200		0x000002
 syscon	open	O_EXCL					0x00000080		0x00000080		0x00000800		0x00000800		0x00000800		0x00000800		0x00000800		0x00000080		# bsd consensus & NT faked as Linux [SYNC libc/calls/open-nt.c]
 syscon	open	O_TRUNC					0x00000200		0x00000200		0x00000400		0x00000400		0x00000400		0x00000400		0x00000400		0x00000200		# bsd consensus & NT faked as Linux [SYNC libc/calls/open-nt.c]
 syscon	open	O_DIRECTORY				0x00010000		0x00004000		0x00100000		0x00100000		0x00020000		0x00020000		0x00200000		0x00010000		# useful hint on UNIX, but required on NT (see kNtFileFlagBackupSemantics) [SYNC libc/calls/open-nt.c]
-syscon	open	O_NOFOLLOW				0x00020000		0x00008000		0x00000100		0x00000100		0x00000100		0x00000100		0x00000100		0x00020000	       	# bsd consensus; kNtFileFlagOpenReparsePoint
-syscon	open	O_DIRECT				0x00004000		0x00010000		0			0			0x00010000		0			0x00080000		0x00004000		#  kNtFileFlagNoBuffering [SYNC libc/calls/open-nt.c]
-syscon	open	O_NDELAY				0x00000800		0x00000800		0x00000004		0x00000004		0x00000004		0x00000004		0x00000004		0x00000800		#  kNtFileFlagWriteThrough [SYNC libc/calls/open-nt.c]
-syscon	open	O_RANDOM				0			0			0			0			0			0			0			0x80000000		#  kNtFileFlagRandomAccess [SYNC libc/calls/open-nt.c]
-syscon	open	O_SEQUENTIAL				0			0			0			0			0			0			0			0x40000000		#  kNtFileFlagSequentialScan [SYNC libc/calls/open-nt.c]
-syscon	open	O_COMPRESSED				0			0			0			0			0			0			0			0x20000000		#  kNtFileAttributeCompressed [SYNC libc/calls/open-nt.c]
+syscon	open	O_NOFOLLOW				0x00020000		0x00008000		0x00000100		0x00000100		0x00000100		0x00000100		0x00000100		0x00020000	       	# don't follow symlinks in the final path component; bsd consensus; kNtFileFlagOpenReparsePoint
+syscon	open	O_DIRECT				0x00004000		0x00010000		0xffffffff		0xffffffff		0x00010000		0xffffffff		0x00080000		0x00004000		# kNtFileFlagNoBuffering [SYNC libc/calls/open-nt.c]
+syscon	open	O_NONBLOCK				0x00000800		0x00000800		0x00000004		0x00000004		0x00000004		0x00000004		0x00000004		0x00000800		# same as O_NDELAY; overlaps with kNtFileFlagWriteThrough which we don't actually pass to win32 (we implement non-blocking ourselves using overlapped i/o)
+syscon	open	O_RANDOM				0			0			0			0			0			0			0			0x80000000		# kNtFileFlagRandomAccess [SYNC libc/calls/open-nt.c]
+syscon	open	O_SEQUENTIAL				0			0			0			0			0			0			0			0x40000000		# kNtFileFlagSequentialScan [SYNC libc/calls/open-nt.c]
+syscon	open	O_COMPRESSED				0			0			0			0			0			0			0			0x20000000		# kNtFileAttributeCompressed [SYNC libc/calls/open-nt.c]
 syscon	open	O_INDEXED				0			0			0			0			0			0			0			0x10000000		# !kNtFileAttributeNotContentIndexed [SYNC libc/calls/open-nt.c]
 syscon	open	O_CLOEXEC				0x00080000		0x00080000		0x01000000		0x01000000		0x00100000		0x00010000		0x00400000		0x00080000		# NT faked as Linux [SYNC libc/calls/open-nt.c]
 syscon	open	O_TMPFILE				0x00410000		0x00404000		0xffffffff		0xffffffff		0xffffffff		0xffffffff		0xffffffff		0xffffffff		# please use tmpfd(); Linux 3.11+ (c. 2013) __O_TMPFILE | O_DIRECTORY; kNtFileAttributeTemporary|kNtFileFlagDeleteOnClose [SYNC libc/calls/open-nt.c]
-syscon	open	O_SPARSE				0			0			0			0			0			0			0			0			# wut
-syscon	open	O_NONBLOCK				0x00000800		0x00000800		0x00000004		0x00000004		0x00000004		0x00000004		0x00000004		0x00000800		# bsd consensus
-syscon	open	O_ASYNC					0x00002000		0x00002000		0x00000040		0x00000040		0x00000040		0x00000040		0x00000040		0			# bsd consensus
-syscon	open	O_NOFOLLOW_ANY				0			0			0x20000000		0x20000000		0			0			0			0			#
-syscon	open	O_SYNC					0x00101000		0x00101000		0x00000080		0x00000080		0x00000080		0x00000080		0x00000080		0			# bsd consensus
+syscon	open	O_ASYNC					0x00002000		0x00002000		0x00000040		0x00000040		0x00000040		0x00000040		0x00000040		0xffffffff		# bsd consensus
+syscon	open	O_NOFOLLOW_ANY				0xffffffff		0xffffffff		0x20000000		0x20000000		0xffffffff		0xffffffff		0xffffffff		0xffffffff		# don't follow symlinks in any path component
+syscon	open	O_SYNC					0x00101000		0x00101000		0x00000080		0x00000080		0x00000080		0x00000080		0x00000080		0xffffffff		# bsd consensus
 syscon	open	O_NOCTTY				0x00000100		0x00000100		0x00020000		0x00020000		0x00008000		0x00008000		0x00008000		0			# used for remote viewing (default behavior on freebsd)
 syscon	open	O_NOATIME				0x00040000		0x00040000		0			0			0			0			0			0			# optimize away access time update
 syscon	open	O_EXEC					0x00200000		0x00200000		0			0x40000000		0x00040000		0			0x04000000		0			# open only for executing (POSIX.1 hack for when file mode is 0111); see fexecve(); O_PATH on Linux
-syscon	open	O_SEARCH				0			0			0			0x40100000		0x00040000		0			0x00800000		0			# it's specified by posix what does it mean
-syscon	open	O_DSYNC					0x00001000		0x00001000		0x00400000		0x00400000		0			0x00000080		0x00010000		0			#
-syscon	open	O_RSYNC					0x00101000		0x00101000		0			0			0			0x00000080		0x00020000		0			#
-syscon	open	O_PATH					0x00200000		0x00200000		0			0			0			0			0			0			# Linux 2.6.39+
-syscon	open	O_VERIFY				0			0			0			0			0x00200000		0			0			0			#
-syscon	open	O_SHLOCK				0			0			0x00000010		0x00000010		0x00000010		0x00000010		0x00000010		0			#
-syscon	open	O_EXLOCK				0			0			0x00000020		0x00000020		0x00000020		0x00000020		0x00000020		0			#
+syscon	open	O_SEARCH				0xffffffff		0xffffffff		0xffffffff		0x40100000		0x00040000		0xffffffff		0x00800000		0xffffffff		# it's specified by posix what does it mean
+syscon	open	O_DSYNC					0x00001000		0x00001000		0x00400000		0x00400000		0xffffffff		0x00000080		0x00010000		0xffffffff		#
+syscon	open	O_RSYNC					0x00101000		0x00101000		0xffffffff		0xffffffff		0xffffffff		0x00000080		0x00020000		0xffffffff		#
+syscon	open	O_PATH					0x00200000		0x00200000		0xffffffff		0xffffffff		0xffffffff		0xffffffff		0xffffffff		0xffffffff		# Linux 2.6.39+
+syscon	open	O_VERIFY				0xffffffff		0xffffffff		0xffffffff		0xffffffff		0x00200000		0xffffffff		0xffffffff		0xffffffff		#
+syscon	open	O_SHLOCK				0xffffffff		0xffffffff		0x00000010		0x00000010		0x00000010		0x00000010		0x00000010		0xffffffff		#
+syscon	open	O_EXLOCK				0xffffffff		0xffffffff		0x00000020		0x00000020		0x00000020		0x00000020		0x00000020		0xffffffff		#
 syscon	open	O_TTY_INIT				0			0			0			0			0x00080000		0			0			0			#
 syscon	compat	O_LARGEFILE				0x00008000		0x00020000		0			0			0			0			0			0			#
 
@@ -245,20 +243,20 @@ syscon	compat	MAP_32BIT				0x00000040		0x00000040		0			0x00008000		0x00080000		0
 #
 #	group	name					GNU/Systemd		GNU/Systemd (Aarch64)	XNU's Not UNIX!		MacOS (Arm64)		FreeBSD			OpenBSD			NetBSD			The New Technology	Commentary
 syscon	madv	MADV_NORMAL				0			0			0			0			0			0			0			0			# consensus
-syscon	compat	POSIX_FADV_NORMAL			0			0			0			0			0			0			0			0			# consensus
-syscon	compat	POSIX_MADV_NORMAL			0			0			0			0			0			0			0			0			# consensus
+syscon	madv	POSIX_FADV_NORMAL			0			0			0			0			0			0			0			0			# consensus
+syscon	madv	POSIX_MADV_NORMAL			0			0			0			0			0			0			0			0			# consensus
 syscon	madv	MADV_DONTNEED				4			4			4			4			4			4			4			127			# TODO(jart): weird nt decommit thing?
-syscon	compat	POSIX_MADV_DONTNEED			4			4			4			4			4			4			4			127			# unix consensus
-syscon	compat	POSIX_FADV_DONTNEED			4			4			127			127			4			4			4			127			# unix consensus
+syscon	madv	POSIX_MADV_DONTNEED			4			4			4			4			4			4			4			127			# unix consensus
+syscon	madv	POSIX_FADV_DONTNEED			4			4			127			127			4			4			4			127			# unix consensus
 syscon	madv	MADV_RANDOM				1			1			1			1			1			1			1			1			# unix consensus
-syscon	compat	POSIX_MADV_RANDOM			1			1			1			1			1			1			1			1			# unix consensus
-syscon	compat	POSIX_FADV_RANDOM			1			1			127			127			1			1			1			1			# unix consensus
+syscon	madv	POSIX_MADV_RANDOM			1			1			1			1			1			1			1			1			# unix consensus
+syscon	madv	POSIX_FADV_RANDOM			1			1			127			127			1			1			1			1			# unix consensus
 syscon	madv	MADV_SEQUENTIAL				2			2			2			2			2			2			2			2			# unix consensus
-syscon	compat	POSIX_MADV_SEQUENTIAL			2			2			2			2			2			2			2			2			# unix consensus
-syscon	compat	POSIX_FADV_SEQUENTIAL			2			2			127			127			2			2			2			2			# TODO(jart): double check xnu
+syscon	madv	POSIX_MADV_SEQUENTIAL			2			2			2			2			2			2			2			2			# unix consensus
+syscon	madv	POSIX_FADV_SEQUENTIAL			2			2			127			127			2			2			2			2			# TODO(jart): double check xnu
 syscon	madv	MADV_WILLNEED				3			3			3			3			3			3			3			3			# unix consensus (faked on NT)
-syscon	compat	POSIX_MADV_WILLNEED			3			3			3			3			3			3			3			3			# unix consensus
-syscon	compat	POSIX_FADV_WILLNEED			3			3			127			127			3			3			3			3			# TODO(jart): double check xnu
+syscon	madv	POSIX_MADV_WILLNEED			3			3			3			3			3			3			3			3			# unix consensus
+syscon	madv	POSIX_FADV_WILLNEED			3			3			127			127			3			3			3			3			# TODO(jart): double check xnu
 syscon	madv	MADV_MERGEABLE				12			12			127			127			127			127			127			127			# turns on (private anon range) page scanning and merging service (linux only)
 syscon	madv	MADV_UNMERGEABLE			13			13			127			127			127			127			127			127			# turns off mergeable (linux only)
 syscon	madv	MADV_FREE				8			8			5			5			5			6			6			8			# Linux 4.5+ (c. 2016) / NT Faked → VMOfferPriorityNormal (Win8+)
@@ -312,10 +310,10 @@ syscon	splice	SPLICE_F_MORE				4			4			0			0			0			0			0			0			# can be safely i
 syscon	splice	SPLICE_F_GIFT				8			8			0			0			0			0			0			0			# can probably be ignored by polyfill
 
 #	access() flags
+#	libc/sysv/consts/ok.h
 #
 #	group	name					GNU/Systemd		GNU/Systemd (Aarch64)	XNU's Not UNIX!		MacOS (Arm64)		FreeBSD			OpenBSD			NetBSD			The New Technology	Commentary
-syscon	access	F_OK					0			0			0			0			0			0			0			0			# consensus
-syscon	access	X_OK					1			1			1			1			1			1			1			0xa0000000		# unix consensus and kNtGenericExecute | kNtGenericRead
+syscon	access	X_OK					1			1			1			1			1			1			1			0x20000000		# unix consensus and kNtGenericExecute
 syscon	access	W_OK					2			2			2			2			2			2			2			0x40000000		# unix consensus and kNtGenericWrite
 syscon	access	R_OK					4			4			4			4			4			4			4			0x80000000		# unix consensus and kNtGenericRead
 
@@ -403,10 +401,10 @@ syscon	fcntl	F_GETLEASE				0x0401			0x0401			-1			107			-1			-1			-1			-1
 #	group	name					GNU/Systemd		GNU/Systemd (Aarch64)	XNU's Not UNIX!		MacOS (Arm64)		FreeBSD			OpenBSD			NetBSD			The New Technology	Commentary
 syscon	at	AT_FDCWD				-100			-100			-2			-2			-100			-100			-100			-100			# faked nt
 syscon	at	AT_SYMLINK_NOFOLLOW			0x0100			0x0100			0x20			0x20			0x0200			2			0x200			0x0100			# faked nt
-syscon	at	AT_SYMLINK_FOLLOW			0x0400			0x0400			0x40			0x40			0x0400			4			0x400			0			# see linkat(2)
+syscon	at	AT_SYMLINK_FOLLOW			0x0400			0x0400			0x40			0x40			0x0400			4			0x400			0x0400			# see linkat(2)
 syscon	at	AT_REMOVEDIR				0x0200			0x0200			0x80			0x80			0x0800			8			0x800			0x0200			# faked nt
 syscon	at	AT_EACCESS				0x0200			0x0200			0x10			0x10			0x0100			1			0x100			0			# performs check using effective uid/gid; unnecessary nt
-syscon	at	AT_EMPTY_PATH				0x1000			0x1000			0			0			0			0			0			0			# linux 2.6.39+; see unlink, O_TMPFILE, etc.
+syscon	at	AT_EMPTY_PATH				0x1000			0x1000			0			0			0			0			0			0x1000			# linux 2.6.39+; see unlink, O_TMPFILE, etc.
 
 #	utimensat() special values
 #
@@ -765,6 +763,7 @@ syscon	ptrace	PTRACE_INTERRUPT			0x4207			0x4207			-1			-1			-1			-1			-1			-1
 syscon	ptrace	PTRACE_LISTEN				0x4208			0x4208			-1			-1			-1			-1			-1			-1
 syscon	ptrace	PTRACE_PEEKSIGINFO			0x4209			0x4209			-1			-1			-1			-1			-1			-1
 syscon	ptrace	PTRACE_SECCOMP_GET_FILTER		0x420c			0x420c			-1			-1			-1			-1			-1			-1
+syscon	ptrace	PTRACE_SECCOMP_GET_METADATA		0x420d			0x420d			-1			-1			-1			-1			-1			-1
 syscon	ptrace	PTRACE_SEIZE				0x4206			0x4206			-1			-1			-1			-1			-1			-1
 syscon	ptrace	PTRACE_SETREGSET			0x4205			0x4205			-1			-1			-1			-1			-1			-1
 syscon	ptrace	PTRACE_SETSIGMASK			0x420b			0x420b			-1			-1			-1			-1			-1			-1
@@ -1046,7 +1045,7 @@ syscon	limits	MAX_INPUT				255			255			1024			1024			255			255			255			255			# w
 syscon	limits	SOMAXCONN				4096			4096			128			128			128			128			128			2147483647		# maximum backlog for listen()
 syscon	limits	_ARG_MAX				128*1024		128*1024		1024*1024		1024*1024		512*1024		512*1024		256*1024		32767*2			# bsd consensus
 syscon	limits	_NAME_MAX				255			255			255			255			255			255			511			255			# probably higher on windows?
-syscon	limits	_PATH_MAX				4096			4096			1024			1024			1024			1024			1024			512			# cosmopolitan libc imposes a lower 512 limit; nt theoretically goes up to 32767
+syscon	limits	_PATH_MAX				4096			4096			1024			1024			1024			1024			1024			32767			# win32 paths are 260 characters max. even with unc paths, cosmo wrappers won't go beyond 1024 chars
 syscon	limits	_NSIG					64			64			32			32			128			32			64			64			# _SIG_MAXSIG on FreeBSD
 
 #	unmount() flags

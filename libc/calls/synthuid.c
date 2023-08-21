@@ -1,7 +1,7 @@
-/*-*- mode:unix-assembly; indent-tabs-mode:t; tab-width:8; coding:utf-8     -*-│
-│vi: set et ft=asm ts=8 sw=8 fenc=utf-8                                     :vi│
+/*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
+│vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,16 +16,30 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/calls/internal.h"
+#include "libc/intrin/atomic.h"
+#include "libc/limits.h"
 #include "libc/macros.internal.h"
-#include "libc/notice.inc"
+#include "libc/nt/accounting.h"
 
-	.initbss 300,_init_envp
-//	Global variable holding _start(envp) parameter.
-__envp:	.quad	0
-	.endobj	__envp,globl
-	.previous
+static uint32_t __kmp32(const void *buf, size_t size) {
+  size_t i;
+  uint32_t h;
+  const uint32_t kPhiPrime = 0x9e3779b1;
+  const unsigned char *p = (const unsigned char *)buf;
+  for (h = i = 0; i < size; i++) h = (p[i] + h) * kPhiPrime;
+  return h;
+}
 
-	.init.start 300,_init_envp
-	mov	%r14,%rax
-	stosq
-	.init.end 300,_init_envp
+textwindows uint32_t __synthesize_uid(void) {
+  char16_t buf[257];
+  static atomic_uint uid;
+  uint32_t tmp, size = ARRAYLEN(buf);
+  if (!(tmp = atomic_load_explicit(&uid, memory_order_acquire))) {
+    GetUserName(&buf, &size);
+    tmp = __kmp32(buf, size >> 1) & INT_MAX;
+    if (!tmp) ++tmp;
+    atomic_store_explicit(&uid, tmp, memory_order_release);
+  }
+  return tmp;
+}

@@ -25,6 +25,7 @@
 #include "libc/errno.h"
 #include "libc/macros.internal.h"
 #include "libc/runtime/internal.h"
+#include "libc/runtime/runtime.h"
 #include "libc/runtime/stack.h"
 #include "libc/stdio/rand.h"
 #include "libc/str/str.h"
@@ -50,6 +51,10 @@ __static_yoink("libc/testlib/hyperion.txt");
 #define THREADS 8
 
 void SetUpOnce(void) {
+  for (int i = 3; i < 200; ++i) {
+    close(i);
+  }
+  errno = 0;
   __enable_threads();
   ASSERT_SYS(0, 0, pledge("stdio rpath", 0));
 }
@@ -62,13 +67,17 @@ TEST(reservefd, testGrowthOfFdsDataStructure) {
   int i, n;
   struct rlimit rlim;
   n = 1700;  // pe '2**16/40' → 1638 (likely value of g_fds.n)
-  if (!getrlimit(RLIMIT_NOFILE, &rlim)) n = MIN(n, rlim.rlim_cur - 3);
+  if (!getrlimit(RLIMIT_NOFILE, &rlim)) {
+    n = MIN(n, rlim.rlim_cur - 3);
+  } else {
+    errno = 0;
+  }
   for (i = 0; i < n; ++i) {
-    EXPECT_SYS(0, i + 3, open("/zip/usr/share/zoneinfo/UTC", O_RDONLY));
+    ASSERT_SYS(0, i + 3, open("/zip/usr/share/zoneinfo/UTC", O_RDONLY));
   }
   ASSERT_GT(g_fds.n, OPEN_MAX);
   for (i = 0; i < n; ++i) {
-    EXPECT_SYS(0, 0, close(i + 3));
+    ASSERT_SYS(0, 0, close(i + 3));
   }
 }
 

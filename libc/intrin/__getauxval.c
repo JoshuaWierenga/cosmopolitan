@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2022 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,12 +16,24 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/dce.h"
+#include "libc/intrin/getauxval.internal.h"
 #include "libc/runtime/runtime.h"
 
-wontreturn void _Exitr(int exitcode) {
-#if SupportsWindows()
-  _restorewintty();
-#endif
-  _Exit(exitcode);
+/**
+ * Returns auxiliary value better.
+ *
+ * @param at is `AT_...` search key
+ * @return true if value was found
+ * @see libc/sysv/consts.sh
+ * @see System Five Application Binary Interface § 3.4.3
+ * @asyncsignalsafe
+ */
+dontasan struct AuxiliaryValue __getauxval(unsigned long at) {
+  unsigned long *ap;
+  for (ap = __auxv; ap[0]; ap += 2) {
+    if (at == ap[0]) {
+      return (struct AuxiliaryValue){ap[1], true};
+    }
+  }
+  return (struct AuxiliaryValue){0, false};
 }

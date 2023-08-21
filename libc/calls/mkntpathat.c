@@ -29,9 +29,10 @@ int __mkntpathat(int dirfd, const char *path, int flags,
                  char16_t file[hasatleast PATH_MAX]) {
   char16_t dir[PATH_MAX];
   uint32_t dirlen, filelen;
+  if (!isutf8(path, -1)) return eilseq();  // thwart overlong nul in conversion
   if ((filelen = __mkntpath2(path, file, flags)) == -1) return -1;
   if (!filelen) return enoent();
-  if (file[0] != u'\\' && dirfd != AT_FDCWD) { /* ProTip: \\?\C:\foo */
+  if (file[0] != u'\\' && dirfd != AT_FDCWD) {  // ProTip: \\?\C:\foo
     if (!__isfdkind(dirfd, kFdFile)) return ebadf();
     dirlen = GetFinalPathNameByHandle(g_fds.p[dirfd].handle, dir, ARRAYLEN(dir),
                                       kNtFileNameNormalized | kNtVolumeNameDos);

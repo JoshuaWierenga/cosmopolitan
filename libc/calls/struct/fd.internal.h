@@ -3,6 +3,10 @@
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 COSMOPOLITAN_C_START_
 
+#define DO_NOTHING 0
+#define DO_RESTART 1
+#define DO_EINTR   2
+
 #define kFdEmpty    0
 #define kFdFile     1
 #define kFdSocket   2
@@ -17,11 +21,14 @@ COSMOPOLITAN_C_START_
 #define kFdTtyEchoRaw 2 /* don't ^X visualize control codes */
 #define kFdTtyMunging 4 /* enable input / output remappings */
 #define kFdTtyNoCr2Nl 8 /* don't map \r → \n (a.k.a !ICRNL) */
+#define kFdTtyNoIsigs 16
 
 struct Fd {
   char kind;
   bool zombie;
-  char ttymagic;
+  bool dontclose;
+  char buflen;
+  char buf[4];
   unsigned flags;
   unsigned mode;
   int64_t handle;
@@ -34,6 +41,7 @@ struct StdinRelay {
   int64_t handle; /* should == g_fds.p[0].handle */
   int64_t reader; /* ReadFile() use this instead */
   int64_t writer; /* only used by WinStdinThread */
+  int64_t thread; /* handle for the stdio thread */
 };
 
 struct Fds {
@@ -43,8 +51,10 @@ struct Fds {
   struct StdinRelay stdin;
 };
 
-int64_t __resolve_stdin_handle(int64_t);
 void WinMainStdin(void);
+int64_t __resolve_stdin_handle(int64_t);
+int __munge_terminal_input(char *, uint32_t *);
+void __echo_terminal_input(struct Fd *, char *, size_t);
 
 COSMOPOLITAN_C_END_
 #endif /* !(__ASSEMBLER__ + __LINKER__ + 0) */

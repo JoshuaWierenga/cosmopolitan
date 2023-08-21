@@ -25,14 +25,15 @@
 #include "libc/fmt/conv.h"
 #include "libc/fmt/itoa.h"
 #include "libc/fmt/magnumstrs.internal.h"
-#include "libc/intrin/_getenv.internal.h"
 #include "libc/intrin/bits.h"
+#include "libc/intrin/getenv.internal.h"
 #include "libc/intrin/weaken.h"
 #include "libc/macros.internal.h"
 #include "libc/runtime/runtime.h"
 #include "libc/stdio/stdio.h"
 #include "libc/stdio/temp.h"
 #include "libc/str/str.h"
+#include "libc/sysv/consts/lock.h"
 #include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/ok.h"
 #include "libc/sysv/consts/s.h"
@@ -119,7 +120,7 @@ static int GetSignalByName(const char *s) {
 
 static void PutEnv(char **p, const char *kv) {
   struct Env e;
-  e = _getenv(p, kv);
+  e = __getenv(p, kv);
   p[e.i] = kv;
   if (!e.s) p[e.i + 1] = 0;
 }
@@ -127,7 +128,7 @@ static void PutEnv(char **p, const char *kv) {
 static void UnsetEnv(char **p, const char *k) {
   int i;
   struct Env e;
-  if ((e = _getenv(p, k)).s) {
+  if ((e = __getenv(p, k)).s) {
     p[e.i] = 0;
     for (i = e.i + 1; p[i]; ++i) {
       p[i - 1] = p[i];
@@ -236,6 +237,73 @@ static int Echo(void) {
   return 0;
 }
 
+static int NeedArgument(const char *prog) {
+  tinyprint(2, prog, ": missing argument\n", NULL);
+  return 1;
+}
+
+static int Flock(void) {
+  int fd;
+  int i = 1;
+  char *endptr;
+  int mode = LOCK_EX;
+  if (i < n && args[i][0] == '-' && args[i][1] == 'x' && !args[i][2]) {
+    ++i, mode = LOCK_EX;
+  }
+  if (i < n && args[i][0] == '-' && args[i][1] == 's' && !args[i][2]) {
+    ++i, mode = LOCK_SH;
+  }
+  if (i == n) {
+    return NeedArgument("flock");
+  }
+  if (i + 1 != n) {
+    tinyprint(2, "flock: too many arguments\n", NULL);
+    return 1;
+  }
+  fd = strtol(args[i], &endptr, 10);
+  if (*endptr) {
+    tinyprint(2, "flock: need a number\n", NULL);
+    return 1;
+  }
+  if (flock(fd, mode)) {
+    perror("flock");
+    return 1;
+  }
+  return 0;
+}
+
+static int Chmod(void) {
+  int i, mode;
+  char *endptr;
+  if (n < 3) {
+    return NeedArgument("chmod");
+  }
+  mode = strtol(args[1], &endptr, 8);
+  if (*endptr) {
+    tinyprint(2, "chmod: bad octal mode\n", NULL);
+    return 1;
+  }
+  for (i = 2; i < n; ++i) {
+    if (chmod(args[i], mode)) {
+      perror(args[i]);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static int Pwd(void) {
+  char path[PATH_MAX + 2];
+  if (getcwd(path, PATH_MAX)) {
+    strlcat(path, "\n", sizeof(path));
+    Write(1, path);
+    return 0;
+  } else {
+    perror("pwd");
+    return 1;
+  }
+}
+
 static int CatDump(const char *path, int fd, bool dontclose) {
   ssize_t rc;
   char buf[512];
@@ -300,6 +368,7 @@ static int Mktemp(void) {
     perror("mkstemp");
     return 1;
   }
+  strlcat(template, "\n", sizeof(template));
   Write(1, template);
   close(fd);
   return 0;
@@ -328,14 +397,9 @@ static int Read(void) {
   return rc;
 }
 
-static int NeedArgument(const char *prog) {
-  tinyprint(2, prog, ": missing argument\n", NULL);
-  return 1;
-}
-
 static int Cd(void) {
   const char *s;
-  if ((s = n > 1 ? args[1] : _getenv(envs, "HOME").s)) {
+  if ((s = n > 1 ? args[1] : __getenv(envs, "HOME").s)) {
     if (!chdir(s)) {
       return 0;
     } else {
@@ -601,12 +665,15 @@ static int TryBuiltin(void) {
   if (!strcmp(args[0], "[")) return Test();
   if (!strcmp(args[0], "cat")) return Cat();
   if (!strcmp(args[0], "env")) return Env();
+  if (!strcmp(args[0], "pwd")) return Pwd();
   if (!strcmp(args[0], "wait")) return Wait();
   if (!strcmp(args[0], "echo")) return Echo();
   if (!strcmp(args[0], "read")) return Read();
   if (!strcmp(args[0], "true")) return True();
   if (!strcmp(args[0], "test")) return Test();
   if (!strcmp(args[0], "kill")) return Kill();
+  if (!strcmp(args[0], "flock")) return Flock();
+  if (!strcmp(args[0], "chmod")) return Chmod();
   if (!strcmp(args[0], "touch")) return Touch();
   if (!strcmp(args[0], "rmdir")) return Rmdir();
   if (!strcmp(args[0], "mkdir")) return Mkdir();
@@ -709,7 +776,7 @@ static const char *GetVar(const char *key) {
     FormatInt32(vbuf, geteuid());
     return vbuf;
   } else {
-    return _getenv(envs, key).s;
+    return __getenv(envs, key).s;
   }
 }
 
@@ -911,6 +978,13 @@ int _cocmd(int argc, char **argv, char **envp) {
   if (!_weaken(glob)) {
     unsupported['*'] = true;
     unsupported['?'] = true;
+  }
+
+  if (argc >= 3 && !strcmp(argv[1], "--")) {
+    for (i = 2; i < argc; ++i) {
+      args[n++] = argv[i];
+    }
+    _Exit(ShellExec());
   }
 
   if (argc != 3) {

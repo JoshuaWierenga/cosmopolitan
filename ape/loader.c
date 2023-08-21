@@ -16,6 +16,7 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "ape/ape.h"
 
 /**
  * @fileoverview APE Loader for GNU/Systemd/XNU/FreeBSD/NetBSD/OpenBSD
@@ -104,6 +105,12 @@
 #define IsAarch64() 0
 #endif
 
+#ifdef __cplusplus
+#define EXTERN_C extern "C"
+#else
+#define EXTERN_C
+#endif
+
 #define O_RDONLY           0
 #define PROT_NONE          0
 #define PROT_READ          1
@@ -158,7 +165,7 @@
   {                                         \
     char ibuf[19] = {0};                    \
     Utox(ibuf, VAR);                        \
-    Print(os, 2, #VAR " ", ibuf, "\n", 0l); \
+    Print(os, 2, ibuf, " " #VAR, "\n", 0l); \
   }
 
 struct ElfEhdr {
@@ -196,7 +203,7 @@ union ElfEhdrBuf {
 
 union ElfPhdrBuf {
   struct ElfPhdr phdr;
-  char buf[4096];
+  char buf[1024];
 };
 
 struct PathSearcher {
@@ -208,14 +215,13 @@ struct PathSearcher {
 };
 
 struct ApeLoader {
-  union ElfEhdrBuf ehdr;
   union ElfPhdrBuf phdr;
   struct PathSearcher ps;
   char path[1024];
 };
 
-long SystemCall(long, long, long, long, long, long, long, int);
-void Launch(void *, long, void *, int) __attribute__((__noreturn__));
+EXTERN_C long SystemCall(long, long, long, long, long, long, long, int);
+EXTERN_C void Launch(void *, long, void *, int) __attribute__((__noreturn__));
 
 extern char __executable_start[];
 extern char _end[];
@@ -622,7 +628,6 @@ __attribute__((__noreturn__)) static void Spawn(int os, const char *exe, int fd,
   found_code = 0;
   found_entry = 0;
   virtmin = virtmax = 0;
-  if (!pagesz) pagesz = 4096;
   if (pagesz & (pagesz - 1)) {
     Pexit(os, exe, 0, "AT_PAGESZ isn't two power");
   }
@@ -715,19 +720,15 @@ __attribute__((__noreturn__)) static void Spawn(int os, const char *exe, int fd,
       unsigned long wipe;
       prot1 = prot;
       prot2 = prot;
-      /*
-       * when we ask the system to map the interval [vaddr,vaddr+filesz)
-       * it might schlep extra file content into memory on both the left
-       * and the righthand side. that's because elf doesn't require that
-       * either side of the interval be aligned on the system page size.
-       *
-       * normally we can get away with ignoring these junk bytes. but if
-       * the segment defines bss memory (i.e. memsz > filesz) then we'll
-       * need to clear the extra bytes in the page, if they exist.
-       *
-       * since we can't do that if we're mapping a read-only page, we'll
-       * actually map it with write permissions and protect it afterward
-       */
+      /* when we ask the system to map the interval [vaddr,vaddr+filesz)
+         it might schlep extra file content into memory on both the left
+         and the righthand side. that's because elf doesn't require that
+         either side of the interval be aligned on the system page size.
+         normally we can get away with ignoring these junk bytes. but if
+         the segment defines bss memory (i.e. memsz > filesz) then we'll
+         need to clear the extra bytes in the page, if they exist. since
+         we can't do that if we're mapping a read-only page, we can just
+         map it with write permissions and call mprotect on it afterward */
       a = p[i].p_vaddr + p[i].p_filesz; /* end of file content */
       b = (a + (pagesz - 1)) & -pagesz; /* first pure bss page */
       c = p[i].p_vaddr + p[i].p_memsz;  /* end of segment data */
@@ -768,8 +769,9 @@ __attribute__((__noreturn__)) static void Spawn(int os, const char *exe, int fd,
   Launch(IsFreebsd() ? sp : 0, dynbase + e->e_entry, sp, os);
 }
 
-static const char *TryElf(struct ApeLoader *M, const char *exe, int fd,
-                          long *sp, long *auxv, unsigned long pagesz, int os) {
+static const char *TryElf(struct ApeLoader *M, union ElfEhdrBuf *ebuf,
+                          const char *exe, int fd, long *sp, long *auxv,
+                          unsigned long pagesz, int os) {
   long i, rc;
   unsigned size;
   struct ElfEhdr *e;
@@ -782,8 +784,8 @@ static const char *TryElf(struct ApeLoader *M, const char *exe, int fd,
   }
 
   /* validate elf header */
-  e = &M->ehdr.ehdr;
-  if (READ32(M->ehdr.buf) != READ32("\177ELF")) {
+  e = &ebuf->ehdr;
+  if (READ32(ebuf->buf) != READ32("\177ELF")) {
     return "didn't embed ELF magic";
   }
   if (e->e_ident[EI_CLASS] == ELFCLASS32) {
@@ -887,11 +889,11 @@ static const char *TryElf(struct ApeLoader *M, const char *exe, int fd,
   Spawn(os, exe, fd, sp, pagesz, e, p);
 }
 
-static __attribute__((__noreturn__)) void ShowUsage(int os, int fd, int rc) {
+__attribute__((__noreturn__)) static void ShowUsage(int os, int fd, int rc) {
   Print(os, fd,
         "NAME\n"
         "\n"
-        "  actually portable executable loader version 1.6\n"
+        "  actually portable executable loader version " APE_VERSION_STR "\n"
         "  copyright 2023 justine alexandra roberts tunney\n"
         "  https://justine.lol/ape.html\n"
         "\n"
@@ -909,15 +911,17 @@ static __attribute__((__noreturn__)) void ShowUsage(int os, int fd, int rc) {
   Exit(rc, os);
 }
 
-__attribute__((__noreturn__)) //
-void ApeLoader(long di, long *sp, char dl) {
-  int rc;
-  unsigned i, n;
+EXTERN_C __attribute__((__noreturn__)) void ApeLoader(long di, long *sp,
+                                                      char dl) {
+  int rc, n;
+  unsigned i;
+  const char *ape;
   int c, fd, os, argc;
   struct ApeLoader *M;
   unsigned long pagesz;
-  long *auxv, *ap, *ew;
-  char *p, *pe, *exe, *ape, *prog, **argv, **envp;
+  union ElfEhdrBuf *ebuf;
+  long *auxv, *ap, *endp, *sp2;
+  char *p, *pe, *exe, *prog, **argv, **envp;
 
   (void)Utox;
 
@@ -935,7 +939,7 @@ void ApeLoader(long di, long *sp, char dl) {
   argc = *sp;
   argv = (char **)(sp + 1);
   envp = (char **)(sp + 1 + argc + 1);
-  auxv = (long *)(sp + 1 + argc + 1);
+  auxv = sp + 1 + argc + 1;
   for (;;) {
     if (!*auxv++) {
       break;
@@ -960,15 +964,12 @@ void ApeLoader(long di, long *sp, char dl) {
       os = NETBSD;
     }
   }
-  ew = ap + 1;
+  if (!pagesz) {
+    pagesz = 4096;
+  }
+  endp = ap + 1;
 
-  /* allocate loader memory */
-  n = sizeof(*M) / sizeof(long);
-  MemMove(sp - n, sp, (char *)ew - (char *)sp);
-  sp -= n, argv -= n, envp -= n, auxv -= n;
-  M = (struct ApeLoader *)(ew - n);
-
-  /* default operating system */
+  /* the default operating system */
   if (!os) {
     os = LINUX;
   }
@@ -1005,17 +1006,43 @@ void ApeLoader(long di, long *sp, char dl) {
     argv = (char **)((sp += 1) + 1);
   }
 
+  /* allocate loader memory in program's arg block */
+  n = sizeof(struct ApeLoader);
+  M = (struct ApeLoader *)__builtin_alloca(n);
+
+  /* create new bottom of stack for spawned program
+     system v abi aligns this on a 16-byte boundary
+     grows down the alloc by poking the guard pages */
+  n = (endp - sp + 1) * sizeof(long);
+  sp2 = (long *)__builtin_alloca(n);
+  if ((long)sp2 & 15) ++sp2;
+  for (; n > 0; n -= pagesz) {
+    ((char *)sp2)[n - 1] = 0;
+  }
+  MemMove(sp2, sp, (endp - sp) * sizeof(long));
+  argv = (char **)(sp2 + 1);
+  envp = (char **)(sp2 + 1 + argc + 1);
+  auxv = sp2 + (auxv - sp);
+  sp = sp2;
+
+  /* allocate ephemeral memory for reading file */
+  n = sizeof(union ElfEhdrBuf);
+  ebuf = (union ElfEhdrBuf *)__builtin_alloca(n);
+  for (; n > 0; n -= pagesz) {
+    ((char *)ebuf)[n - 1] = 0;
+  }
+
   /* resolve path of executable and read its first page */
   if (!(exe = Commandv(&M->ps, os, prog, GetEnv(envp, "PATH")))) {
     Pexit(os, prog, 0, "not found (maybe chmod +x or ./ needed)");
   } else if ((fd = Open(exe, O_RDONLY, 0, os)) < 0) {
     Pexit(os, exe, fd, "open");
-  } else if ((rc = Pread(fd, M->ehdr.buf, sizeof(M->ehdr.buf), 0, os)) < 0) {
+  } else if ((rc = Pread(fd, ebuf->buf, sizeof(ebuf->buf), 0, os)) < 0) {
     Pexit(os, exe, rc, "read");
-  } else if ((unsigned long)rc < sizeof(M->ehdr.ehdr)) {
+  } else if ((unsigned long)rc < sizeof(ebuf->ehdr)) {
     Pexit(os, exe, 0, "too small");
   }
-  pe = M->ehdr.buf + rc;
+  pe = ebuf->buf + rc;
 
   /* change argv[0] to resolved path if it's ambiguous */
   if ((argc > 0 && *prog != '/' && *exe == '/' && !StrCmp(prog, argv[0])) ||
@@ -1028,10 +1055,10 @@ void ApeLoader(long di, long *sp, char dl) {
      2. shell script may have multiple lines producing elf headers
      3. all elf printf lines must exist in the first 8192 bytes of file
      4. elf program headers may appear anywhere in the binary */
-  if (READ64(M->ehdr.buf) == READ64("MZqFpD='") ||
-      READ64(M->ehdr.buf) == READ64("jartsr='") ||
-      READ64(M->ehdr.buf) == READ64("APEDBG='")) {
-    for (p = M->ehdr.buf; p < pe; ++p) {
+  if (READ64(ebuf->buf) == READ64("MZqFpD='") ||
+      READ64(ebuf->buf) == READ64("jartsr='") ||
+      READ64(ebuf->buf) == READ64("APEDBG='")) {
+    for (p = ebuf->buf; p < pe; ++p) {
       if (READ64(p) != READ64("printf '")) {
         continue;
       }
@@ -1049,15 +1076,15 @@ void ApeLoader(long di, long *sp, char dl) {
             }
           }
         }
-        M->ehdr.buf[i++] = c;
-        if (i >= sizeof(M->ehdr.buf)) {
+        ebuf->buf[i++] = c;
+        if (i >= sizeof(ebuf->buf)) {
           break;
         }
       }
-      if (i >= sizeof(M->ehdr.ehdr)) {
-        TryElf(M, exe, fd, sp, auxv, pagesz, os);
+      if (i >= sizeof(ebuf->ehdr)) {
+        TryElf(M, ebuf, exe, fd, sp, auxv, pagesz, os);
       }
     }
   }
-  Pexit(os, exe, 0, TryElf(M, exe, fd, sp, auxv, pagesz, os));
+  Pexit(os, exe, 0, TryElf(M, ebuf, exe, fd, sp, auxv, pagesz, os));
 }

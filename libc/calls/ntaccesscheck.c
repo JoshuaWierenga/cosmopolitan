@@ -39,12 +39,10 @@
 #include "libc/sysv/consts/ok.h"
 #include "libc/sysv/errfuns.h"
 
+// TODO: what does this code do with symlinks?
+
 /**
  * Asks Microsoft if we're authorized to use a folder or file.
- *
- * Implementation Details: MSDN documentation imposes no limit on the
- * internal size of SECURITY_DESCRIPTOR, which we are responsible for
- * allocating. We've selected 1024 which shall hopefully be adequate.
  *
  * @param flags can have R_OK, W_OK, X_OK, etc.
  * @return 0 if authorized, or -1 w/ errno
@@ -86,25 +84,32 @@ TryAgain:
                          &hToken)) {
       if (DuplicateToken(hToken, kNtSecurityImpersonation,
                          &hImpersonatedToken)) {
+        if (flags == kNtGenericExecute) {  // X_OK
+          flags |= kNtGenericRead;         // R_OK
+        }
         if (AccessCheck(s, hImpersonatedToken, flags, &mapping, &privileges,
                         &privsize, &granted, &result)) {
           if (result || flags == F_OK) {
             rc = 0;
           } else {
-            STRACE("ntaccesscheck finale failed %d %d", result, flags);
+            NTTRACE("ntaccesscheck finale failed: result=%d flags=%x", result,
+                    flags);
             rc = eacces();
           }
         } else {
           rc = __winerr();
-          STRACE("%s(%#hs) failed: %m", "AccessCheck", pathname);
+          NTTRACE("%s(%#hs) failed: %s", "AccessCheck", pathname,
+                  strerror(errno));
         }
       } else {
         rc = __winerr();
-        STRACE("%s(%#hs) failed: %m", "DuplicateToken", pathname);
+        NTTRACE("%s(%#hs) failed: %s", "DuplicateToken", pathname,
+                strerror(errno));
       }
     } else {
       rc = __winerr();
-      STRACE("%s(%#hs) failed: %m", "OpenProcessToken", pathname);
+      NTTRACE("%s(%#hs) failed: %s", "OpenProcessToken", pathname,
+              strerror(errno));
     }
   } else {
     e = GetLastError();
@@ -114,11 +119,13 @@ TryAgain:
         goto TryAgain;
       } else {
         rc = enomem();
-        STRACE("%s(%#hs) failed: %m", "GetFileSecurity", pathname);
+        NTTRACE("%s(%#hs) failed: %s", "GetFileSecurity", pathname,
+                strerror(errno));
       }
     } else {
       errno = e;
-      STRACE("%s(%#hs) failed: %m", "GetFileSecurity", pathname);
+      NTTRACE("%s(%#hs) failed: %s", "GetFileSecurity", pathname,
+              strerror(errno));
       rc = -1;
     }
   }

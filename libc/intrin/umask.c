@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2022 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,24 +16,7 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/thread/thread.h"
-#include "libc/runtime/zipos.internal.h"
+#include "libc/atomic.h"
+#include "libc/calls/internal.h"
 
-static pthread_mutex_t __zipos_lock_obj;
-
-void(__zipos_lock)(void) {
-  pthread_mutex_lock(&__zipos_lock_obj);
-}
-
-void(__zipos_unlock)(void) {
-  pthread_mutex_unlock(&__zipos_lock_obj);
-}
-
-void __zipos_funlock(void) {
-  pthread_mutex_init(&__zipos_lock_obj, 0);
-}
-
-__attribute__((__constructor__)) static void __zipos_init(void) {
-  __zipos_funlock();
-  pthread_atfork(__zipos_lock, __zipos_unlock, __zipos_funlock);
-}
+atomic_int __umask;

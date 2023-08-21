@@ -16,6 +16,7 @@
 #include "libc/log/check.h"
 #include "libc/log/log.h"
 #include "libc/runtime/runtime.h"
+#include "libc/stdio/dprintf.h"
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/exit.h"
@@ -54,24 +55,37 @@ int rawmode(void) {
   static bool once;
   struct termios t;
   if (!once) {
-    if (tcgetattr(1, &oldterm) != -1) {
+    if (tcgetattr(1, &oldterm)) {
       atexit(restoretty);
     } else {
-      return -1;
+      perror("tcgetattr");
     }
     once = true;
   }
   memcpy(&t, &oldterm, sizeof(t));
+
   t.c_cc[VMIN] = 1;
   t.c_cc[VTIME] = 1;
+
+  // emacs does the following to remap ctrl-c to ctrl-g in termios
+  //     t.c_cc[VINTR] = CTRL('G');
+  // it can be restored using
+  //     (set-quit-char (logxor ?C 0100))
+  // but we are able to polyfill the remapping on windows
+  // please note this is a moot point b/c ISIG is cleared
+
   t.c_iflag &= ~(INPCK | ISTRIP | PARMRK | INLCR | IGNCR | ICRNL | IXON |
                  IGNBRK | BRKINT);
   t.c_lflag &= ~(IEXTEN | ICANON | ECHO | ECHONL | ISIG);
   t.c_cflag &= ~(CSIZE | PARENB);
-  t.c_oflag &= ~OPOST;
+  t.c_oflag |= OPOST | ONLCR;
   t.c_cflag |= CS8;
   t.c_iflag |= IUTF8;
-  tcsetattr(1, TCSANOW, &t);
+
+  if (tcsetattr(1, TCSANOW, &t)) {
+    perror("tcsetattr");
+  }
+
   WRITE(1, ENABLE_SAFE_PASTE);
   WRITE(1, ENABLE_MOUSE_TRACKING);
   WRITE(1, PROBE_DISPLAY_SIZE);
@@ -83,7 +97,7 @@ void getsize(void) {
     printf("termios says terminal size is %hu×%hu\r\n", wsize.ws_col,
            wsize.ws_row);
   } else {
-    printf("%s\n", strerror(errno));
+    perror("tcgetwinsize");
   }
 }
 
@@ -125,8 +139,16 @@ const char *describemouseevent(int e) {
   return buf + 1;
 }
 
+// change the code above to enable ISIG if you want to trigger this
+// then press ctrl-c or ctrl-\ in your pseudoteletypewriter console
+void OnSignalThatWontEintrRead(int sig) {
+  dprintf(1, "got %s\n", strsignal(sig));
+}
+
 int main(int argc, char *argv[]) {
   int e, c, y, x, n, yn, xn;
+  signal(SIGINT, OnSignalThatWontEintrRead);
+  signal(SIGQUIT, OnSignalThatWontEintrRead);
   xsigaction(SIGTERM, onkilled, 0, 0, NULL);
   xsigaction(SIGWINCH, onresize, 0, 0, NULL);
   xsigaction(SIGCONT, onresize, 0, 0, NULL);
@@ -138,12 +160,13 @@ int main(int argc, char *argv[]) {
       getsize();
       resized = false;
     }
+    bzero(code, sizeof(code));
     if ((n = readansi(0, code, sizeof(code))) == -1) {
       if (errno == EINTR) continue;
-      printf("ERROR: READ: %s\r\n", strerror(errno));
+      perror("read");
       exit(1);
     }
-    printf("%`'.*s ", n, code);
+    printf("%`'.*s (got %d) ", n, code, n);
     if (iscntrl(code[0]) && !code[1]) {
       printf("is CTRL-%c a.k.a. ^%c\r\n", CTRL(code[0]), CTRL(code[0]));
       if (code[0] == CTRL('C') || code[0] == CTRL('D')) break;

@@ -26,6 +26,7 @@
 #include "libc/calls/struct/siginfo.h"
 #include "libc/calls/struct/sigset.h"
 #include "libc/intrin/strace.internal.h"
+#include "libc/intrin/weaken.h"
 #include "libc/macros.internal.h"
 #include "libc/nt/runtime.h"
 #include "libc/runtime/internal.h"
@@ -35,6 +36,7 @@
 #include "libc/sysv/consts/sig.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/tls.h"
+
 #ifdef __x86_64__
 
 /**
@@ -179,7 +181,17 @@ textwindows bool __sig_handle(int sigops, int sig, int si_code,
   switch (__sighandrvas[sig]) {
     case (intptr_t)SIG_DFL:
       if (__sig_is_fatal(sig)) {
-        STRACE("terminating on %G", sig);
+        intptr_t hStderr;
+        const char *signame;
+        char *end, sigbuf[15], output[16];
+        signame = strsignal_r(sig, sigbuf);
+        STRACE("terminating due to uncaught %s", signame);
+        hStderr = GetStdHandle(kNtStdErrorHandle);
+        end = stpcpy(stpcpy(output, signame), "\n");
+        WriteFile(hStderr, output, end - output, 0, 0);
+        if (_weaken(__restore_console_win32)) {
+          _weaken(__restore_console_win32)();
+        }
         ExitProcess(sig);
       }
       // fallthrough
