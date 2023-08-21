@@ -34,9 +34,6 @@ build\bootstrap\make.com V=0 -j8
     in which case you can delete the bad file with `del` or in worse situations, delete its directory with `rd /s`.
   - `make.com` might get stuck after all processes have finished. In this case, open Task Manager and kill the make process.
 - `failed to move output file` errors often happen when running make with a high job count. Either try again or restart with `-j1`.
-- These warnings are safe to ignore:
-  - `Makefile:91: please run ape/apeinstall.sh if you intend to use landlock make`
-  - `make.com: sleep: command not found on $PATH: ENOENT`
 - It is recommended to disable windows defender as it has false positives for almost anything produced by cosmo's build system.
 ## Other notes
 - Remember that you should use backslashes when typing the path to a binary, and regular slashes when typing paths in arguments.
@@ -44,7 +41,6 @@ build\bootstrap\make.com V=0 -j8
 - After running make or any Cosmopolitan program, your console window will probably work oddly:
   - Arrow keys will output the escape sequence into the console.
   - Opening the command history window with F7 won't work.
-  - Backspace will delete entire words, you can work around this by holding Ctrl.
 - The following modifications have been done to make the build work on Windows:
   - `build/bootstrap` - Binaries have been updated to the latest as of July 28, 2023.
     They can be download independently [here](https://justine.lol/cosmo-bootstrap.zip).
