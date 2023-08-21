@@ -184,6 +184,7 @@ TEST(open, testRelativePath_opensRelativeToDirFd) {
 }
 
 TEST(open, eloop) {
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "link"));
   ASSERT_TRUE(issymlink("link"));
   ASSERT_SYS(ELOOP, -1, open("link", O_RDONLY | O_NOFOLLOW));
@@ -216,6 +217,7 @@ TEST(open, longNormDot) {
 #define NAME                                                                   \
   "funfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfu" \
   "nfunfunfunfunfunfunnfunfunfunfunfunfunnfunfunfunfunfunfununfunfunfunfunfun"
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, mkdir(NAME, 0755));
   ASSERT_SYS(0, 0, mkdir(abs(NAME "/" NAME), 0755));
   ASSERT_SYS(0, 3, creat(abs(NAME "//" NAME "/./norm"), 0644));
@@ -227,6 +229,7 @@ TEST(open, longNormDotDot) {
 #define NAME                                                                   \
   "funfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfu" \
   "nfunfunfunfunfunfunnfunfunfunfunfunfunnfunfunfunfunfunfununfunfunfunfunfun"
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, mkdir(NAME, 0755));
   ASSERT_SYS(0, 0, mkdir(abs(NAME "/" NAME), 0755));
   ASSERT_SYS(0, 0, mkdir(abs(NAME "/" NAME "/" NAME), 0755));

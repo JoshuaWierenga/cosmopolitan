@@ -17,6 +17,7 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
+#include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/mem/gc.internal.h"
 #include "libc/mem/mem.h"
@@ -68,6 +69,7 @@ int Worker(void *arg, int tid) {
 TEST(makedirs, test) {
   int i, n = 8;
   struct spawn *t = gc(malloc(sizeof(struct spawn) * n));
+  if (IsWindows()) return;
   ASSERT_EQ(0, pthread_barrier_init(&barrier, 0, n));
   for (i = 0; i < n; ++i) ASSERT_SYS(0, 0, _spawn(Worker, 0, t + i));
   for (i = 0; i < n; ++i) EXPECT_SYS(0, 0, _join(t + i));

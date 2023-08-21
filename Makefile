@@ -86,6 +86,7 @@ o/$(MODE):			\
 	o/$(MODE)/examples	\
 	o/$(MODE)/third_party
 
+ifeq ($(origin HOMEPATH),undefined)
 ifneq ($(LANDLOCKMAKE_VERSION),)
 ifeq ($(wildcard /usr/bin/ape),)
 $(warning please run ape/apeinstall.sh if you intend to use landlock make)
@@ -93,6 +94,7 @@ $(shell sleep .5)
 endif
 ifeq ($(USE_SYSTEM_TOOLCHAIN),)
 .STRICT = 1
+endif
 endif
 endif
 

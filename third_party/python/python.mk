@@ -1746,12 +1746,14 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/test_atexit.py				\
 	third_party/python/Lib/test/test_builtin.py				\
 	third_party/python/Lib/test/test_calendar.py				\
+	third_party/python/Lib/test/test_cgi.py					\
 	third_party/python/Lib/test/test_cgitb.py				\
 	third_party/python/Lib/test/test_cmd_line.py				\
 	third_party/python/Lib/test/test_cmd_line_script.py		\
 	third_party/python/Lib/test/test_compile.py				\
 	third_party/python/Lib/test/test_cosmo.py				\
 	third_party/python/Lib/test/test_cprofile.py				\
+	third_party/python/Lib/test/test_csv.py					\
 	third_party/python/Lib/test/test_doctest.py				\
 	third_party/python/Lib/test/test_epoll.py				\
 	third_party/python/Lib/test/test_exceptions.py				\
@@ -1762,7 +1764,9 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/test_gc.py					\
 	third_party/python/Lib/test/test_gzip.py				\
 	third_party/python/Lib/test/test_hash.py				\
+	third_party/python/Lib/test/test_imp.py					\
 	third_party/python/Lib/test/test_marshal.py				\
+	third_party/python/Lib/test/test_mmap.py				\
 	third_party/python/Lib/test/test_modulefinder.py			\
 	third_party/python/Lib/test/test_parser.py				\
 	third_party/python/Lib/test/test_pkgimport.py				\
@@ -1807,7 +1811,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_bytes.py				\
 	third_party/python/Lib/test/test_bz2.py					\
 	third_party/python/Lib/test/test_call.py				\
-	third_party/python/Lib/test/test_cgi.py					\
 	third_party/python/Lib/test/test_charmapcodec.py			\
 	third_party/python/Lib/test/test_class.py				\
 	third_party/python/Lib/test/test_cmath.py				\
@@ -1838,7 +1841,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_copyreg.py				\
 	third_party/python/Lib/test/test_coroutines.py				\
 	third_party/python/Lib/test/test_crashers.py				\
-	third_party/python/Lib/test/test_csv.py					\
 	third_party/python/Lib/test/test_datetime.py				\
 	third_party/python/Lib/test/test_decimal.py				\
 	third_party/python/Lib/test/test_decorators.py				\
@@ -1906,7 +1908,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_http_cookiejar.py			\
 	third_party/python/Lib/test/test_http_cookies.py			\
 	third_party/python/Lib/test/test_imghdr.py				\
-	third_party/python/Lib/test/test_imp.py					\
 	third_party/python/Lib/test/test_index.py				\
 	third_party/python/Lib/test/test_int.py					\
 	third_party/python/Lib/test/test_int_literal.py				\
@@ -1927,7 +1928,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_metaclass.py				\
 	third_party/python/Lib/test/test_mimetypes.py				\
 	third_party/python/Lib/test/test_minidom.py				\
-	third_party/python/Lib/test/test_mmap.py				\
 	third_party/python/Lib/test/test_module.py				\
 	third_party/python/Lib/test/test_multibytecodec.py			\
 	third_party/python/Lib/test/test_numeric_tower.py			\
