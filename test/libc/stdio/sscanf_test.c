@@ -21,7 +21,10 @@
 #include "libc/intrin/bits.h"
 #include "libc/inttypes.h"
 #include "libc/limits.h"
+#include "libc/mem/gc.internal.h"
 #include "libc/mem/mem.h"
+#include "libc/stdio/internal.h"
+#include "libc/str/str.h"
 #include "libc/testlib/testlib.h"
 
 #define sscanf1(STR, FMT)               \
@@ -42,7 +45,6 @@ TEST(sscanf, testMultiple) {
 
 TEST(sscanf, testDecimal) {
   EXPECT_EQ(123, sscanf1("123", "%d"));
-  EXPECT_EQ(123, sscanf1("123", "%n"));
   EXPECT_EQ(123, sscanf1("123", "%u"));
   EXPECT_EQ((uint32_t)-123, sscanf1("-123", "%d"));
 }
@@ -257,4 +259,111 @@ TEST(sscanf, test0) {
   v = 0xFFFFFFFF;
   ASSERT_EQ(sscanf("0", "%b", &v), 1);
   ASSERT_EQ(v, 0);
+}
+
+TEST(sscanf, n) {
+  int x, y;
+  EXPECT_EQ(1, sscanf("7 2 3 4", "%d%n", &x, &y));
+  EXPECT_EQ(7, x);
+  EXPECT_EQ(1, y);
+}
+
+TEST(sscanf, eofForNoMatching) {
+  int y = 666;
+  char x[8] = "hi";
+  EXPECT_EQ(-1, sscanf("   ", "%s%n", &x, &y));
+  EXPECT_STREQ("hi", x);
+  EXPECT_EQ(666, y);
+}
+
+TEST(sscanf, eofConditions) {
+  int x = 666;
+  EXPECT_EQ(-1, sscanf("", "%d", &x));
+  EXPECT_EQ(666, x);
+  EXPECT_EQ(-1, sscanf(" ", "%d", &x));
+  EXPECT_EQ(666, x);
+  EXPECT_EQ(-1, sscanf("123", "%*d%d", &x));
+  EXPECT_EQ(666, x);
+  EXPECT_EQ(-1, sscanf("123", "%*d%n", &x));
+  EXPECT_EQ(666, x);
+}
+
+TEST(sscanf, decimal) {
+  int x = 666;
+  int y = 666;
+  EXPECT_EQ(1, sscanf("019", "%d%d", &x, &y));
+  EXPECT_EQ(19, x);
+  EXPECT_EQ(666, y);
+}
+
+TEST(sscanf, octal) {
+  int x = 666;
+  int y = 666;
+  EXPECT_EQ(2, sscanf("019", "%o%d", &x, &y));
+  EXPECT_EQ(1, x);
+  EXPECT_EQ(9, y);
+}
+
+TEST(sscanf, flexdecimal_octal) {
+  int x = 666;
+  int y = 666;
+  EXPECT_EQ(2, sscanf("019", "%i%d", &x, &y));
+  EXPECT_EQ(1, x);
+  EXPECT_EQ(9, y);
+}
+
+TEST(sscanf, flexdecimal_decimal) {
+  int x = 666;
+  int y = 666;
+  EXPECT_EQ(1, sscanf("109a", "%i%d", &x, &y));
+  EXPECT_EQ(109, x);
+  EXPECT_EQ(666, y);
+}
+
+TEST(sscanf, flexdecimal_hex) {
+  int x = 666;
+  int y = 666;
+  EXPECT_EQ(1, sscanf("0x19a", "%i%d", &x, &y));
+  EXPECT_EQ(0x19a, x);
+  EXPECT_EQ(666, y);
+}
+
+TEST(sscanf, luplus) {
+  long x = 666;
+  EXPECT_EQ(1, sscanf("+123", "%lu", &x));
+  EXPECT_EQ(123, x);
+}
+
+TEST(sscanf, lupluser) {
+  long x = 666;
+  EXPECT_EQ(1, sscanf("+123", "%li", &x));
+  EXPECT_EQ(123, x);
+}
+
+TEST(fscanf, stuff) {
+  int x;
+  char *s = "1 12 123\n"
+            "4 44\n";
+  FILE *f = fmemopen(s, strlen(s), "r+");
+  EXPECT_EQ(1, fscanf(f, "%d", &x));
+  EXPECT_EQ(1, x);
+  EXPECT_EQ(1, fscanf(f, "%d", &x));
+  EXPECT_EQ(12, x);
+  EXPECT_EQ(1, fscanf(f, "%d", &x));
+  EXPECT_EQ(123, x);
+  EXPECT_EQ(1, fscanf(f, "%d", &x));
+  EXPECT_EQ(4, x);
+  EXPECT_EQ(1, fscanf(f, "%d", &x));
+  EXPECT_EQ(44, x);
+  EXPECT_EQ(-1, fscanf(f, "%d", &x));
+  fclose(f);
+}
+
+TEST(fscanf, wantDecimalButGotLetter_returnsZeroMatches) {
+  int x = 666;
+  char *s = "a1\n";
+  FILE *f = fmemopen(s, strlen(s), "r+");
+  EXPECT_EQ(0, fscanf(f, "%d", &x));
+  EXPECT_EQ(666, x);
+  fclose(f);
 }

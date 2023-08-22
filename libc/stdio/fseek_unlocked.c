@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2021 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,39 +16,68 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/fmt/conv.h"
-#include "libc/fmt/strtol.internal.h"
-#include "libc/str/str.h"
-#include "libc/str/tab.internal.h"
+#include "libc/calls/calls.h"
+#include "libc/errno.h"
+#include "libc/macros.internal.h"
+#include "libc/stdio/internal.h"
+#include "libc/stdio/stdio.h"
+#include "libc/sysv/consts/o.h"
 
 /**
- * Decodes 128-bit unsigned integer from ASCII string.
+ * Repositions open file stream.
  *
- * @param s is a non-null nul-terminated string
- * @param endptr if non-null will always receive a pointer to the char
- *     following the last one this function processed, which is usually
- *     the NUL byte, or in the case of invalid strings, would point to
- *     the first invalid character
- * @param base can be anywhere between [2,36] or 0 to auto-detect based
- *     on the the prefixes 0 (octal), 0x (hexadecimal), 0b (binary), or
- *     decimal (base 10) by default
- * @return decoded integer mod 2¹²⁸ negated if leading `-`
- * @see strtoi128()
+ * This function flushes the buffer (unless it's currently in the EOF
+ * state) and then calls lseek() on the underlying file. If the stream
+ * is in the EOF state, this function can be used to restore it without
+ * needing to reopen the file.
+ *
+ * @param f is a non-null stream handle
+ * @param offset is the byte delta
+ * @param whence can be SEET_SET, SEEK_CUR, or SEEK_END
+ * @returns 0 on success or -1 on error
  */
-uint128_t strtou128(const char *s, char **endptr, int base) {
-  char t = 0;
-  int d, c = *s;
-  uint128_t x = 0;
-  CONSUME_SPACES(s, c);
-  GET_SIGN(s, c, d);
-  GET_RADIX(s, c, base);
-  if ((c = kBase36[c & 255]) && --c < base) {
-    t |= 1;
-    do {
-      x *= base;
-      x += c;
-    } while ((c = kBase36[*++s & 255]) && --c < base);
+int fseek_unlocked(FILE *f, int64_t offset, int whence) {
+  int res;
+  ssize_t rc;
+  int64_t pos;
+  if (f->fd != -1) {
+    if (__fflush_impl(f) == -1) return -1;
+    if (whence == SEEK_CUR && f->beg < f->end) {
+      offset -= f->end - f->beg;
+    }
+    if (lseek(f->fd, offset, whence) != -1) {
+      f->beg = 0;
+      f->end = 0;
+      f->state = 0;
+      res = 0;
+    } else {
+      f->state = errno == ESPIPE ? EBADF : errno;
+      res = -1;
+    }
+  } else {
+    switch (whence) {
+      case SEEK_SET:
+        pos = offset;
+        break;
+      case SEEK_CUR:
+        pos = f->beg + offset;
+        break;
+      case SEEK_END:
+        pos = f->end + offset;
+        break;
+      default:
+        pos = -1;
+        break;
+    }
+    f->end = MAX(f->beg, f->end);
+    if (0 <= pos && pos <= f->end) {
+      f->beg = pos;
+      f->state = 0;
+      res = 0;
+    } else {
+      f->state = errno = EINVAL;
+      res = -1;
+    }
   }
-  if (t && endptr) *endptr = s;
-  return d > 0 ? x : -x;
+  return res;
 }

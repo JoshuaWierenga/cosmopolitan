@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,39 +16,9 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/fmt/conv.h"
-#include "libc/fmt/strtol.internal.h"
-#include "libc/str/str.h"
-#include "libc/str/tab.internal.h"
+#include "libc/str/unicode.h"
+#include "libc/testlib/testlib.h"
 
-/**
- * Decodes 128-bit unsigned integer from wide string.
- *
- * @param s is a non-null nul-terminated string
- * @param endptr if non-null will always receive a pointer to the char
- *     following the last one this function processed, which is usually
- *     the NUL byte, or in the case of invalid strings, would point to
- *     the first invalid character
- * @param base can be anywhere between [2,36] or 0 to auto-detect based
- *     on the the prefixes 0 (octal), 0x (hexadecimal), 0b (binary), or
- *     decimal (base 10) by default
- * @return decoded integer mod 2¹²⁸ negated if leading `-`
- * @see strtoi128()
- */
-uint128_t wcstou128(const wchar_t *s, wchar_t **endptr, int base) {
-  char t = 0;
-  int d, c = *s;
-  uint128_t x = 0;
-  CONSUME_SPACES(s, c);
-  GET_SIGN(s, c, d);
-  GET_RADIX(s, c, base);
-  if ((c = kBase36[c & 255]) && --c < base) {
-    t |= 1;
-    do {
-      x *= base;
-      x += c;
-    } while ((c = kBase36[*++s & 255]) && --c < base);
-  }
-  if (t && endptr) *endptr = s;
-  return d > 0 ? x : -x;
+TEST(locale, test) {
+  EXPECT_STREQ(".", localeconv()->decimal_point);
 }
