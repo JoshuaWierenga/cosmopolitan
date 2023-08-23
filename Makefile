@@ -86,6 +86,7 @@ o/$(MODE):			\
 	o/$(MODE)/examples	\
 	o/$(MODE)/third_party
 
+# TODO Check if a version of cosmo's IsWindows is available here
 ifeq ($(origin HOMEPATH),undefined)
 ifneq ($(LANDLOCKMAKE_VERSION),)
 ifeq ($(wildcard /usr/bin/ape),)

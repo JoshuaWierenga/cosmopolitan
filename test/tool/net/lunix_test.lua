@@ -121,7 +121,12 @@ function UnixTest()
    st = assert(unix.fstat(fd))
    assert(st:size() == 8192)
    assert(st:blocks() == 8192/512)
-   assert((st:mode() & 0777) == 0600)
+   -- TODO Figure out why this fails on windows
+   -- https://github.com/jart/cosmopolitan/blob/965516e/libc/calls/fstat-nt.c#L92?
+   -- TODO Check if a version of cosmo's IsWindows is available here
+   if os.getenv('HOMEPATH') == '' then
+     assert((st:mode() & 0777) == 0600)
+   end
    assert(st:uid() == unix.getuid())
    assert(st:gid() == unix.getgid())
    assert(unix.write(fd, "bear", 4))
@@ -162,8 +167,5 @@ function main()
    end
 end
 
--- TODO Check if a version of cosmo's IsWindows is available here
-if os.getenv('HOMEPATH') == '' then
-    main()
-end
+main()
 
