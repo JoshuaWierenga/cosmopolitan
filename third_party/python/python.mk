@@ -1739,39 +1739,25 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 ################################################################################
 # TESTS
 
+# TODO Check if a version of cosmo's IsWindows is available here
+# TODO Find out while these tests fail on windows
 ifeq ($(origin HOMEPATH),undefined)
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/signalinterproctester.py			\
-	third_party/python/Lib/test/test__locale.py				\
-	third_party/python/Lib/test/test_atexit.py				\
 	third_party/python/Lib/test/test_builtin.py				\
 	third_party/python/Lib/test/test_calendar.py				\
 	third_party/python/Lib/test/test_cgi.py					\
-	third_party/python/Lib/test/test_cgitb.py				\
 	third_party/python/Lib/test/test_cmd_line.py				\
 	third_party/python/Lib/test/test_cmd_line_script.py		\
 	third_party/python/Lib/test/test_compile.py				\
-	third_party/python/Lib/test/test_cosmo.py				\
-	third_party/python/Lib/test/test_cprofile.py				\
 	third_party/python/Lib/test/test_csv.py					\
-	third_party/python/Lib/test/test_doctest.py				\
 	third_party/python/Lib/test/test_epoll.py				\
-	third_party/python/Lib/test/test_exceptions.py				\
-	third_party/python/Lib/test/test_fcntl.py				\
 	third_party/python/Lib/test/test_file_eintr.py				\
-	third_party/python/Lib/test/test_filecmp.py				\
 	third_party/python/Lib/test/test_fileio.py				\
-	third_party/python/Lib/test/test_gc.py					\
-	third_party/python/Lib/test/test_gzip.py				\
-	third_party/python/Lib/test/test_hash.py				\
 	third_party/python/Lib/test/test_imp.py					\
-	third_party/python/Lib/test/test_marshal.py				\
 	third_party/python/Lib/test/test_mmap.py				\
-	third_party/python/Lib/test/test_modulefinder.py			\
 	third_party/python/Lib/test/test_parser.py				\
-	third_party/python/Lib/test/test_pkgimport.py				\
 	third_party/python/Lib/test/test_poll.py				\
-	third_party/python/Lib/test/test_quopri.py				\
 	third_party/python/Lib/test/test_resource.py				\
 	third_party/python/Lib/test/test_script_helper.py			\
 	third_party/python/Lib/test/test_select.py				\
@@ -1781,13 +1767,15 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/test_tarfile.py				\
 	third_party/python/Lib/test/test_time.py				\
 	third_party/python/Lib/test/test_timeout.py				\
-	third_party/python/Lib/test/test_traceback.py				\
-	third_party/python/Lib/test/test_tracemalloc.py				\
 	third_party/python/Lib/test/test_unicode_file.py			\
 	third_party/python/Lib/test/test_zipapp.py
+
+# Some tests become flaky in parallel mode with high thread counts
+# Starts breaking around -j13 on my 16 smt thread 5800x3d
 endif
 
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+	third_party/python/Lib/test/test__locale.py				\
 	third_party/python/Lib/test/test___future__.py				\
 	third_party/python/Lib/test/test__opcode.py				\
 	third_party/python/Lib/test/test_abc.py					\
@@ -1795,6 +1783,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_aifc.py				\
 	third_party/python/Lib/test/test_array.py				\
 	third_party/python/Lib/test/test_asdl_parser.py				\
+	third_party/python/Lib/test/test_atexit.py				\
 	third_party/python/Lib/test/test_audioop.py				\
 	third_party/python/Lib/test/test_augassign.py				\
 	third_party/python/Lib/test/test_base64.py				\
@@ -1811,6 +1800,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_bytes.py				\
 	third_party/python/Lib/test/test_bz2.py					\
 	third_party/python/Lib/test/test_call.py				\
+	third_party/python/Lib/test/test_cgitb.py				\
 	third_party/python/Lib/test/test_charmapcodec.py			\
 	third_party/python/Lib/test/test_class.py				\
 	third_party/python/Lib/test/test_cmath.py				\
@@ -1840,6 +1830,8 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_copy.py				\
 	third_party/python/Lib/test/test_copyreg.py				\
 	third_party/python/Lib/test/test_coroutines.py				\
+	third_party/python/Lib/test/test_cosmo.py				\
+	third_party/python/Lib/test/test_cprofile.py				\
 	third_party/python/Lib/test/test_crashers.py				\
 	third_party/python/Lib/test/test_datetime.py				\
 	third_party/python/Lib/test/test_decimal.py				\
@@ -1853,6 +1845,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_dictviews.py				\
 	third_party/python/Lib/test/test_difflib.py				\
 	third_party/python/Lib/test/test_dis.py					\
+	third_party/python/Lib/test/test_doctest.py				\
 	third_party/python/Lib/test/test_doctest2.py				\
 	third_party/python/Lib/test/test_dummy_threading.py			\
 	third_party/python/Lib/test/test_dynamic.py				\
@@ -1877,8 +1870,11 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_errno.py				\
 	third_party/python/Lib/test/test_exception_hierarchy.py			\
 	third_party/python/Lib/test/test_exception_variations.py		\
+	third_party/python/Lib/test/test_exceptions.py				\
 	third_party/python/Lib/test/test_extcall.py				\
+	third_party/python/Lib/test/test_fcntl.py				\
 	third_party/python/Lib/test/test_file.py				\
+	third_party/python/Lib/test/test_filecmp.py				\
 	third_party/python/Lib/test/test_fileinput.py				\
 	third_party/python/Lib/test/test_finalization.py			\
 	third_party/python/Lib/test/test_float.py				\
@@ -1893,6 +1889,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_future3.py				\
 	third_party/python/Lib/test/test_future4.py				\
 	third_party/python/Lib/test/test_future5.py				\
+	third_party/python/Lib/test/test_gc.py					\
 	third_party/python/Lib/test/test_generator_stop.py			\
 	third_party/python/Lib/test/test_generators.py				\
 	third_party/python/Lib/test/test_genericpath.py				\
@@ -1901,6 +1898,8 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_getopt.py				\
 	third_party/python/Lib/test/test_global.py				\
 	third_party/python/Lib/test/test_grammar.py				\
+	third_party/python/Lib/test/test_gzip.py				\
+	third_party/python/Lib/test/test_hash.py				\
 	third_party/python/Lib/test/test_hashlib.py				\
 	third_party/python/Lib/test/test_heapq.py				\
 	third_party/python/Lib/test/test_html.py				\
@@ -1923,12 +1922,14 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_listcomps.py				\
 	third_party/python/Lib/test/test_long.py				\
 	third_party/python/Lib/test/test_longexp.py				\
+	third_party/python/Lib/test/test_marshal.py				\
 	third_party/python/Lib/test/test_memoryio.py				\
 	third_party/python/Lib/test/test_memoryview.py				\
 	third_party/python/Lib/test/test_metaclass.py				\
 	third_party/python/Lib/test/test_mimetypes.py				\
 	third_party/python/Lib/test/test_minidom.py				\
 	third_party/python/Lib/test/test_module.py				\
+	third_party/python/Lib/test/test_modulefinder.py			\
 	third_party/python/Lib/test/test_multibytecodec.py			\
 	third_party/python/Lib/test/test_numeric_tower.py			\
 	third_party/python/Lib/test/test_opcodes.py				\
@@ -1938,6 +1939,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_peepholer.py				\
 	third_party/python/Lib/test/test_pickle.py				\
 	third_party/python/Lib/test/test_pickletools.py				\
+	third_party/python/Lib/test/test_pkgimport.py				\
 	third_party/python/Lib/test/test_plistlib.py				\
 	third_party/python/Lib/test/test_pow.py					\
 	third_party/python/Lib/test/test_pprint.py				\
@@ -1949,6 +1951,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_pstats.py				\
 	third_party/python/Lib/test/test_pulldom.py				\
 	third_party/python/Lib/test/test_pyexpat.py				\
+	third_party/python/Lib/test/test_quopri.py				\
 	third_party/python/Lib/test/test_raise.py				\
 	third_party/python/Lib/test/test_random.py				\
 	third_party/python/Lib/test/test_range.py				\
@@ -1988,6 +1991,8 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_syslog.py				\
 	third_party/python/Lib/test/test_textwrap.py				\
 	third_party/python/Lib/test/test_timeit.py				\
+	third_party/python/Lib/test/test_tracemalloc.py				\
+	third_party/python/Lib/test/test_traceback.py				\
 	third_party/python/Lib/test/test_tuple.py				\
 	third_party/python/Lib/test/test_typechecks.py				\
 	third_party/python/Lib/test/test_types.py				\
