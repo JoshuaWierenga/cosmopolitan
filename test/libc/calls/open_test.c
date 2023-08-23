@@ -184,6 +184,8 @@ TEST(open, testRelativePath_opensRelativeToDirFd) {
 }
 
 TEST(open, eloop) {
+  // Gives EPERM on windows
+  // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "link"));
   ASSERT_TRUE(issymlink("link"));
@@ -218,7 +220,6 @@ TEST(open, longNormDot) {
 #define NAME                                                                   \
   "funfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfu" \
   "nfunfunfunfunfunfunnfunfunfunfunfunfunnfunfunfunfunfunfununfunfunfunfunfun"
-  if (IsWindows()) return;
   ASSERT_SYS(0, 0, mkdir(NAME, 0755));
   ASSERT_SYS(0, 0, mkdir(abs(NAME "/" NAME), 0755));
   ASSERT_SYS(0, 3, creat(abs(NAME "//" NAME "/./norm"), 0644));
@@ -231,7 +232,6 @@ TEST(open, longNormDotDot) {
 #define NAME                                                                   \
   "funfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfunfu" \
   "nfunfunfunfunfunfunnfunfunfunfunfunfunnfunfunfunfunfunfununfunfunfunfunfun"
-  if (IsWindows()) return;
   ASSERT_SYS(0, 0, mkdir(NAME, 0755));
   ASSERT_SYS(0, 0, mkdir(abs(NAME "/" NAME), 0755));
   ASSERT_SYS(0, 0, mkdir(abs(NAME "/" NAME "/" NAME), 0755));

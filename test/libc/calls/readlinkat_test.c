@@ -39,20 +39,20 @@ void SetUpOnce(void) {
 
 TEST(readlink, enoent) {
   char buf[32];
-  if (IsWindows()) return;
   ASSERT_SYS(ENOENT, -1, readlink("doesnotexist", buf, 32));
   ASSERT_SYS(ENOENT, -1, readlink("o/doesnotexist", buf, 32));
 }
 
 TEST(readlink, enotdir) {
   char buf[32];
-  if (IsWindows()) return;
   ASSERT_SYS(0, 0, touch("o", 0644));
   ASSERT_SYS(ENOTDIR, -1, readlink("o/doesnotexist", buf, 32));
 }
 
 TEST(readlinkat, test) {
   char buf[128], *p, *q;
+  // Gives EPERM on windows
+  // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   memset(buf, -1, sizeof(buf));
   ASSERT_NE(-1, xbarf("hello→", "hi", -1));
@@ -69,19 +69,16 @@ TEST(readlinkat, test) {
 
 TEST(readlinkat, efault) {
   char buf[128];
-  if (IsWindows()) return;
   ASSERT_SYS(EFAULT, -1, readlink(0, buf, sizeof(buf)));
 }
 
 TEST(readlinkat, notexist) {
   char buf[128];
-  if (IsWindows()) return;
   ASSERT_SYS(ENOENT, -1, readlink("hi", buf, sizeof(buf)));
 }
 
 TEST(readlinkat, notalink) {
   char buf[128];
-  if (IsWindows()) return;
   ASSERT_SYS(0, 0, close(creat("hi", 0644)));
   ASSERT_SYS(EINVAL, -1, readlink("hi", buf, sizeof(buf)));
 }
@@ -89,6 +86,8 @@ TEST(readlinkat, notalink) {
 TEST(readlinkat, frootloop) {
   int fd;
   char buf[128];
+  // Gives EPERM on windows
+  // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "froot"));
   ASSERT_SYS(ELOOP, -1, readlink("froot/loop", buf, sizeof(buf)));
@@ -103,6 +102,8 @@ TEST(readlinkat, frootloop) {
 
 TEST(readlinkat, statReadsNameLength) {
   struct stat st;
+  // Gives EPERM on windows
+  // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "froot"));
   ASSERT_SYS(0, 0, fstatat(AT_FDCWD, "froot", &st, AT_SYMLINK_NOFOLLOW));
@@ -113,7 +114,7 @@ TEST(readlinkat, statReadsNameLength) {
 TEST(readlinkat, realpathReturnsLongPath) {
   struct stat st;
   char buf[PATH_MAX];
-  return;
+  if (!IsWindows()) return;
   if (!startswith(getcwd(buf, PATH_MAX), "/c/")) return;
   ASSERT_SYS(0, 0, touch("froot", 0644));
   ASSERT_STARTSWITH("/c/", realpath("froot", buf));

@@ -70,7 +70,6 @@ TEST(makedirs, test) {
   if (IsWindows()) return;  // todo: why won't long paths work on windows
   int i, n = 8;
   struct spawn *t = gc(malloc(sizeof(struct spawn) * n));
-  if (IsWindows()) return;
   ASSERT_EQ(0, pthread_barrier_init(&barrier, 0, n));
   for (i = 0; i < n; ++i) ASSERT_SYS(0, 0, _spawn(Worker, 0, t + i));
   for (i = 0; i < n; ++i) EXPECT_SYS(0, 0, _join(t + i));
