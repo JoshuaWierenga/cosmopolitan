@@ -1775,8 +1775,8 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 endif
 
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
-	third_party/python/Lib/test/test__locale.py				\
 	third_party/python/Lib/test/test___future__.py				\
+	third_party/python/Lib/test/test__locale.py				\
 	third_party/python/Lib/test/test__opcode.py				\
 	third_party/python/Lib/test/test_abc.py					\
 	third_party/python/Lib/test/test_abstract_numbers.py			\
@@ -1991,8 +1991,8 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_syslog.py				\
 	third_party/python/Lib/test/test_textwrap.py				\
 	third_party/python/Lib/test/test_timeit.py				\
-	third_party/python/Lib/test/test_tracemalloc.py				\
 	third_party/python/Lib/test/test_traceback.py				\
+	third_party/python/Lib/test/test_tracemalloc.py				\
 	third_party/python/Lib/test/test_tuple.py				\
 	third_party/python/Lib/test/test_typechecks.py				\
 	third_party/python/Lib/test/test_types.py				\

@@ -97,10 +97,10 @@ endif
 ifeq ($(PREFIX),)
 ifeq ($(USE_SYSTEM_TOOLCHAIN),)
 ifneq ("$(wildcard o/third_party/gcc/bin/x86_64-pc-linux-gnu-*)","")
-PREFIX = o/third_party/gcc/bin/
+PREFIX = o/third_party/gcc/bin/x86_64-pc-linux-gnu-
 else
 IGNORE := $(shell build/bootstrap/unbundle.com)
-PREFIX = o/third_party/gcc/bin/
+PREFIX = o/third_party/gcc/bin/x86_64-linux-musl-
 endif
 ifeq ($(ARCH), aarch64)
 PREFIX = o/third_party/gcc/bin/aarch64-linux-musl-

@@ -7,7 +7,7 @@
 Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/build-on-windows) with the goal of having less changes and having it be easier to apply to future builds of Cosmopolitan.
 
 ## Build instructions
-Note that you should be using the Command Prompt (`cmd.exe`) and not Windows PowerShell.
+Note that you should be using the Command Prompt (`cmd.exe`) and not Windows PowerShell. Is this still true?
 ```
 curl -LO https://github.com/JoshuaWierenga/cosmopolitan/archive/refs/heads/build-on-windows-3.zip
 tar -xvf build-on-windows.zip
@@ -16,15 +16,16 @@ REM git clone https://github.com/JoshuaWierenga/cosmopolitan cosmopolitan-build-
 cd cosmopolitan-build-on-windows
 mkdir o\third_party\gcc
 cd o\third_party\gcc
-curl -LO https://github.com/ahgamut/musl-cross-make/releases/download/z0.0.0/gcc11.zip
+curl -LO https://github.com/ahgamut/musl-cross-make/releases/download/z0.0.1/gcc11.zip
 tar -xvf gcc11.zip
 del gcc11.zip
-cd bin
+for /R bin %%x in (*.com) do copy "%%x" "bin\x86_64-pc-linux-gnu-%%~nx" >NUL
 REM This needs to be set for gcc to work
-set PATH=%PATH%;%CD%
-cd ..\..\..\..\
+set PATH=%PATH%;%CD%\bin
+cd ..\..\..\
 build\bootstrap\make.com V=0 -j8
 ```
+For an automated build try [this script](https://github.com/JoshuaWierenga/RandomScripts/blob/main/buildcosmo.bat).
 
 ## Build notes
 - Building will take a while, as process creation and file operations are expensive on Windows.
@@ -43,17 +44,14 @@ build\bootstrap\make.com V=0 -j8
   - Opening the command history window with F7 won't work.
   - Backspace will delete entire words, you can work around this by holding Ctrl.
 - The following modifications have been done to make the build work on Windows:
-  - `build/bootstrap` - Binaries have been updated to the latest as of July 28, 2023.
-    They can be download independently [here](https://justine.lol/cosmo-bootstrap.zip).
-  - `build/definitions.mk` - Build tool names have been adjusted for Actually Portable GCC.
-  - `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` - Disabled on windows as creating symlinks as a regular user is unreliable.
+  - `Makefile` - Landlock make requring apeinstall.sh warning has been disabled on Windows.
+  - `build/bootstrap` - Binaries have been updated to the latest as of August 22, 2023.
+    They can be download independently [here](https://justine.lol/cosmo-bootstrap.zip). How up to date are these? I built them with m=tiny and copied over.
+  - `test/libc/calls/open_test.c`, `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` - Disabled on windows as creating symlinks as a regular user is unreliable.
     - Optionally, `libc/calls/symlinkat-nt.c` can be replaced with [this copy](https://justine.lol/symlinkat-nt.c) for some debugging.
-  - `test/libc/intrin/kprintf_test.c` - Some tests have been disabled on windows, need to figure out why they fail.
-  - `test/libc/mem/test.mk` - `assimilate.com` arguments have been changed to force assimilating one binary to ELF.
-  - ~~`test/libc/stdio/posix_spawn_test.c` - Removed, as the `wait4` system call implementation is messy on Windows and does not pass the test.~~ Currently readded since it doesn't appear to be causing errors.
-  - `test/tool/net/lunix_test.lua` - Disabled on windows as an assertion fails due to `chmod` and `stat` not returning consistent outputs.
-  - ~~`third_party/python/Lib/test/signalinterproctester.py` - Removed, for similar reasons as `posix_spawn_test.c`~~ Still disabled but the file exists again now.
-  - `third_party/python/python.mk` - Removed the above test as well as quite a few others from the list of tests to run as they timeout or error on windows.
+  - `test/libc/mem/test.mk` - `assimilate.com` arguments have been changed to force assimilating two binaries to ELF.
+  - `test/tool/net/lunix_test.lua` - One assert has been disabled on windows due to `stat` not returning consistent outputs.
+  - `third_party/python/python.mk` - Disabled quite a few tests on windows as they error.
 
 # Cosmopolitan
 
