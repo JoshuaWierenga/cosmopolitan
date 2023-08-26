@@ -45,6 +45,7 @@ int sys_close_nt(int, int);
 int _park_norestart(uint32_t, uint64_t);
 int _park_restartable(uint32_t, uint64_t);
 int sys_openat_metal(int, const char *, int, unsigned);
+int64_t sys_lseek_metal(struct Fd *, int64_t, int);
 
 #ifdef __x86_64__
 bool __iswsl1(void);

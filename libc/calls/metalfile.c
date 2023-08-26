@@ -54,7 +54,7 @@ void *__ape_com_base;
 size_t __ape_com_size = 0;
 
 textstartup void InitializeMetalFile(void) {
-  if (IsMetal()) {
+  if (IsMetal() && _weaken(__ape_com_sectors)) {
     /*
      * Copy out a pristine image of the program — before the program might
      * decide to modify its own .data section.
@@ -64,8 +64,7 @@ textstartup void InitializeMetalFile(void) {
      * The zipos code will automatically arrange to do this.  Alternatively,
      * user code can __static_yoink this symbol.
      */
-    size_t size = ROUNDUP(_ezip - __executable_start, 4096);
-    // TODO(jart): Restore support for ZIPOS on metal.
+    size_t size = ROUNDUP((size_t)__ape_com_sectors * 512, 4096);
     void *copied_base;
     struct DirectMap dm;
     dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
