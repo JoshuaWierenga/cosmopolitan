@@ -105,7 +105,6 @@ o/$(MODE)/tool/build/dso/sandbox.so:			\
 		-s					\
 		-shared					\
 		-nostdlib				\
-		-Wl,--gc-sections			\
 		o/$(MODE)/tool/build/dso/sandbox.o	\
 		o/$(MODE)/libc/calls/pledge-linux.o	\
 		o/$(MODE)/libc/sysv/restorert.o		\
