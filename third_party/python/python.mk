@@ -1767,6 +1767,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/test_signal.py				\
 	third_party/python/Lib/test/test_stat.py				\
 	third_party/python/Lib/test/test_tarfile.py				\
+	third_party/python/Lib/test/test_threadsignals.py			\
 	third_party/python/Lib/test/test_time.py				\
 	third_party/python/Lib/test/test_timeout.py				\
 	third_party/python/Lib/test/test_unicode_file.py			\
@@ -1775,6 +1776,9 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 # Some tests become flaky in parallel mode with high thread counts
 # Starts breaking around -j13 on my 16 smt thread 5800x3d
 endif
+else
+THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+	third_party/python/Lib/test/test_threadsignals.py
 endif
 
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
@@ -1948,7 +1952,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_pprint.py				\
 	third_party/python/Lib/test/test_print.py				\
 	third_party/python/Lib/test/test_thread.py				\
-	third_party/python/Lib/test/test_threadsignals.py			\
 	third_party/python/Lib/test/test_profile.py				\
 	third_party/python/Lib/test/test_property.py				\
 	third_party/python/Lib/test/test_pstats.py				\
