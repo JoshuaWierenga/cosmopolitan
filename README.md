@@ -1,33 +1,52 @@
 ![Cosmopolitan Honeybadger](usr/share/img/honeybadger.png)
 
 [![build](https://github.com/jart/cosmopolitan/actions/workflows/build.yml/badge.svg)](https://github.com/jart/cosmopolitan/actions/workflows/build.yml)
-# Cosmopolitan (Build on Windows)
+# Cosmopolitan (Build on Linux, NetBSD and Windows)
 
-**This is an (unsupported) fork that makes it possible to build Cosmopolitan natively on a Windows system.**  
+**This is an (unsupported) fork that makes it possible to build Cosmopolitan natively on a Linux, NetBSD and Windows system whereas the main branch only supports building on Linux.**  
 Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/build-on-windows) with the goal of having less changes and having it be easier to apply to future builds of Cosmopolitan.
 
-## Build instructions
-Note that you should be using the Command Prompt (`cmd.exe`) and not Windows PowerShell. Is this still true?
-```
-curl -LO https://github.com/JoshuaWierenga/cosmopolitan/archive/refs/heads/build-on-windows-3.zip
-tar -xvf build-on-windows.zip
-REM Alternatively, assuming you have Git for Windows installed:
-REM git clone https://github.com/JoshuaWierenga/cosmopolitan cosmopolitan-build-on-windows -b build-on-windows-3
-cd cosmopolitan-build-on-windows
+## Build instructions for Windows
+Note: At one point it was recommended to use Command Prompt (cmd.exe) and not Windows PowerShell. Is this still true?
+```batch
+git clone -c core.autocrlf=false https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-3
+cd cosmopolitan
 mkdir o\third_party\gcc
 cd o\third_party\gcc
-curl -LO https://github.com/ahgamut/musl-cross-make/releases/download/z0.0.1/gcc11.zip
+curl -LO https://github.com/JoshuaWierenga/RandomScripts/releases/download/z0.0.0-1/gcc11.zip
 tar -xvf gcc11.zip
 del gcc11.zip
 for /R bin %%x in (*.com) do copy "%%x" "bin\x86_64-pc-linux-gnu-%%~nx" >NUL
-REM This needs to be set for gcc to work
+REM Not sure if this is still required
 set PATH=%PATH%;%CD%\bin
 cd ..\..\..\
-build\bootstrap\make.com V=0 -j8
+build\bootstrap\make.com -j8
+REM This is only required if some python tests fail due to flakiness at high job counts
+build\bootstrap\make.com -j1 o//third_party/python
 ```
 For an automated build try [this script](https://github.com/JoshuaWierenga/RandomScripts/blob/main/buildcosmo.bat).
 
-## Build notes
+## Build instructions for Unix-likes
+Note: Currently only tested on Linux and NetBSD, others may work.
+```sh
+git clone https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-3
+cd cosmopolitan
+mkdir -p o/third_party/gcc
+cd o/third_party/gcc
+curl -LO https://github.com/JoshuaWierenga/RandomScripts/releases/download/z0.0.0-1/gcc11.zip
+unzip gcc11.zip # Substitute for bsdtar/tar -xvf or other zip extraction commands as required on your system
+rm gcc11.zip
+find bin -type f -exec sh -c 'mv "$1" "${1%.*}"' sh {} \;
+find bin -type f -exec sh -c 'cp "$1" bin/x86_64-pc-linux-gnu-"${1#*/}"' sh {} \;
+PATH="$PATH:$(pwd)/bin"
+cd ../../../
+build/bootstrap/make.com -j8
+# This is only required if some python tests fail due to flakiness at high job counts
+build/bootstrap/make.com -j1 o//third_party/python
+```
+For an automated build try [this script](https://github.com/JoshuaWierenga/RandomScripts/blob/main/buildcosmo.sh).
+
+## Build notes, mostly for Windows
 - Building will take a while, as process creation and file operations are expensive on Windows.
   Expect to wait at least 30 minutes, even if you have a fast processor.
 - CTRL+C during the build process is unreliable, so it's best not to use it. Issues include:
@@ -36,7 +55,8 @@ For an automated build try [this script](https://github.com/JoshuaWierenga/Rando
   - `make.com` might get stuck after all processes have finished. In this case, open Task Manager and kill the make process.
 - `failed to move output file` errors often happen when running make with a high job count. Either try again or restart with `-j1`.
 - It is recommended to disable windows defender as it has false positives for almost anything produced by cosmo's build system.
-## Other notes
+
+## Other notes, mostly for windows
 - Remember that you should use backslashes when typing the path to a binary, and regular slashes when typing paths in arguments.
   For example: `build\bootstrap\make.com o//tool/net/dig.com`
 - After running make or any Cosmopolitan program, your console window will probably work oddly:
@@ -52,9 +72,10 @@ For an automated build try [this script](https://github.com/JoshuaWierenga/Rando
   - `test/libc/mem/test.mk` - `assimilate.com` arguments have been changed to force assimilating two binaries to ELF.
   - `test/tool/net/lunix_test.lua` - One assert has been disabled on windows due to `stat` not returning consistent outputs.
   - `third_party/python/python.mk` - Disabled quite a few tests on windows as they error.
-
+##
+  <br /><br />
+**Original readme follows**
 # Cosmopolitan
-
 [Cosmopolitan Libc](https://justine.lol/cosmopolitan/index.html) makes C
 a build-once run-anywhere language, like Java, except it doesn't need an
 interpreter or virtual machine. Instead, it reconfigures stock GCC and
