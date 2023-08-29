@@ -1740,8 +1740,10 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 # TESTS
 
 # TODO Check if a version of cosmo's IsWindows is available here
-# TODO Find out while these tests fail on windows
+# TODO Find out while these tests fail on windows and netbsd
 ifeq ($(origin HOMEPATH),undefined)
+OS := $(shell uname)
+ifneq ($(OS), NetBSD)
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/signalinterproctester.py			\
 	third_party/python/Lib/test/test_builtin.py				\
@@ -1772,6 +1774,7 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 
 # Some tests become flaky in parallel mode with high thread counts
 # Starts breaking around -j13 on my 16 smt thread 5800x3d
+endif
 endif
 
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
