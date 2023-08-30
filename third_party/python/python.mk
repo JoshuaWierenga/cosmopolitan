@@ -1741,9 +1741,26 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 
 # TODO Check if a version of cosmo's IsWindows is available here
 # TODO Find out while these tests fail on windows and netbsd
-ifeq ($(origin HOMEPATH),undefined)
-OS := $(shell uname)
-ifneq ($(OS), NetBSD)
+# Note that some tests become flaky with high job counts
+# They start breaking around -j13 on my 16 smt thread 5800x3d
+ifneq ($(origin HOMEPATH),undefined)
+	RunBadTests := 0
+	RunThreadTest := 1
+else
+	OS := $(shell uname -s)
+	ifeq ($(OS), FreeBSD)
+		RunBadTests := 0
+		RunThreadTest := 1
+	else ifeq ($(OS), NetBSD)
+		RunBadTests := 0
+		RunThreadTest := 0
+	else
+		RunBadTests := 1
+		RunThreadTest := 1
+	endif
+endif
+
+ifeq ($(RunBadTests), 1)
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/signalinterproctester.py			\
 	third_party/python/Lib/test/test_builtin.py				\
@@ -1772,11 +1789,9 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
 	third_party/python/Lib/test/test_timeout.py				\
 	third_party/python/Lib/test/test_unicode_file.py			\
 	third_party/python/Lib/test/test_zipapp.py
-
-# Some tests become flaky in parallel mode with high thread counts
-# Starts breaking around -j13 on my 16 smt thread 5800x3d
 endif
-else
+
+ifeq ($(RunThreadTest), 1)
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_threadsignals.py
 endif
