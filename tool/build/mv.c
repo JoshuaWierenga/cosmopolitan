@@ -23,6 +23,7 @@
 #include "libc/fmt/fmt.h"
 #include "libc/fmt/libgen.h"
 #include "libc/fmt/magnumstrs.internal.h"
+#include "libc/limits.h"
 #include "libc/mem/gc.h"
 #include "libc/runtime/runtime.h"
 #include "libc/stdio/ftw.h"
@@ -158,7 +159,7 @@ char *Join(const char *a, const char *b) {
 
 void Mv(char *src, char *dst) {
   ssize_t rc;
-  const char *s, *d;
+  const char *d;
   if (strlen(src) + 1 > PATH_MAX) _Exit(2);
   if (strlen(dst) + 1 > PATH_MAX) _Exit(2);
   basename(src);

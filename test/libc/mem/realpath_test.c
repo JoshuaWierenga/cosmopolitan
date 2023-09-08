@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2022 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -17,48 +17,59 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
+#include "libc/dce.h"
 #include "libc/errno.h"
-#include "libc/stdio/rand.h"
-#include "libc/stdio/temp.h"
+#include "libc/mem/gc.internal.h"
+#include "libc/mem/mem.h"
+#include "libc/runtime/runtime.h"
 #include "libc/str/str.h"
-#include "libc/sysv/errfuns.h"
+#include "libc/testlib/testlib.h"
 
-/**
- * Creates temporary directory, e.g.
- *
- *     char path[PATH_MAX];
- *     snprintf(path, sizeof(path), "%s%s.XXXXXX",
- *              kTmpPath, program_invocation_short_name);
- *     printf("%s\n", mkdtemp(path));
- *     rmdir(path);
- *
- * @param template must end with XXXXXX which is replaced with
- *     nondeterministic base36 random data
- * @return pointer to template on success, or NULL w/ errno
- * @raise EINVAL if template didn't end with XXXXXX
- */
-char *mkdtemp(char *template) {
-  unsigned x;
-  int i, j, n;
-  if ((n = strlen(template)) >= 6 && !memcmp(template + n - 6, "XXXXXX", 6)) {
-    for (i = 0; i < 10; ++i) {
-      x = _rand64();
-      for (j = 0; j < 6; ++j) {
-        template[n - 6 + j] = "0123456789abcdefghijklmnopqrstuvwxyz"[x % 36];
-        x /= 36;
-      }
-      if (!mkdir(template, 0700)) {
-        return template;
-      }
-      if (errno != EEXIST) {
-        break;
-      }
-    }
-    for (j = 0; j < 6; ++j) {
-      template[n - 6 + j] = 'X';
-    }
+char testlib_enable_tmp_setup_teardown;
+
+void SetUp(void) {
+  touch("conftest.a", 0644);
+  symlink("conftest.a", "conftest.l");
+  mkdir("conftest.d", 0755);
+}
+
+TEST(realpath, test1) {
+  char *name = gc(realpath("conftest.a", NULL));
+  ASSERT_TRUE(name && *name == '/');
+}
+
+TEST(realpath, test2) {
+  ASSERT_EQ(NULL, gc(realpath("conftest.b/../conftest.a", NULL)));
+}
+
+TEST(realpath, test3) {
+  char *name = gc(realpath("conftest.l/../conftest.a", NULL));
+  if (IsWindows()) {
+    // WIN32 acts as a flat namespace, rather than linear inode crawl.
+    // GNU ./configure scripts consider this outcome to be acceptable.
+    ASSERT_NE(NULL, name);
   } else {
-    einval();
+    // Every other OS FS is a UNIX inode crawl.
+    ASSERT_SYS(ENOTDIR, NULL, name);
   }
-  return 0;
+}
+
+TEST(realpath, test4) {
+  ASSERT_SYS(ENOTDIR, NULL, gc(realpath("conftest.a/", NULL)));
+}
+
+TEST(realpath, test5) {
+  char *name1 = gc(realpath(".", NULL));
+  char *name2 = gc(realpath("conftest.d//./..", NULL));
+  ASSERT_NE(NULL, name1);
+  ASSERT_NE(NULL, name2);
+  ASSERT_STREQ(name1, name2);
+}
+
+TEST(realpath, test6) {
+  // musl libc fails this test
+  // comment say // is special but doesn't say why :/
+  char *name = gc(realpath("//", NULL));
+  ASSERT_NE(NULL, name);
+  EXPECT_STREQ("/", name);
 }

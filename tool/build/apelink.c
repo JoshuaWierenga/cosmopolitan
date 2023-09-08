@@ -861,8 +861,6 @@ void FixupPeImage(char *map, size_t size,       //
                   Elf64_Sxword off_skew) {
   assert(!(rva_skew & 65535));
 
-  Elf64_Sxword skew = rva_skew;
-
   // fixup pe header
   if (ckd_sub(&pe->OptionalHeader.ImageBase,  //
               pe->OptionalHeader.ImageBase, rva_skew))
@@ -972,7 +970,6 @@ static void AddLoader(const char *path) {
 }
 
 static void GetOpts(int argc, char *argv[]) {
-  char *endptr;
   int opt, bits;
   bool got_support_vector = false;
   while ((opt = getopt(argc, argv, "hvgsGBo:l:S:M:V:")) != -1) {
@@ -1282,7 +1279,7 @@ static char *GenerateMachoSegment(char *p, struct Input *in, Elf64_Phdr *phdr) {
   load = (struct MachoLoadSegment *)p;
   load->command = MAC_LC_SEGMENT_64;
   load->size = sizeof(*load);
-  FormatInt32(stpcpy(load->name, "__APE"), macholoadcount);
+  FormatInt32(__veil("r", stpcpy(load->name, "__APE")), macholoadcount);
   ++macholoadcount;
   load->vaddr = phdr->p_vaddr;
   load->memsz = phdr->p_memsz;
@@ -1461,9 +1458,10 @@ static char *SecondPass2(char *p, struct Input *in) {
     // the new file size. that's only possible if all the fat ape hdrs
     // we generate are able to fit inside the prologue.
     p = ALIGN(p, 8);
+    // TODO(jart): Figure out why not skewing corrupts pe import table
     in->we_must_skew_pe_vaspace =
-        ROUNDUP(p - prologue + in->size_of_pe_headers,
-                (int)in->pe->OptionalHeader.FileAlignment) > in->minload;
+        1 || ROUNDUP(p - prologue + in->size_of_pe_headers,
+                     (int)in->pe->OptionalHeader.FileAlignment) > in->minload;
     if (!in->we_must_skew_pe_vaspace) {
       in->pe_e_lfanew = p - prologue;
       in->pe_SizeOfHeaders = in->pe->OptionalHeader.SizeOfHeaders;
@@ -1482,9 +1480,7 @@ static char *SecondPass2(char *p, struct Input *in) {
 // focusing on embedding the executable files passed via the flags.
 static Elf64_Off ThirdPass(Elf64_Off offset, struct Input *in) {
   int i;
-  char *data;
   Elf64_Addr vaddr;
-  Elf64_Phdr *phdr;
   Elf64_Xword image_align;
 
   // determine microprocessor page size
@@ -1814,9 +1810,8 @@ static void CopyZips(Elf64_Off offset) {
 
 int main(int argc, char *argv[]) {
   char *p;
-  int i, j, opt;
+  int i, j;
   Elf64_Off offset;
-  char empty[64] = {0};
   Elf64_Xword prologue_bytes;
 #ifndef NDEBUG
   ShowCrashReports();

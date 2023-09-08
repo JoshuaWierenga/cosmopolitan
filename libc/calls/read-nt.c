@@ -28,7 +28,6 @@
 #include "libc/errno.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/nomultics.internal.h"
-#include "libc/intrin/strace.internal.h"
 #include "libc/intrin/weaken.h"
 #include "libc/macros.internal.h"
 #include "libc/nt/console.h"
@@ -66,7 +65,6 @@ static textwindows ssize_t sys_read_nt_impl(struct Fd *fd, void *data,
   int filetype;
   int64_t handle;
   uint32_t remain;
-  uint32_t conmode;
   char *targetdata;
   uint32_t targetsize;
   bool is_console_input;
@@ -108,6 +106,7 @@ StartOver:
       // since for overlapped i/o, we always use GetOverlappedResult
       ok = ReadFile(handle, targetdata, targetsize, 0, &overlap);
       if (!ok && GetLastError() == kNtErrorIoPending) {
+      TryAgain:
         // the i/o operation is in flight; blocking is unavoidable
         // if we're in a non-blocking mode, then immediately abort
         // if an interrupt is pending then we abort before waiting
@@ -138,6 +137,9 @@ StartOver:
         // overlapped is allocated on stack, so it's important we wait
         // for windows to acknowledge that it's done using that memory
         ok = GetOverlappedResult(handle, &overlap, &got, true);
+        if (!ok && GetLastError() == kNtErrorIoIncomplete) {
+          goto TryAgain;
+        }
       }
       CloseHandle(overlap.hEvent);
     } else {
@@ -205,7 +207,6 @@ StartOver:
 textwindows ssize_t sys_read_nt(struct Fd *fd, const struct iovec *iov,
                                 size_t iovlen, int64_t opt_offset) {
   ssize_t rc;
-  uint32_t size;
   size_t i, total;
   if (opt_offset < -1) return einval();
   if (_check_interrupts(kSigOpRestartable)) return -1;

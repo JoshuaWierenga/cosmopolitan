@@ -26,6 +26,7 @@
 #include "libc/runtime/runtime.h"
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
+#include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/o.h"
 #include "libc/testlib/testlib.h"
 #include "libc/x/x.h"
@@ -71,14 +72,18 @@ TEST(makedirs, pathExists_isSuccess) {
 TEST(mkdir, enametoolong) {
   int i;
   size_t n = 2048;
-  char *d, *s = gc(calloc(1, n));
+  char *s = gc(calloc(1, n));
   for (i = 0; i < n - 1; ++i) s[i] = 'x';
   s[i] = 0;
   EXPECT_SYS(ENAMETOOLONG, -1, mkdir(s, 0644));
 }
 
-TEST(makedirs, testEmptyString_ENOENT) {
+TEST(mkdir, testEmptyString_ENOENT) {
   EXPECT_SYS(ENOENT, -1, mkdir("", 0755));
+}
+
+TEST(mkdir, slashSlash) {
+  EXPECT_SYS(0, 0, mkdirat(AT_FDCWD, "o//", 0777));
 }
 
 TEST(mkdirat, testRelativePath_opensRelativeToDirFd) {

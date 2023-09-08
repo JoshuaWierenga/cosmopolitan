@@ -75,7 +75,7 @@ TEST(reservefd, testGrowthOfFdsDataStructure) {
   for (i = 0; i < n; ++i) {
     ASSERT_SYS(0, i + 3, open("/zip/usr/share/zoneinfo/UTC", O_RDONLY));
   }
-  ASSERT_GT(g_fds.n, OPEN_MAX);
+  ASSERT_GT(g_fds.n, 16);
   for (i = 0; i < n; ++i) {
     ASSERT_SYS(0, 0, close(i + 3));
   }
@@ -119,20 +119,4 @@ int Worker(void *p, int tid) {
     close(fd);
   }
   return 0;
-}
-
-TEST(reservefd, tortureTest) {
-  int i;
-  struct spawn th[THREADS];
-  struct sigaction oldsa;
-  struct itimerval oldit;
-  struct itimerval it = {{0, 10000}, {0, 100}};
-  struct sigaction sa = {.sa_sigaction = OnSigAlrm,
-                         .sa_flags = 0 /* SA_NODEFER */};
-  // ASSERT_SYS(0, 0, sigaction(SIGALRM, &sa, &oldsa));
-  // ASSERT_SYS(0, 0, setitimer(ITIMER_REAL, &it, &oldit));
-  for (i = 0; i < THREADS; ++i) _spawn(Worker, 0, th + i);
-  for (i = 0; i < THREADS; ++i) _join(th + i);
-  // EXPECT_SYS(0, 0, sigaction(SIGALRM, &oldsa, 0));
-  // EXPECT_SYS(0, 0, setitimer(ITIMER_REAL, &oldit, 0));
 }

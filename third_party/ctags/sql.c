@@ -24,7 +24,7 @@
 #include "libc/calls/weirdtypes.h"
 #include "libc/fmt/fmt.h"
 #include "libc/stdio/stdio.h"
-#include "libc/stdio/temp.h"
+#include "libc/temp.h"
 #include "third_party/musl/tempnam.h"
 #endif
 
@@ -1242,6 +1242,7 @@ static void parseStatements (tokenInfo *const token, const boolean exit_on_endif
 {
 	boolean isAnsi   = TRUE;
 	boolean stmtTerm = FALSE;
+        (void)isAnsi;
 	do
 	{
 

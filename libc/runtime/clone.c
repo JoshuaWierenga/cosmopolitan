@@ -52,7 +52,7 @@
 #include "libc/thread/openbsd.internal.h"
 #include "libc/thread/thread.h"
 #include "libc/thread/tls.h"
-#include "libc/thread/tls2.h"
+#include "libc/thread/tls2.internal.h"
 #include "libc/thread/xnu.internal.h"
 
 #define kMaxThreadIds 32768
@@ -215,8 +215,6 @@ XnuThreadMain(void *pthread,                    // rdi
 
 static errno_t CloneXnu(int (*fn)(void *), char *stk, size_t stksz, int flags,
                         void *arg, void *tls, int *ptid, int *ctid) {
-  int rc;
-  bool failed;
   static bool once;
   struct CloneArgs *wt;
   if (!once) {
@@ -690,6 +688,10 @@ errno_t clone(void *func, void *stk, size_t stksz, int flags, void *arg,
 #endif /* __x86_64__ */
   } else {
     rc = ENOSYS;
+  }
+
+  if (SupportsBsd() && rc == EPROCLIM) {
+    rc = EAGAIN;
   }
 
   STRACE("clone(%t, %p, %'zu, %#x, %p, %p, %p, %p) → %s", func, stk, stksz,

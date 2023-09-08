@@ -23,13 +23,13 @@ struct Serializer {
 };
 
 bool LuaHasMultipleItems(lua_State *);
-char *LuaFormatStack(lua_State *) dontdiscard;
+char *LuaFormatStack(lua_State *) __wur;
 int LuaCallWithTrace(lua_State *, int, int, lua_State *);
 int LuaEncodeJsonData(lua_State *, char **, int, struct EncoderConfig);
 int LuaEncodeLuaData(lua_State *, char **, int, struct EncoderConfig);
 int LuaEncodeUrl(lua_State *);
 int LuaParseUrl(lua_State *);
-int LuaPushHeader(lua_State *, struct HttpMessage *, char *, int);
+int LuaPushHeader(lua_State *, struct HttpMessage *, const char *, int);
 int LuaPushHeaders(lua_State *, struct HttpMessage *, const char *);
 void LuaPrintStack(lua_State *);
 void LuaPushLatin1(lua_State *, const char *, size_t);

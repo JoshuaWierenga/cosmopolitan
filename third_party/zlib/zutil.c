@@ -12,6 +12,8 @@
 #include "third_party/zlib/zutil.internal.h"
 // clang-format off
 
+#pragma GCC diagnostic ignored "-Wimplicit-int"
+
 /* @(#) $Id$ */
 
 z_const char * const z_errmsg[10] = {
@@ -313,11 +315,7 @@ voidpf ZLIB_INTERNAL zcalloc (opaque, items, size)
     unsigned size;
 {
     (void)opaque;
-    if (_weaken(malloc)) {
-        return _weaken(malloc)(items * size);
-    } else {
-        return 0;
-    }
+    return malloc(items * size);
 }
 
 void ZLIB_INTERNAL zcfree (opaque, ptr)
@@ -325,9 +323,7 @@ void ZLIB_INTERNAL zcfree (opaque, ptr)
     voidpf ptr;
 {
     (void)opaque;
-    if (_weaken(free)) {
-        _weaken(free)(ptr);
-    }
+    free(ptr);
 }
 
 #endif /* MY_ZCALLOC */

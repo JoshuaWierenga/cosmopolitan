@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,27 +16,24 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/fmt/conv.h"
-#include "libc/limits.h"
-#include "libc/macros.internal.h"
-#include "libc/mem/gc.internal.h"
 #include "libc/stdio/stdio.h"
-#include "libc/str/str.h"
-#include "libc/x/x.h"
-#include "third_party/gdtoa/gdtoa.h"
+#include "libc/sysv/errfuns.h"
 
-void double2int(const char *s) {
-  double b64;
-  uint64_t u64;
-  b64 = strtod(s, NULL);
-  memcpy(&u64, &b64, 8);
-  printf("0x%016lx\n", u64);
-}
-
-int main(int argc, char *argv[]) {
-  int i;
-  for (i = 1; i < argc; ++i) {
-    double2int(argv[i]);
+/**
+ * Generates temporary file name, reentrantly.
+ *
+ * This function is the same as tmpnam() except `buf` can't be NULL.
+ *
+ * @param buf must have `L_tmpnam` bytes available
+ * @return pointer to `buf` which is populated with a unique generated
+ *     filename, or null w/ errno on failure; buffer content will only
+ *     be mutated on success
+ */
+char *tmpnam_r(char *buf) {
+  if (buf) {
+    return tmpnam(buf);
+  } else {
+    einval();
+    return 0;
   }
-  return 0;
 }

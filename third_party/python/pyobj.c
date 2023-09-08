@@ -29,6 +29,7 @@
 #include "libc/mem/gc.internal.h"
 #include "libc/mem/mem.h"
 #include "libc/runtime/runtime.h"
+#include "libc/runtime/stack.h"
 #include "libc/stdio/append.h"
 #include "libc/stdio/stdio.h"
 #include "libc/sysv/consts/clock.h"
@@ -63,6 +64,8 @@
 #include "tool/build/lib/interner.h"
 #include "tool/build/lib/stripcomponents.h"
 /* clang-format off */
+
+STATIC_STACK_ALIGN(GetStackSize());
 
 __static_yoink("_PyUnicode_GetCode");
 
@@ -214,9 +217,6 @@ const char *const kIgnoredModules[] = /* sorted */ {
     "test.libregrtest.main",
     /* "xml.dom", */
 };
-
-_Py_IDENTIFIER(stdout);
-_Py_IDENTIFIER(stderr);
 
 struct Yoinks {
     size_t n;
@@ -469,13 +469,13 @@ Analyze(const char *modname, PyObject *code, struct Interner *globals)
     int rc;
     bool istry;
     unsigned a;
-    size_t i, j, n;
+    size_t i, n;
     char *p, *mod, *imp;
     int x, y, op, arg, rel;
     PyObject *co_code, *co_names, *co_consts, *name, *iter, *item;
     rc = 0;
     mod = 0;
-    istry = rel = 0;
+    istry = (rel = 0);
     assert(PyCode_Check(code));
     co_code = ((PyCodeObject *)code)->co_code;
     co_names = ((PyCodeObject *)code)->co_names;

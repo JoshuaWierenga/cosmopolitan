@@ -20,6 +20,7 @@
 #include "libc/calls/struct/stat.h"
 #include "libc/dce.h"
 #include "libc/errno.h"
+#include "libc/limits.h"
 #include "libc/log/log.h"
 #include "libc/mem/gc.h"
 #include "libc/mem/gc.internal.h"
@@ -46,11 +47,13 @@ TEST(readlink, enoent) {
 TEST(readlink, enotdir) {
   char buf[32];
   ASSERT_SYS(0, 0, touch("o", 0644));
+  ASSERT_SYS(ENOTDIR, -1, readlink("o/", buf, 32));
+  ASSERT_SYS(ENOTDIR, -1, readlink("o/o/..", buf, 32));
   ASSERT_SYS(ENOTDIR, -1, readlink("o/doesnotexist", buf, 32));
 }
 
 TEST(readlinkat, test) {
-  char buf[128], *p, *q;
+  char buf[128];
   // Gives EPERM on windows
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
@@ -100,19 +103,18 @@ TEST(readlinkat, frootloop) {
   }
 }
 
-TEST(readlinkat, statReadsNameLength) {
+TEST(readlinkat, statReadsNameLength_countsUtf8Bytes) {
   struct stat st;
   // Gives EPERM on windows
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
-  ASSERT_SYS(0, 0, symlink("froot", "froot"));
-  ASSERT_SYS(0, 0, fstatat(AT_FDCWD, "froot", &st, AT_SYMLINK_NOFOLLOW));
+  ASSERT_SYS(0, 0, symlink("froÒt", "froÒt"));
+  ASSERT_SYS(0, 0, fstatat(AT_FDCWD, "froÒt", &st, AT_SYMLINK_NOFOLLOW));
   EXPECT_TRUE(S_ISLNK(st.st_mode));
-  EXPECT_EQ(5, st.st_size);
+  EXPECT_EQ(6, st.st_size);
 }
 
 TEST(readlinkat, realpathReturnsLongPath) {
-  struct stat st;
   char buf[PATH_MAX];
   if (!IsWindows()) return;
   if (!startswith(getcwd(buf, PATH_MAX), "/c/")) return;

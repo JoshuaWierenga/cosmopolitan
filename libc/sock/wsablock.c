@@ -43,12 +43,13 @@ static textwindows void __wsablock_abort(int64_t handle,
 
 textwindows int __wsablock(struct Fd *fd, struct NtOverlapped *overlapped,
                            uint32_t *flags, int sigops, uint32_t timeout) {
+  int abort_errno;
   uint32_t i, got;
-  int rc, abort_errno;
   if (WSAGetLastError() != kNtErrorIoPending) {
     // our i/o operation never happened because it failed
     return __winsockerr();
   }
+TryAgain:
   // our i/o operation is in flight and it needs to block
   abort_errno = EAGAIN;
   if (fd->flags & O_NONBLOCK) {
@@ -87,10 +88,15 @@ textwindows int __wsablock(struct Fd *fd, struct NtOverlapped *overlapped,
   // we wait for win32 to acknowledge that it's done using that memory.
   if (WSAGetOverlappedResult(fd->handle, overlapped, &got, true, flags)) {
     return got;
-  } else if (WSAGetLastError() == kNtErrorOperationAborted) {
-    errno = abort_errno;
-    return -1;
-  } else {
-    return -1;
   }
+  switch (WSAGetLastError()) {
+    case kNtErrorIoIncomplete:
+      goto TryAgain;
+    case kNtErrorOperationAborted:
+      errno = abort_errno;
+      break;
+    default:
+      break;
+  }
+  return -1;
 }

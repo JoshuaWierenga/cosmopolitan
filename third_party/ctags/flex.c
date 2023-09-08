@@ -29,7 +29,7 @@
 #include "libc/calls/weirdtypes.h"
 #include "libc/fmt/fmt.h"
 #include "libc/stdio/stdio.h"
-#include "libc/stdio/temp.h"
+#include "libc/temp.h"
 #include "third_party/musl/tempnam.h"
 #endif
 
@@ -1475,6 +1475,7 @@ static boolean parseStatement (tokenInfo *const token)
 	boolean is_global = FALSE;
 	boolean is_prototype = FALSE;
 	vString *	fulltag;
+        (void)is_prototype;
 
 	vStringClear(saveScope);
 	vStringCopy (saveScope, token->scope);

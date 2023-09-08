@@ -39,6 +39,7 @@
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/promises.internal.h"
 #include "libc/intrin/safemacros.internal.h"
+#include "libc/limits.h"
 #include "libc/macros.internal.h"
 #include "libc/math.h"
 #include "libc/mem/gc.internal.h"
@@ -583,9 +584,7 @@ Finish:
 int main(int argc, char *argv[]) {
   const char *s;
   bool hasfunbits;
-  int fdin, fdout;
   char buf[PATH_MAX];
-  int e, zipfd, memfd;
   int useruid, usergid;
   int owneruid, ownergid;
   int oldfsuid, oldfsgid;

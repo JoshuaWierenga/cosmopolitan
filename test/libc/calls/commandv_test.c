@@ -23,6 +23,7 @@
 #include "libc/errno.h"
 #include "libc/fmt/fmt.h"
 #include "libc/intrin/safemacros.internal.h"
+#include "libc/limits.h"
 #include "libc/log/check.h"
 #include "libc/mem/gc.internal.h"
 #include "libc/mem/mem.h"
@@ -45,7 +46,6 @@ void SetUpOnce(void) {
 }
 
 void SetUp(void) {
-  static int x;
   mkdir("bin", 0755);
   mkdir("home", 0755);
   oldpath = strdup(nulltoempty(getenv("PATH")));

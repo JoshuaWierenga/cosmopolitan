@@ -34,6 +34,7 @@
 #include "libc/intrin/bsr.h"
 #include "libc/intrin/hilbert.h"
 #include "libc/intrin/safemacros.internal.h"
+#include "libc/limits.h"
 #include "libc/log/log.h"
 #include "libc/macros.internal.h"
 #include "libc/runtime/runtime.h"
@@ -261,7 +262,6 @@ static void SetExtent(long lo, long hi) {
 }
 
 static void Open(void) {
-  int err;
   if ((fd = open(path, O_RDONLY)) == -1) {
     FailPath("open() failed", errno);
   }

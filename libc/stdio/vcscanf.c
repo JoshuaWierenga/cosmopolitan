@@ -19,6 +19,7 @@
 #include "libc/fmt/conv.h"
 #include "libc/fmt/fmt.h"
 #include "libc/intrin/weaken.h"
+#include "libc/limits.h"
 #include "libc/mem/mem.h"
 #include "libc/runtime/runtime.h"
 #include "libc/str/str.h"
@@ -326,7 +327,6 @@ int __vcscanf(int callback(void *),    //
               } else if (tpdecodecb((wint_t *)&c, c, (void *)callback, arg) !=
                          -1) {
                 if (charbytes == sizeof(char16_t)) {
-                  size_t k = 0;
                   unsigned w = EncodeUtf16(c);
                   do {
                     if ((j + 1) * 2 < bufsize) {

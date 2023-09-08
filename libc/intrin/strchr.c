@@ -35,7 +35,8 @@ typedef char xmm_t __attribute__((__vector_size__(16), __aligned__(16)));
 dontasan static inline const char *strchr_sse(const char *s, unsigned char c) {
   unsigned k;
   unsigned m;
-  xmm_t v, *p;
+  const xmm_t *p;
+  xmm_t v;
   xmm_t z = {0};
   xmm_t n = {c, c, c, c, c, c, c, c, c, c, c, c, c, c, c, c};
   k = (uintptr_t)s & 15;
@@ -106,14 +107,14 @@ dontasan char *strchr(const char *s, int c) {
   unassert(!r || *r || !(c & 255));
   return (char *)r;
 #else
-  char *r;
+  const char *r;
   for (c &= 255; (uintptr_t)s & 7; ++s) {
-    if ((*s & 255) == c) return s;
+    if ((*s & 255) == c) return (char *)s;
     if (!*s) return NULL;
   }
   r = strchr_x64(s, c);
   unassert(!r || *r || !c);
-  return r;
+  return (char *)r;
 #endif
 }
 

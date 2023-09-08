@@ -25,8 +25,8 @@
 #include "libc/fmt/itoa.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/runtime/runtime.h"
-#include "libc/stdio/temp.h"
 #include "libc/str/str.h"
+#include "libc/temp.h"
 #include "libc/testlib/ezbench.h"
 #include "libc/testlib/subprocess.h"
 #include "libc/testlib/testlib.h"
@@ -69,8 +69,8 @@ TEST(execve, testArgPassing) {
 }
 
 TEST(execve, ziposELF) {
-  if (IsFreebsd()) return;           // TODO: fixme on freebsd
-  if (!__is_linux_2_6_23()) return;  // TODO: fixme on old linux
+  if (IsFreebsd()) return;                        // TODO: fixme on freebsd
+  if (IsLinux() && !__is_linux_2_6_23()) return;  // TODO: fixme on old linux
   if (!IsLinux() && !IsFreebsd()) {
     EXPECT_SYS(ENOSYS, -1,
                execve("/zip/life.elf", (char *const[]){0}, (char *const[]){0}));
@@ -83,8 +83,8 @@ TEST(execve, ziposELF) {
 }
 
 TEST(execve, ziposAPE) {
-  if (IsFreebsd()) return;           // TODO: fixme on freebsd
-  if (!__is_linux_2_6_23()) return;  // TODO: fixme on old linux
+  if (IsFreebsd()) return;                        // TODO: fixme on freebsd
+  if (IsLinux() && !__is_linux_2_6_23()) return;  // TODO: fixme on old linux
   if (!IsLinux() && !IsFreebsd()) {
     EXPECT_EQ(-1, execve("/zip/life-nomod.com", (char *const[]){0},
                          (char *const[]){0}));
@@ -111,7 +111,7 @@ TEST(execve, ziposAPE) {
 void ExecvTinyElf(const char *path) {
   int ws;
   if (!vfork()) {
-    execv(path, (char *[]){path, 0});
+    execv(path, (char *[]){(char *)path, 0});
     abort();
   }
   ASSERT_NE(-1, wait(&ws));
@@ -121,7 +121,7 @@ void ExecvTinyElf(const char *path) {
 void ExecvpTinyElf(const char *path) {
   int ws;
   if (!vfork()) {
-    execvp(path, (char *[]){path, 0});
+    execvp(path, (char *[]){(char *)path, 0});
     abort();
   }
   ASSERT_NE(-1, wait(&ws));
@@ -131,7 +131,7 @@ void ExecvpTinyElf(const char *path) {
 void ExecveTinyElf(const char *path) {
   int ws;
   if (!vfork()) {
-    execve(path, (char *[]){path, 0}, (char *[]){0});
+    execve(path, (char *[]){(char *)path, 0}, (char *[]){0});
     abort();
   }
   ASSERT_NE(-1, wait(&ws));

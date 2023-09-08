@@ -18,6 +18,7 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/dce.h"
 #include "libc/intrin/asan.internal.h"
+#include "libc/limits.h"
 #include "libc/nexgen32e/x86feature.h"
 #include "libc/stdckdint.h"
 #include "libc/str/str.h"
@@ -39,7 +40,7 @@ static inline const wchar_t *wmemrchr_pure(const wchar_t *s, wchar_t c,
 dontasan static inline const wchar_t *wmemrchr_sse(const wchar_t *s, wchar_t c,
                                                    size_t n) {
   size_t i;
-  unsigned k, m;
+  unsigned m;
   xmm_t v, t = {c, c, c, c};
   for (i = n; i >= 4;) {
     v = *(const xmm_t *)(s + (i -= 4));
@@ -78,6 +79,6 @@ void *wmemrchr(const wchar_t *s, wchar_t c, size_t n) {
   r = wmemrchr_sse(s, c, n);
   return (void *)r;
 #else
-  return wmemrchr_pure(s, c, n);
+  return (void *)wmemrchr_pure(s, c, n);
 #endif
 }

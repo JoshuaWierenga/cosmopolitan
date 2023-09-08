@@ -55,7 +55,7 @@ void OnSig(int sig) {
   gotsig = true;
 }
 
-dontdiscard char *FormatPollFd(struct pollfd p[2]) {
+__wur char *FormatPollFd(struct pollfd p[2]) {
   return xasprintf("fd:%d revents:%s\n"
                    "fd:%d revents:%s\n",
                    p[0].fd, "<TODO:kPollNames>", p[1].fd, "<TODO:kPollNames>");
@@ -131,6 +131,7 @@ TEST(poll, pipe_hasInput) {
   char buf[2];
   sigset_t chldmask, savemask;
   int ws, pid, sync[2], pipefds[2];
+  (void)sync;
   EXPECT_EQ(0, sigemptyset(&chldmask));
   EXPECT_EQ(0, sigaddset(&chldmask, SIGCHLD));
   EXPECT_EQ(0, sigprocmask(SIG_BLOCK, &chldmask, &savemask));

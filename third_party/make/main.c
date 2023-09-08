@@ -979,6 +979,10 @@ main (int argc, char **argv, char **envp)
   unsigned int syncing = 0;
   int argv_slots;
 
+  // [jart] workaround to prevent make -j fork bomb
+  default_load_average = __get_cpu_count();
+  max_load_average = default_load_average;
+
   /* Useful for attaching debuggers, etc.  */
   SPIN ("main-entry");
 
@@ -1662,7 +1666,10 @@ main (int argc, char **argv, char **envp)
           p = quote_for_env (p, eval_strings->list[i]);
           *(p++) = ' ';
         }
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wstringop-overflow" /* wut */
       p[-1] = '\0';
+#pragma GCC pop_options
 
       define_variable_cname ("-*-eval-flags-*-", value, o_automatic, 0);
     }

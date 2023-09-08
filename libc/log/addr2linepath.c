@@ -17,12 +17,13 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
+#include "libc/limits.h"
 #include "libc/log/log.h"
 #include "libc/runtime/runtime.h"
 #include "libc/str/str.h"
 
 static const char *TryMonoRepoPath(const char *var, const char *path) {
-  const char buf[PATH_MAX];
+  char buf[PATH_MAX];
   if (getenv(var)) return 0;
   if (!isexecutable(path)) return 0;
   if (*path != '/') {

@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,8 +16,21 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/stdio/temp.h"
+#include "libc/calls/calls.h"
+#include "libc/runtime/runtime.h"
 
-int mkostemp(char *template, unsigned flags) {
-  return mkostempsm(template, 0, flags, 0600);
+/**
+ * Returns environment variable, securely.
+ *
+ * This is the same as getenv() except it'll return null if current
+ * process is a setuid / setgid program.
+ *
+ * @param name is environment variable key name, which may not be null
+ */
+char *secure_getenv(const char *name) {
+  if (!issetugid()) {
+    return getenv(name);
+  } else {
+    return 0;
+  }
 }

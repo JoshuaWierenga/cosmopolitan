@@ -53,7 +53,7 @@ static dontubsan void RaiseSigFpe(void) {
  * @asyncsignalsafe
  */
 int raise(int sig) {
-  int rc, tid, event;
+  int rc;
   STRACE("raise(%G) → ...", sig);
   if (sig == SIGTRAP) {
     DebugBreak();
@@ -68,10 +68,6 @@ int raise(int sig) {
     rc = sys_tkill(gettid(), sig, 0);
   } else if (IsWindows() || IsMetal()) {
     if (IsWindows() && sig == SIGKILL) {
-      // TODO(jart): Isn't this implemented by __sig_raise()?
-      if (_weaken(__restore_console_win32)) {
-        _weaken(__restore_console_win32)();
-      }
       ExitProcess(sig);
     } else {
       rc = __sig_raise(sig, SI_TKILL);

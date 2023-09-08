@@ -410,18 +410,21 @@ get_target_variable (const char *name,
     return dflt;
 }
 
-const char *
+char *
 get_tmpdir (struct file *file)
 {
-  return get_target_variable (STRING_SIZE_TUPLE ("TMPDIR"), file, 0);
+  const char *tmpdir;
+  tmpdir = get_target_variable (STRING_SIZE_TUPLE ("TMPDIR"), file, 0);
+  if (!tmpdir) tmpdir = kTmpPath;
+  return strdup (tmpdir);
 }
 
 char *
 new_tmpdir (const char *tmp, struct file *file)
 {
+  char *tmpdir;
   const char *s;
   int c, e, i, j;
-  char *dir, *tmpdir;
   char cwd[PATH_MAX];
   char path[PATH_MAX];
 
@@ -1875,9 +1878,9 @@ child_execute_job (struct childbase *child,
   char outpathbuf[PATH_MAX];
   int fdout = FD_STDOUT;
   int fderr = FD_STDERR;
+  const char *s;
   pid_t pid;
   int e, r;
-  char *s;
 
   /* Divert child output if we want to capture it.  */
   if (child->output.syncout)
@@ -1931,11 +1934,11 @@ child_execute_job (struct childbase *child,
 
   if (sandboxed)
     {
-      promises = emptytonull (get_target_variable
-                              (STRING_SIZE_TUPLE (".PLEDGE"),
-                               c ? c->file : 0, 0));
-      if (promises)
-        promises = xstrdup (promises);
+      const char *ps;
+      ps = emptytonull (get_target_variable
+                        (STRING_SIZE_TUPLE (".PLEDGE"),
+                         c ? c->file : 0, 0));
+      promises = ps ? xstrdup (ps) : 0;
       if (ParsePromises (promises, &ipromises))
         {
           OSS (error, NILF, "%s: invalid .PLEDGE string: %s",
@@ -2128,7 +2131,7 @@ child_execute_job (struct childbase *child,
         DB (DB_JOBS, (_("Blocked Internet access with seccomp ptrace\n")));
       else
         {
-          if (errno = EPERM)
+          if (errno == EPERM)
             {
               errno = e;
               DB (DB_JOBS, (_("Can't block Internet if already traced\n")));
@@ -2152,7 +2155,7 @@ child_execute_job (struct childbase *child,
   if (!strict || !sandboxed)
     {
       if ((s = commandv (argv[0], pathbuf, sizeof (pathbuf))))
-        argv[0] = s;
+        argv[0] = (char *)s;
       else
         {
           OSS (error, NILF, "%s: command not found on $PATH: %s",
@@ -2255,7 +2258,7 @@ child_execute_job (struct childbase *child,
           if (!c->file->phony &&
               strlen(c->file->name) < PATH_MAX)
             {
-              int fd, rc, err;
+              int fd, err;
               if (c->file->last_mtime == NONEXISTENT_MTIME)
                 {
                   strcpy (outpathbuf, c->file->name);
@@ -2306,7 +2309,7 @@ child_execute_job (struct childbase *child,
               RETURN_ON_ERROR (Unveil (d->file->name, "rx"));
               if (n > 4 && READ32LE(d->file->name + n - 4) == READ32LE(".com"))
                 {
-                  s = xstrcat (d->file->name, ".dbg");
+                  char *s = xstrcat (d->file->name, ".dbg");
                   RETURN_ON_ERROR (Unveil (s, "rx"));
                   free (s);
                 }

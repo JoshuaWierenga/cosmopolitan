@@ -57,7 +57,7 @@ Lua 5.4.3 (MIT License)\\n\
 Copyright 1994–2021 Lua.org, PUC-Rio.\"");
 asm(".include \"libc/disclaimer.inc\"");
 
-STATIC_STACK_SIZE(0x80000);
+STATIC_STACK_ALIGN(GetStackSize());
 
 #if !defined(LUA_PROGNAME)
 #define LUA_PROGNAME		"lua"
@@ -68,9 +68,6 @@ STATIC_STACK_SIZE(0x80000);
 #endif
 
 #define LUA_INITVARVERSION	LUA_INIT_VAR LUA_VERSUFFIX
-
-
-static lua_State *globalL = NULL;
 
 
 static bool lua_stdin_is_tty(void) {

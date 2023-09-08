@@ -134,7 +134,6 @@ include libc/tinymath/tinymath.mk		# │  You can issue raw system calls
 include libc/str/str.mk				# │
 include third_party/xed/xed.mk			# │
 include third_party/puff/puff.mk		# │
-include third_party/zlib/zlib.mk		# │
 include libc/elf/elf.mk				# │
 include ape/ape.mk				# │
 include libc/fmt/fmt.mk				# │
@@ -150,6 +149,7 @@ include third_party/gdtoa/gdtoa.mk		# ├──DYNAMIC RUNTIME
 include third_party/nsync/mem/mem.mk		# │  You can now use stdio
 include libc/thread/thread.mk			# │  You can finally call malloc()
 include tool/hello/hello.mk			# │
+include third_party/zlib/zlib.mk		# │
 include libc/stdio/stdio.mk			# │
 include libc/time/time.mk			# │
 include net/net.mk				# │

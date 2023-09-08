@@ -25,17 +25,18 @@
 │  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                      │
 │                                                                              │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "third_party/musl/tempnam.h"
 #include "libc/calls/calls.h"
 #include "libc/calls/struct/stat.h"
 #include "libc/calls/struct/timespec.h"
 #include "libc/errno.h"
+#include "libc/limits.h"
 #include "libc/mem/mem.h"
 #include "libc/runtime/runtime.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/clock.h"
 #include "libc/time/time.h"
-#include "third_party/musl/tempnam.h"
 
 #define MAXTRIES 100
 
@@ -52,7 +53,7 @@ __randname(char *template)
 	struct timespec ts;
 	unsigned long r;
 	clock_gettime(CLOCK_REALTIME, &ts);
-	r = ts.tv_nsec * 65537 ^ (uintptr_t)&ts / 16 + (uintptr_t) template;
+	r = ts.tv_nsec * 65537 ^ ((uintptr_t)&ts / 16 + (uintptr_t) template);
 	for (i = 0; i < 6; i++, r >>= 5) template[i] = 'A' + (r & 15) + (r & 16) * 2;
 	return template;
 }

@@ -21,6 +21,7 @@
 #include "libc/calls/internal.h"
 #include "libc/calls/struct/dirent.h"
 #include "libc/calls/struct/stat.h"
+#include "libc/calls/syscall-sysv.internal.h"
 #include "libc/calls/syscall_support-nt.internal.h"
 #include "libc/dce.h"
 #include "libc/errno.h"
@@ -42,6 +43,7 @@
 #include "libc/runtime/zipos.internal.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/dt.h"
+#include "libc/sysv/consts/f.h"
 #include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
@@ -262,6 +264,20 @@ GiveUpOnGettingInode:
  */
 DIR *fdopendir(int fd) {
 
+  // sanity check file descriptor
+  struct stat st;
+  if (fstat(fd, &st) == -1) {
+    return 0;
+  }
+  if (!S_ISDIR(st.st_mode)) {
+    enotdir();
+    return 0;
+  }
+  if (IsLinux() && (__sys_fcntl(fd, F_GETFL) & O_PATH)) {
+    ebadf();
+    return 0;
+  }
+
   // allocate directory iterator object
   DIR *dir;
   if (!(dir = calloc(1, sizeof(*dir)))) {
@@ -294,13 +310,13 @@ DIR *fdopendir(int fd) {
 
   // get path of this file descriptor and ensure trailing slash
   size_t len;
-  char *name;
+  const char *name;
   if (h->cfile != ZIPOS_SYNTHETIC_DIRECTORY) {
     len = ZIP_CFILE_NAMESIZE(h->zipos->map + h->cfile);
     name = ZIP_CFILE_NAME(h->zipos->map + h->cfile);
   } else {
     len = h->size;
-    name = (char *)h->data;
+    name = (const char *)h->data;
   }
   if (len + 2 > ZIPOS_PATH_MAX) {
     free(dir);
@@ -385,13 +401,13 @@ static struct dirent *readdir_zipos(DIR *dir) {
       ent->d_ino = __zipos_inode(
           dir->zip.zipos, __zipos_scan(dir->zip.zipos, &p), p.path, p.len);
     } else {
-      uint8_t *s = ZIP_CFILE_NAME(dir->zip.zipos->map + dir->zip.offset);
+      const char *s = ZIP_CFILE_NAME(dir->zip.zipos->map + dir->zip.offset);
       size_t n = ZIP_CFILE_NAMESIZE(dir->zip.zipos->map + dir->zip.offset);
       if (n > dir->zip.prefix.len &&
           !memcmp(dir->zip.prefix.path, s, dir->zip.prefix.len)) {
         s += dir->zip.prefix.len;
         n -= dir->zip.prefix.len;
-        uint8_t *p = memchr(s, '/', n);
+        const char *p = memchr(s, '/', n);
         if (p) n = p - s;
         if ((n = MIN(n, sizeof(ent->d_name) - 1)) &&
             critbit0_emplace(&dir->zip.found, s, n) == 1) {

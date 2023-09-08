@@ -129,6 +129,7 @@
 #include "libc/macros.internal.h"
 #include "libc/mem/alg.h"
 #include "libc/mem/alloca.h"
+#include "libc/mem/gc.internal.h"
 #include "libc/mem/mem.h"
 #include "libc/paths.h"
 #include "libc/runtime/runtime.h"
@@ -1026,7 +1027,6 @@ struct t_op {
 │ cosmopolitan § the unbourne shell » bss                                  ─╬─│┼
 ╚────────────────────────────────────────────────────────────────────────────│*/
 
-static int inter;
 static char **argptr; /* argument list for builtin commands */
 static char **gargv;
 static char **t_wp;
@@ -1788,7 +1788,7 @@ static int xvsnprintf(char *outbuf, unsigned length, const char *fmt,
   return ret;
 }
 
-static int xvasprintf(char **sp, unsigned size, const char *f, va_list ap) {
+static int Xvasprintf(char **sp, unsigned size, const char *f, va_list ap) {
   char *s;
   int len;
   va_list ap2;
@@ -1859,7 +1859,7 @@ printfesque(2) static int Xasprintf(char **sp, const char *fmt, ...) {
   va_list ap;
   int ret;
   va_start(ap, fmt);
-  ret = xvasprintf(sp, 0, fmt, ap);
+  ret = Xvasprintf(sp, 0, fmt, ap);
   va_end(ap);
   return ret;
 }
@@ -1872,7 +1872,7 @@ static void doformat(struct output *dest, const char *f, va_list ap) {
   setstackmark(&smark);
   s = dest->nextc;
   olen = dest->end - dest->nextc;
-  len = xvasprintf(&s, olen, f, ap);
+  len = Xvasprintf(&s, olen, f, ap);
   if (likely(olen > len)) {
     dest->nextc += len;
     goto out;
@@ -5747,7 +5747,7 @@ static void CompleteCommand(const char *p, const char *q, const char *b,
         }
         closedir(d);
       }
-      free(path);
+      free((void *)path);
     }
   }
 }
@@ -5784,7 +5784,6 @@ static void CompleteFilename(const char *p, const char *q, const char *b,
 static void ShellCompletion(const char *p, linenoiseCompletions *c) {
   bool slashed;
   const char *q, *b;
-  struct tblentry **pp, *cmdp;
   for (slashed = false, b = p, q = (p += strlen(p)); p > b; --p) {
     if (p[-1] == '/' && p[-1] == '\\') slashed = true;
     if (!isalnum(p[-1]) &&
@@ -5818,9 +5817,14 @@ static ssize_t preadfd(void) {
 retry:
   if (!parsefile->fd && isatty(0)) {
     linenoiseSetFreeHintsCallback(free);
-    linenoiseSetHintsCallback(ShellHint);
-    linenoiseSetCompletionCallback(ShellCompletion);
-    if ((p = linenoiseWithHistory(">: ", "unbourne"))) {
+    if (!IsWindows()) {
+      // TODO(jart): Cache $PATH search.
+      linenoiseSetHintsCallback(ShellHint);
+      linenoiseSetCompletionCallback(ShellCompletion);
+    }
+    char ps1[256];
+    snprintf(ps1, sizeof(ps1), "%d >: ", exitstatus);
+    if ((p = linenoiseWithHistory(ps1, "unbourne"))) {
       nr = min(strlen(p), IBUFSIZ - 2);
       memcpy(buf, p, nr);
       buf[nr++] = '\n';

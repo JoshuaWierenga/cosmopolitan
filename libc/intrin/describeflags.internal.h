@@ -9,7 +9,7 @@ struct thatispacked DescribeFlags {
   const char *name;
 };
 
-const char *DescribeFlags(char *, size_t, struct DescribeFlags *, size_t,
+const char *DescribeFlags(char *, size_t, const struct DescribeFlags *, size_t,
                           const char *, unsigned);
 
 const char *DescribeArchPrctlCode(char[12], int);
@@ -44,6 +44,7 @@ const char *DescribeNtProcAccessFlags(char[256], uint32_t);
 const char *DescribeNtStartFlags(char[128], uint32_t);
 const char *DescribeNtSymlinkFlags(char[64], uint32_t);
 const char *DescribeOpenFlags(char[128], int);
+const char *DescribeOpenMode(char[15], int, int);
 const char *DescribePersonalityFlags(char[128], int);
 const char *DescribePollFlags(char[64], int);
 const char *DescribePrctlOperation(int);
@@ -54,7 +55,7 @@ const char *DescribeRemapFlags(char[48], int);
 const char *DescribeRlimitName(char[20], int);
 const char *DescribeSchedPolicy(char[48], int);
 const char *DescribeSeccompOperation(int);
-const char *DescribeSiCode(char[17], int, int);
+const char *DescribeSiCode(char[20], int, int);
 const char *DescribeSleepFlags(char[16], int);
 const char *DescribeSockLevel(char[12], int);
 const char *DescribeSockOptname(char[32], int, int);
@@ -97,6 +98,7 @@ const char *DescribeWhichPrio(char[12], int);
 #define DescribeNtStartFlags(x)      DescribeNtStartFlags(alloca(128), x)
 #define DescribeNtSymlinkFlags(x)    DescribeNtSymlinkFlags(alloca(64), x)
 #define DescribeOpenFlags(x)         DescribeOpenFlags(alloca(128), x)
+#define DescribeOpenMode(x, y)       DescribeOpenMode(alloca(15), x, y)
 #define DescribePersonalityFlags(p)  DescribePersonalityFlags(alloca(128), p)
 #define DescribePollFlags(p)         DescribePollFlags(alloca(64), p)
 #define DescribeProtFlags(x)         DescribeProtFlags(alloca(48), x)
@@ -105,7 +107,7 @@ const char *DescribeWhichPrio(char[12], int);
 #define DescribeRemapFlags(x)        DescribeRemapFlags(alloca(48), x)
 #define DescribeRlimitName(rl)       DescribeRlimitName(alloca(20), rl)
 #define DescribeSchedPolicy(x)       DescribeSchedPolicy(alloca(48), x)
-#define DescribeSiCode(x, y)         DescribeSiCode(alloca(17), x, y)
+#define DescribeSiCode(x, y)         DescribeSiCode(alloca(20), x, y)
 #define DescribeSleepFlags(x)        DescribeSleepFlags(alloca(16), x)
 #define DescribeSockLevel(x)         DescribeSockLevel(alloca(12), x)
 #define DescribeSockOptname(x, y)    DescribeSockOptname(alloca(32), x, y)

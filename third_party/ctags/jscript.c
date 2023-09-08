@@ -28,7 +28,7 @@
 #include "libc/calls/weirdtypes.h"
 #include "libc/fmt/fmt.h"
 #include "libc/stdio/stdio.h"
-#include "libc/stdio/temp.h"
+#include "libc/temp.h"
 #include "third_party/musl/tempnam.h"
 #endif
 
@@ -1105,6 +1105,8 @@ static boolean parseStatement (tokenInfo *const token, boolean is_inside_class)
 	boolean is_prototype = FALSE;
 	boolean has_methods = FALSE;
 	vString *	fulltag;
+
+        (void)is_prototype;
 
 	vStringClear(saveScope);
 	/*

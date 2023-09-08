@@ -83,6 +83,7 @@ static void SetupTmpDir(void) {
   strlcat(g_tmpdir, number, sizeof(g_tmpdir));
   if (makedirs(g_tmpdir, 0755) || chdir(g_tmpdir)) {
     perror(g_tmpdir);
+    tinyprint(2, "testlib failed to setup tmpdir\n", NULL);
     exit(1);
   }
 }
@@ -94,6 +95,7 @@ static void TearDownTmpDir(void) {
   }
   if (rmrf(g_tmpdir)) {
     perror(g_tmpdir);
+    tinyprint(2, "testlib failed to tear down tmpdir\n", NULL);
     exit(1);
   }
 }
@@ -101,7 +103,8 @@ static void TearDownTmpDir(void) {
 /**
  * Runs all test case functions in sorted order.
  */
-void testlib_runtestcases(testfn_t *start, testfn_t *end, testfn_t warmup) {
+void testlib_runtestcases(const testfn_t *start, const testfn_t *end,
+                          testfn_t warmup) {
   // getpid() calls are inserted to help visually see tests in traces
   // which can be performed on Linux, FreeBSD, OpenBSD, and XNU:
   //
