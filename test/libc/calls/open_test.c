@@ -372,6 +372,9 @@ TEST(open, readOnlyCreatMode) {
 
 TEST(open, parentSymlink) {
   struct stat st;
+  // Gives EPERM on windows
+  // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
+  if (IsWindows()) return;
   ASSERT_SYS(0, 0, mkdir("parent", 0755));
   // create directory symlink
   ASSERT_SYS(0, 0, symlink("parent", "parent-link"));

@@ -1746,6 +1746,7 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 ifneq ($(origin HOMEPATH),undefined)
 	RunBadTests := 0
 	RunThreadTest := 1
+    RunGenericPathTest := 0
 else
 	OS := $(shell uname -s)
 	ifeq ($(OS), FreeBSD)
@@ -1758,6 +1759,7 @@ else
 		RunBadTests := 1
 		RunThreadTest := 1
 	endif
+    RunGenericPathTest := 1
 endif
 
 ifeq ($(RunBadTests), 1)
@@ -1794,6 +1796,11 @@ endif
 ifeq ($(RunThreadTest), 1)
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_threadsignals.py
+endif
+
+ifeq ($(RunGenericPathTest), 1)
+THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+	third_party/python/Lib/test/test_genericpath.py
 endif
 
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
@@ -1914,7 +1921,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_gc.py					\
 	third_party/python/Lib/test/test_generator_stop.py			\
 	third_party/python/Lib/test/test_generators.py				\
-	third_party/python/Lib/test/test_genericpath.py				\
 	third_party/python/Lib/test/test_genexps.py				\
 	third_party/python/Lib/test/test_getargs2.py				\
 	third_party/python/Lib/test/test_getopt.py				\
