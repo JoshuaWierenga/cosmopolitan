@@ -23,50 +23,8 @@ else
 MAKE_OBJCOPY = $(COMPILE) -AOBJCOPY -T$@ $(OBJCOPY) -S $< $@ && $(MAKE_ZIPCOPY)
 endif
 
-o/%.lds: %.lds                     ; @$(COMPILE) -APREPROCESS $(PREPROCESS.lds) $(OUTPUT_OPTION) $<
-o/%.inc: %.h                       ; @$(COMPILE) -APREPROCESS $(PREPROCESS) $(OUTPUT_OPTION) -D__ASSEMBLER__ -P $<
-o/$(MODE)/%: o/$(MODE)/%.dbg       ; @$(MAKE_OBJCOPY)
-o/$(MODE)/%.o: %.f                 ; @$(COMPILE) -AOBJECTIFY.f $(OBJECTIFY.f) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.o: %.F                 ; @$(COMPILE) -AOBJECTIFY.F $(OBJECTIFY.F) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.h: %.c                 ; @$(COMPILE) -AAMALGAMATE $(PREPROCESS) $(OUTPUT_OPTION) -fdirectives-only -P $<
-o/$(MODE)/%.h: o/$(MODE)/%.c       ; @$(COMPILE) -AAMALGAMATE $(PREPROCESS) $(OUTPUT_OPTION) -fdirectives-only -P $<
-o/$(MODE)/%.o: %.cc                ; @$(COMPILE) -AOBJECTIFY.cxx $(OBJECTIFY.cxx) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.lds: %.lds             ; @$(COMPILE) -APREPROCESS $(PREPROCESS.lds) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.initabi.o: %.initabi.c ; @$(COMPILE) -AOBJECTIFY.init $(OBJECTIFY.initabi.c) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.ncabi.o: %.ncabi.c     ; @$(COMPILE) -AOBJECTIFY.nc $(OBJECTIFY.ncabi.c) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.real.o: %.c            ; @$(COMPILE) -AOBJECTIFY.real $(OBJECTIFY.real.c) $(OUTPUT_OPTION) $<
-
-ifneq ($(ARCH), aarch64)
-o/%.o: %.s                         ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) $<
-o/%.o: o/%.s                       ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) $<
-o/%.s: %.S                         ; @$(COMPILE) -APREPROCESS $(PREPROCESS) $(OUTPUT_OPTION) $<
-o/%.s: o/%.S                       ; @$(COMPILE) -APREPROCESS $(PREPROCESS) $(OUTPUT_OPTION) $<
-o/%.o: %.S                         ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) $<
-o/%.o: o/%.S                       ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.o: %.s                 ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.o: o/$(MODE)/%.s       ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.o: %.S                 ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) $<
-o/$(MODE)/%.o: o/$(MODE)/%.S       ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) $<
-else
-o/%.o: %.s libc/empty.s                   ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-o/%.o: o/%.s libc/empty.s                 ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-o/%.s: %.S libc/empty.s                   ; @$(COMPILE) -APREPROCESS $(PREPROCESS) $(OUTPUT_OPTION) libc/empty.s
-o/%.s: o/%.S libc/empty.s                 ; @$(COMPILE) -APREPROCESS $(PREPROCESS) $(OUTPUT_OPTION) libc/empty.s
-o/%.o: %.S libc/empty.s                   ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-o/%.o: o/%.S libc/empty.s                 ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-o/$(MODE)/%.o: %.s libc/empty.s           ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-o/$(MODE)/%.o: o/$(MODE)/%.s libc/empty.s ; @$(COMPILE) -AOBJECTIFY.s $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-o/$(MODE)/%.o: %.S libc/empty.s           ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-o/$(MODE)/%.o: o/$(MODE)/%.S libc/empty.s ; @$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
-endif
-
-o/%.o: %.cc
-	@$(COMPILE) -AOBJECTIFY.cxx $(OBJECTIFY.cxx) $(OUTPUT_OPTION) $<
-	@$(COMPILE) -AFIXUPOBJ -wT$@ $(FIXUPOBJ) $@
-
-o/%.o: o/%.cc
-	@$(COMPILE) -AOBJECTIFY.cxx $(OBJECTIFY.cxx) $(OUTPUT_OPTION) $<
-	@$(COMPILE) -AFIXUPOBJ -wT$@ $(FIXUPOBJ) $@
+o/$(MODE)/%: o/$(MODE)/%.dbg
+	@$(MAKE_OBJCOPY)
 
 o/$(MODE)/%.o: %.c
 	@$(COMPILE) -AOBJECTIFY.c $(OBJECTIFY.c) $(OUTPUT_OPTION) $<
@@ -76,13 +34,26 @@ o/$(MODE)/%.o: o/$(MODE)/%.c
 	@$(COMPILE) -AOBJECTIFY.c $(OBJECTIFY.c) $(OUTPUT_OPTION) $<
 	@$(COMPILE) -AFIXUPOBJ -wT$@ $(FIXUPOBJ) $@
 
-o/$(MODE)/%.o: o/$(MODE)/%.cc
-	@$(COMPILE) -AOBJECTIFY.cxx $(OBJECTIFY.cxx) $(OUTPUT_OPTION) $<
-	@$(COMPILE) -AFIXUPOBJ -wT$@ $(FIXUPOBJ) $@
+o/$(MODE)/%.h: %.c
+	@$(COMPILE) -AAMALGAMATE $(PREPROCESS) $(OUTPUT_OPTION) -fdirectives-only -P $<
 
-o/%.greg.o: %.greg.c
-	@$(COMPILE) -AOBJECTIFY.greg $(OBJECTIFY.greg.c) $(OUTPUT_OPTION) $<
-	@$(COMPILE) -AFIXUPOBJ -wT$@ $(FIXUPOBJ) $@
+o/$(MODE)/%.o: %.cc
+	@$(COMPILE) -AOBJECTIFY.cxx $(OBJECTIFY.cxx) $(OUTPUT_OPTION) $<
+
+o/$(MODE)/%.lds: %.lds
+	@$(COMPILE) -APREPROCESS $(PREPROCESS.lds) $(OUTPUT_OPTION) $<
+
+ifneq ($(ARCH), aarch64)
+o/$(MODE)/%.o: %.S
+	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) $<
+o/$(MODE)/%.o: o/$(MODE)/%.S
+	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) $<
+else
+o/$(MODE)/%.o: %.S libc/empty.s
+	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
+o/$(MODE)/%.o: o/$(MODE)/%.S libc/empty.s
+	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.s) $(OUTPUT_OPTION) libc/empty.s
+endif
 
 o/$(MODE)/%.o: %.greg.c
 	@$(COMPILE) -AOBJECTIFY.greg $(OBJECTIFY.greg.c) $(OUTPUT_OPTION) $<
@@ -104,17 +75,17 @@ o/$(MODE)/%.pkg:
 	$(file >$(TMPSAFE).args,$(filter %.o,$^))
 	@$(COMPILE) -APACKAGE -wT$@ $(PKG) $(OUTPUT_OPTION) $(addprefix -d,$(filter %.pkg,$^)) @$(TMPSAFE).args
 
-o/$(MODE)/%.o: %.py o/$(MODE)/third_party/python/pyobj.com $(VM)
-	@$(COMPILE) -wAPYOBJ $(VM) o/$(MODE)/third_party/python/pyobj.com $(PYFLAGS) -o $@ $<
+o/$(MODE)/%.o: %.py o/$(MODE)/third_party/python/pyobj.com
+	@$(COMPILE) -wAPYOBJ o/$(MODE)/third_party/python/pyobj.com $(PYFLAGS) -o $@ $<
 
-o/$(MODE)/%.pyc: %.py o/$(MODE)/third_party/python/pycomp.com $(VM)
-	@$(COMPILE) -wAPYCOMP $(VM) o/$(MODE)/third_party/python/pycomp.com $(PYCFLAGS) -o $@ $<
+o/$(MODE)/%.pyc: %.py o/$(MODE)/third_party/python/pycomp.com
+	@$(COMPILE) -wAPYCOMP o/$(MODE)/third_party/python/pycomp.com $(PYCFLAGS) -o $@ $<
 
-o/$(MODE)/%.lua: %.lua o/$(MODE)/third_party/lua/luac.com $(VM)
-	@$(COMPILE) -wALUAC $(VM) o/$(MODE)/third_party/lua/luac.com -s -o $@ $<
+o/$(MODE)/%.lua: %.lua o/$(MODE)/third_party/lua/luac.com
+	@$(COMPILE) -wALUAC o/$(MODE)/third_party/lua/luac.com -s -o $@ $<
 
-o/$(MODE)/%.lua.runs: %.lua o/$(MODE)/tool/net/redbean.com $(VM)
-	@$(COMPILE) -wALUA -tT$@ $(VM) o/$(MODE)/tool/net/redbean.com $(LUAFLAGS) -i $<
+o/$(MODE)/%.lua.runs: %.lua o/$(MODE)/tool/net/redbean.com
+	@$(COMPILE) -wALUA -tT$@ o/$(MODE)/tool/net/redbean.com $(LUAFLAGS) -i $<
 
 ################################################################################
 # LOCAL UNIT TESTS
@@ -154,8 +125,8 @@ o/$(MODE)/%.lua.runs: %.lua o/$(MODE)/tool/net/redbean.com $(VM)
 # then the stdout/stderr output, which would normally be suppressed,
 # will actually be displayed.
 
-o/$(MODE)/%.runs: o/$(MODE)/% $(VM)
-	@$(COMPILE) -ACHECK -wtT$@ $(VM) $< $(TESTARGS)
+o/$(MODE)/%.runs: o/$(MODE)/%
+	@$(COMPILE) -ACHECK -wtT$@ $< $(TESTARGS)
 
 ################################################################################
 # ELF ZIP FILES
@@ -213,14 +184,12 @@ o/$(MODE)/%.okk: %
 
 MAKE_SYMTAB_CREATE =				\
 	$(COMPILE) -wASYMTAB			\
-	$(VM)					\
 	o/$(MODE)/tool/build/symtab.com		\
 	-o $(TMPSAFE)/.symtab			\
 	$<
 
 MAKE_SYMTAB_ZIP =				\
 	$(COMPILE) -AZIP -T$@			\
-	$(VM)					\
 	o/$(MODE)/third_party/zip/zip.com	\
 	-b$(TMPDIR)				\
 	-9qj					\

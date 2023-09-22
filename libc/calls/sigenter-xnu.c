@@ -29,6 +29,7 @@
 #include "libc/intrin/repstosb.h"
 #include "libc/log/libfatal.internal.h"
 #include "libc/runtime/runtime.h"
+#include "libc/runtime/stack.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/sa.h"
 
@@ -488,14 +489,18 @@ static privileged void linuxssefpustate2xnu(
 privileged void __sigenter_xnu(void *fn, int infostyle, int sig,
                                struct siginfo_xnu *xnuinfo,
                                struct __darwin_ucontext *xnuctx) {
-  int rva, flags;
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wframe-larger-than="
   struct Goodies {
     ucontext_t uc;
     siginfo_t si;
   } g;
-  rva = __sighandrvas[sig & (NSIG - 1)];
+  CheckLargeStackAllocation(&g, sizeof(g));
+#pragma GCC pop_options
+  int rva, flags;
+  rva = __sighandrvas[sig];
   if (rva >= kSigactionMinRva) {
-    flags = __sighandflags[sig & (NSIG - 1)];
+    flags = __sighandflags[sig];
     if (~flags & SA_SIGINFO) {
       ((sigaction_f)(__executable_start + rva))(sig, 0, 0);
     } else {

@@ -16,13 +16,12 @@
 COSMOPOLITAN_C_START_
 
 #ifdef SYSDEBUG
-#define STRACE(FMT, ...)                                   \
-  do {                                                     \
-    if (UNLIKELY(__strace > 0) && strace_enabled(0) > 0) { \
-      ftrace_enabled(-1);                                  \
-      __stracef(STRACE_PROLOGUE FMT "\n", ##__VA_ARGS__);  \
-      ftrace_enabled(+1);                                  \
-    }                                                      \
+#define STRACE(FMT, ...)                                  \
+  do {                                                    \
+    if (UNLIKELY(strace_enter())) {                       \
+      __stracef(STRACE_PROLOGUE FMT "\n", ##__VA_ARGS__); \
+      ftrace_enabled(+1);                                 \
+    }                                                     \
   } while (0)
 #else
 #define STRACE(FMT, ...) (void)0
@@ -53,7 +52,7 @@ COSMOPOLITAN_C_START_
 #endif
 
 #if defined(SYSDEBUG) && _NTTRACE
-#define NTTRACE(FMT, ...) STRACE(FMT, ##__VA_ARGS__)
+#define NTTRACE(FMT, ...) STRACE("\e[2m" FMT "\e[0m", ##__VA_ARGS__)
 #else
 #define NTTRACE(FMT, ...) (void)0
 #endif

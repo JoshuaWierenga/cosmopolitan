@@ -22,7 +22,6 @@
 #include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/fmt/conv.h"
-#include "libc/fmt/fmt.h"
 #include "libc/fmt/itoa.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/limits.h"
@@ -34,6 +33,7 @@
 #include "libc/stdio/append.h"
 #include "libc/stdio/ftw.h"
 #include "libc/stdio/rand.h"
+#include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/dt.h"
 #include "libc/sysv/consts/o.h"
@@ -48,7 +48,9 @@ __static_yoink("usr/share/zoneinfo/New_York");
 __static_yoink("libc/testlib/hyperion.txt");
 __static_yoink("libc/testlib/moby.txt");
 
-char testlib_enable_tmp_setup_teardown;
+void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown();
+}
 
 DIR *dir;
 struct dirent *ent;

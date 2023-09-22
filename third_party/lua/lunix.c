@@ -67,7 +67,6 @@
 #include "libc/sock/syslog.h"
 #include "libc/stdio/append.h"
 #include "libc/stdio/stdio.h"
-#include "libc/str/path.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/af.h"
 #include "libc/sysv/consts/at.h"
@@ -2013,7 +2012,7 @@ static int LuaUnixTiocgwinsz(lua_State *L) {
 
 // unix.sched_yield()
 static int LuaUnixSchedYield(lua_State *L) {
-  sched_yield();
+  pthread_yield();
   return 0;
 }
 

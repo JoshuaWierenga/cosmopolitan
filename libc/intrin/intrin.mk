@@ -46,155 +46,28 @@ $(LIBC_INTRIN_A).pkg:					\
 		$(LIBC_INTRIN_A_OBJS)			\
 		$(foreach x,$(LIBC_INTRIN_A_DIRECTDEPS),$($(x)_A).pkg)
 
-# we can't use asan because:
-#   __strace_init() calls this before asan is initialized
-o/$(MODE)/libc/intrin/strace_enabled.o: private		\
-		COPTS +=				\
-			-fno-sanitize=address
+o/$(MODE)/libc/intrin/mman.greg.o: private COPTS += -Os
 
-# we can't use asan because:
-#   asan guard pages haven't been allocated yet
-o/$(MODE)/libc/intrin/directmap.o			\
-o/$(MODE)/libc/intrin/directmap-nt.o: private		\
+$(LIBC_INTRIN_A_OBJS): private				\
 		COPTS +=				\
-			-ffreestanding			\
-			-fno-sanitize=address
-
-# we want small code size because:
-#   to keep .text.head under 4096 bytes
-o/$(MODE)/libc/intrin/mman.greg.o: private		\
-		COPTS +=				\
-			-Os
-
-# we can't use asan and ubsan because:
-#   this is asan and ubsan
-o/$(MODE)/libc/intrin/asan.o				\
-o/$(MODE)/libc/intrin/ubsan.o: private			\
-		CFLAGS +=				\
+			-x-no-pg			\
 			-ffreestanding			\
 			-fno-sanitize=all		\
-			-fno-stack-protector
+			-fno-stack-protector		\
+			-Wframe-larger-than=4096	\
+			-Walloca-larger-than=4096
+
+o/$(MODE)/libc/intrin/kprintf.o: private		\
+		CFLAGS +=				\
+			-Wframe-larger-than=128		\
+			-Walloca-larger-than=128
 
 o/$(MODE)/libc/intrin/asan.o: private			\
 		CFLAGS +=				\
 			-O2				\
 			-finline			\
-			-finline-functions
-
-o/$(MODE)/libc/intrin/asanthunk.o: private		\
-		CFLAGS +=				\
-			-x-no-pg			\
-			-ffreestanding			\
-			-fno-sanitize=all		\
-			-fno-stack-protector
-
-# we can't use compiler magic because:
-#   kprintf() is mission critical to error reporting
-o/$(MODE)/libc/intrin/getmagnumstr.greg.o		\
-o/$(MODE)/libc/intrin/strerrno.greg.o			\
-o/$(MODE)/libc/intrin/strerrdoc.greg.o			\
-o/$(MODE)/libc/intrin/strerror_wr.greg.o		\
-o/$(MODE)/libc/intrin/kprintf.greg.o: private		\
-		CFLAGS +=				\
-			-fpie				\
-			-fwrapv				\
-			-x-no-pg			\
-			-ffreestanding			\
-			-fno-sanitize=all		\
-			-fno-stack-protector
-
-# TODO(jart): Do we really need these?
-# synchronization primitives are intended to be magic free
-o/$(MODE)/libc/intrin/futex_wait.o			\
-o/$(MODE)/libc/intrin/futex_wake.o			\
-o/$(MODE)/libc/intrin/gettid.greg.o			\
-o/$(MODE)/libc/intrin/_trylock_debug_4.o		\
-o/$(MODE)/libc/intrin/_spinlock_debug_4.o: private	\
-		CFLAGS +=				\
-			-fwrapv				\
-			-x-no-pg			\
-			-ffreestanding			\
-			-fno-sanitize=all		\
-			-mgeneral-regs-only		\
-			-fno-stack-protector
-
-# we can't use asan because:
-#   global gone could be raised
-o/$(MODE)/libc/intrin/exit.o				\
-o/$(MODE)/libc/intrin/restorewintty.o: private		\
-		CFLAGS +=				\
-			-fno-sanitize=all
-
-# we can't use -ftrapv because:
-#   this file implements it
-o/$(MODE)/libc/intrin/ftrapv.o: private			\
-		CFLAGS +=				\
-			-ffunction-sections		\
-			-ffreestanding			\
-			-fwrapv
-
-# we can't use asan because:
-#   sys_mmap() calls these which sets up shadow memory
-o/$(MODE)/libc/intrin/describeflags.o			\
-o/$(MODE)/libc/intrin/describeframe.o			\
-o/$(MODE)/libc/intrin/describemapflags.o		\
-o/$(MODE)/libc/intrin/describeprotflags.o: private	\
-		CFLAGS +=				\
-			-fno-sanitize=address
-
-o/$(MODE)/libc/intrin/exit1.greg.o			\
-o/$(MODE)/libc/intrin/wsarecv.o				\
-o/$(MODE)/libc/intrin/wsarecvfrom.o			\
-o/$(MODE)/libc/intrin/createfile.o			\
-o/$(MODE)/libc/intrin/reopenfile.o			\
-o/$(MODE)/libc/intrin/deletefile.o			\
-o/$(MODE)/libc/intrin/createpipe.o			\
-o/$(MODE)/libc/intrin/closehandle.o			\
-o/$(MODE)/libc/intrin/openprocess.o			\
-o/$(MODE)/libc/intrin/createthread.o			\
-o/$(MODE)/libc/intrin/findclose.o			\
-o/$(MODE)/libc/intrin/findnextfile.o			\
-o/$(MODE)/libc/intrin/createprocess.o			\
-o/$(MODE)/libc/intrin/findfirstfile.o			\
-o/$(MODE)/libc/intrin/removedirectory.o			\
-o/$(MODE)/libc/intrin/createsymboliclink.o		\
-o/$(MODE)/libc/intrin/createnamedpipe.o			\
-o/$(MODE)/libc/intrin/unmapviewoffile.o			\
-o/$(MODE)/libc/intrin/virtualprotect.o			\
-o/$(MODE)/libc/intrin/flushviewoffile.o			\
-o/$(MODE)/libc/intrin/createdirectory.o			\
-o/$(MODE)/libc/intrin/flushfilebuffers.o		\
-o/$(MODE)/libc/intrin/terminateprocess.o		\
-o/$(MODE)/libc/intrin/getfileattributes.o		\
-o/$(MODE)/libc/intrin/getexitcodeprocess.o		\
-o/$(MODE)/libc/intrin/waitforsingleobject.o		\
-o/$(MODE)/libc/intrin/setcurrentdirectory.o		\
-o/$(MODE)/libc/intrin/mapviewoffileex.o			\
-o/$(MODE)/libc/intrin/movefileex.o			\
-o/$(MODE)/libc/intrin/mapviewoffileexnuma.o		\
-o/$(MODE)/libc/intrin/createfilemapping.o		\
-o/$(MODE)/libc/intrin/createfilemappingnuma.o		\
-o/$(MODE)/libc/intrin/waitformultipleobjects.o		\
-o/$(MODE)/libc/intrin/wsagetoverlappedresult.o		\
-o/$(MODE)/libc/intrin/generateconsolectrlevent.o	\
-o/$(MODE)/libc/intrin/wsawaitformultipleevents.o: private\
-		CFLAGS +=				\
-			-Os				\
-			-fwrapv				\
-			-ffreestanding			\
-			-fno-stack-protector		\
-			-fno-sanitize=all
-
-# privileged functions
-o/$(MODE)/libc/intrin/dos2errno.o			\
-o/$(MODE)/libc/intrin/have_fsgsbase.o			\
-o/$(MODE)/libc/intrin/getmagnumstr.o			\
-o/$(MODE)/libc/intrin/formatint32.o			\
-o/$(MODE)/libc/intrin/strsignal_r.o			\
-o/$(MODE)/libc/intrin/strerror_wr.o: private		\
-		CFLAGS +=				\
-			-ffreestanding			\
-			-fno-sanitize=all
+			-finline-functions		\
+			-fpatchable-function-entry=0,0
 
 o//libc/intrin/memmove.o: private			\
 		CFLAGS +=				\
@@ -247,6 +120,8 @@ o/$(MODE)/libc/intrin/ksockoptnames.o: libc/intrin/ksockoptnames.S
 o/$(MODE)/libc/intrin/ktcpoptnames.o: libc/intrin/ktcpoptnames.S
 	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
 o/$(MODE)/libc/intrin/sched_yield.o: libc/intrin/sched_yield.S
+	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
+o/$(MODE)/libc/intrin/stackcall.o: libc/intrin/stackcall.S
 	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
 
 LIBC_INTRIN_LIBS = $(foreach x,$(LIBC_INTRIN_ARTIFACTS),$($(x)))

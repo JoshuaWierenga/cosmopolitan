@@ -16,6 +16,7 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/mem/gc.h"
 #include "libc/assert.h"
 #include "libc/intrin/likely.h"
 #include "libc/mem/mem.h"
@@ -61,7 +62,6 @@ static void DeferFunction(struct StackFrame *frame, void *fn, void *arg) {
   struct Garbage *p2;
   struct Garbages *g;
   struct CosmoTib *t;
-  __require_tls();
   t = __get_tls();
   g = t->tib_garbages;
   if (UNLIKELY(!g)) {

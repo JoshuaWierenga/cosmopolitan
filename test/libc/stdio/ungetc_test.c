@@ -18,6 +18,7 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
 #include "libc/nexgen32e/crc32.h"
+#include "libc/runtime/runtime.h"
 #include "libc/stdio/rand.h"
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
@@ -26,7 +27,10 @@
 
 FILE *f;
 char buf[512];
-char testlib_enable_tmp_setup_teardown;
+
+void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown();
+}
 
 TEST(ungetc, testGetChar_canBeUndoneWithinReason) {
   ASSERT_NE(NULL, (f = fopen("hog", "wb")));

@@ -19,31 +19,13 @@
 #include "libc/calls/internal.h"
 #include "libc/calls/sig.internal.h"
 #include "libc/calls/syscall_support-nt.internal.h"
-#include "libc/errno.h"
-#include "libc/intrin/strace.internal.h"
-#include "libc/nt/errors.h"
-#include "libc/nt/synchronization.h"
-#include "libc/sysv/errfuns.h"
 
 textwindows int sys_pause_nt(void) {
-  for (;;) {
-
-    if (_check_interrupts(0)) {
-      return -1;
+  int rc;
+  while (!(rc = _check_interrupts(0))) {
+    if ((rc = __pause_thread(__SIG_SIG_INTERVAL_MS))) {
+      break;
     }
-
-    if (SleepEx(__SIG_POLLING_INTERVAL_MS, true) == kNtWaitIoCompletion) {
-      POLLTRACE("IOCP EINTR");  // in case we ever figure it out
-      continue;
-    }
-
-#if defined(SYSDEBUG) && _POLLTRACE
-    long ms = 0, totoms = 0;
-    ms += __SIG_POLLING_INTERVAL_MS;
-    if (ms >= __SIG_LOGGING_INTERVAL_MS) {
-      totoms += ms, ms = 0;
-      POLLTRACE("... pausing for %'lums...", totoms);
-    }
-#endif
   }
+  return rc;
 }

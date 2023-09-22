@@ -380,7 +380,7 @@ static char *replace_extn(char *tmpl, char *extn) {
 }
 
 static char *create_tmpfile(void) {
-  char *path = xjoinpaths(kTmpPath, "chibicc-XXXXXX");
+  char *path = xjoinpaths(__get_tmpdir(), "chibicc-XXXXXX");
   int fd = mkstemp(path);
   if (fd == -1) error("%s: mkstemp failed: %s", path, strerror(errno));
   close(fd);
@@ -668,7 +668,6 @@ static void run_linker(StringArray *inputs, char *output) {
   strarray_push(&arr, "--gc-sections");
   strarray_push(&arr, "--build-id=none");
   strarray_push(&arr, "--no-dynamic-linker");
-  strarray_push(&arr, xasprintf("-Ttext-segment=%#x", IMAGE_BASE_VIRTUAL));
   /* strarray_push(&arr, "-T"); */
   /* strarray_push(&arr, LDS); */
   /* strarray_push(&arr, APE); */

@@ -33,7 +33,7 @@
 
 #define pagesz         16384
 #define SYSLIB_MAGIC   ('s' | 'l' << 8 | 'i' << 16 | 'b' << 24)
-#define SYSLIB_VERSION 1
+#define SYSLIB_VERSION 4
 
 struct Syslib {
   int magic;
@@ -56,6 +56,28 @@ struct Syslib {
   long (*dispatch_semaphore_signal)(dispatch_semaphore_t);
   long (*dispatch_semaphore_wait)(dispatch_semaphore_t, dispatch_time_t);
   dispatch_time_t (*dispatch_walltime)(const struct timespec *, int64_t);
+  /* v2 (2023-09-10) */
+  pthread_t (*pthread_self)(void);
+  void (*dispatch_release)(dispatch_semaphore_t);
+  int (*raise)(int);
+  int (*pthread_join)(pthread_t, void **);
+  void (*pthread_yield_np)(void);
+  int pthread_stack_min;
+  int sizeof_pthread_attr_t;
+  int (*pthread_attr_init)(pthread_attr_t *);
+  int (*pthread_attr_destroy)(pthread_attr_t *);
+  int (*pthread_attr_setstacksize)(pthread_attr_t *, size_t);
+  int (*pthread_attr_setguardsize)(pthread_attr_t *, size_t);
+  /* v4 (2023-09-19) */
+  void (*exit)(int);
+  long (*close)(int);
+  long (*munmap)(void *, size_t);
+  long (*openat)(int, const char *, int, int);
+  long (*write)(int, const void *, size_t);
+  long (*read)(int, void *, size_t);
+  long (*sigaction)(int, const struct sigaction *, struct sigaction *);
+  long (*pselect)(int, fd_set *, fd_set *, fd_set *, const struct timespec *, const sigset_t *);
+  long (*mprotect)(void *, size_t, int);
 };
 
 #define ELFCLASS32  1
@@ -151,6 +173,7 @@ union ElfPhdrBuf {
 };
 
 struct PathSearcher {
+  int literally;
   unsigned long namelen;
   const char *name;
   const char *syspath;
@@ -377,10 +400,27 @@ static char SearchPath(struct PathSearcher *ps, const char *suffix) {
 }
 
 static char FindCommand(struct PathSearcher *ps, const char *suffix) {
+  ps->path[0] = 0;
+
+  /* paths are always 100% taken literally when a slash exists
+       $ ape foo/bar.com arg1 arg2 */
   if (MemChr(ps->name, '/', ps->namelen)) {
-    ps->path[0] = 0;
     return AccessCommand(ps, suffix, 0);
   }
+
+  /* we don't run files in the current directory
+       $ ape foo.com arg1 arg2
+     unless $PATH has an empty string entry, e.g.
+       $ expert PATH=":/bin"
+       $ ape foo.com arg1 arg2
+     however we will execute this
+       $ ape - foo.com foo.com arg1 arg2
+     because cosmo's execve needs it */
+  if (ps->literally && AccessCommand(ps, suffix, 0)) {
+    return 1;
+  }
+
+  /* otherwise search for name on $PATH */
   return SearchPath(ps, suffix);
 }
 
@@ -762,12 +802,36 @@ static long sys_fork(void) {
   return sysret(fork());
 }
 
+static long sys_close(int fd) {
+  return sysret(close(fd));
+}
+
 static long sys_pipe(int pfds[2]) {
   return sysret(pipe(pfds));
 }
 
+static long sys_munmap(void *addr, size_t size) {
+  return sysret(munmap(addr, size));
+}
+
+static long sys_read(int fd, void *data, size_t size) {
+  return sysret(read(fd, data, size));
+}
+
+static long sys_mprotect(void *data, size_t size, int prot) {
+  return sysret(mprotect(data, size, prot));
+}
+
+static long sys_write(int fd, const void *data, size_t size) {
+  return sysret(write(fd, data, size));
+}
+
 static long sys_clock_gettime(int clock, struct timespec *ts) {
   return sysret(clock_gettime((clockid_t)clock, ts));
+}
+
+static long sys_openat(int fd, const char *path, int flags, int mode) {
+  return sysret(openat(fd, path, flags, mode));
 }
 
 static long sys_nanosleep(const struct timespec *req, struct timespec *rem) {
@@ -777,6 +841,15 @@ static long sys_nanosleep(const struct timespec *req, struct timespec *rem) {
 static long sys_mmap(void *addr, size_t size, int prot, int flags, int fd,
                      off_t off) {
   return sysret((long)mmap(addr, size, prot, flags, fd, off));
+}
+
+static long sys_sigaction(int sig, const struct sigaction *act, struct sigaction *oact) {
+  return sysret(sigaction(sig, act, oact));
+}
+
+static long sys_pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
+                        const struct timespec *timeout, const sigset_t *sigmask) {
+  return sysret(pselect(nfds, readfds, writefds, errorfds, timeout, sigmask));
 }
 
 int main(int argc, char **argv, char **envp) {
@@ -811,6 +884,26 @@ int main(int argc, char **argv, char **envp) {
   M->lib.dispatch_semaphore_signal = dispatch_semaphore_signal;
   M->lib.dispatch_semaphore_wait = dispatch_semaphore_wait;
   M->lib.dispatch_walltime = dispatch_walltime;
+  M->lib.pthread_self = pthread_self;
+  M->lib.dispatch_release = dispatch_release;
+  M->lib.raise = raise;
+  M->lib.pthread_join = pthread_join;
+  M->lib.pthread_yield_np = pthread_yield_np;
+  M->lib.pthread_stack_min = PTHREAD_STACK_MIN;
+  M->lib.sizeof_pthread_attr_t = sizeof(pthread_attr_t);
+  M->lib.pthread_attr_init = pthread_attr_init;
+  M->lib.pthread_attr_destroy = pthread_attr_destroy;
+  M->lib.pthread_attr_setstacksize = pthread_attr_setstacksize;
+  M->lib.pthread_attr_setguardsize = pthread_attr_setguardsize;
+  M->lib.exit = exit;
+  M->lib.close = sys_close;
+  M->lib.munmap = sys_munmap;
+  M->lib.openat = sys_openat;
+  M->lib.write = sys_write;
+  M->lib.read = sys_read;
+  M->lib.sigaction = sys_sigaction;
+  M->lib.pselect = sys_pselect;
+  M->lib.mprotect = sys_mprotect;
 
   /* getenv("_") is close enough to at_execfn */
   execfn = argc > 0 ? argv[0] : 0;
@@ -825,7 +918,7 @@ int main(int argc, char **argv, char **envp) {
   auxv = (long *)(envp + i + 1);
 
   /* interpret command line arguments */
-  if (argc >= 3 && !StrCmp(argv[1], "-")) {
+  if ((M->ps.literally = argc >= 3 && !StrCmp(argv[1], "-"))) {
     /* if the first argument is a hyphen then we give the user the
        power to change argv[0] or omit it entirely. most operating
        systems don't permit the omission of argv[0] but we do, b/c
@@ -836,7 +929,7 @@ int main(int argc, char **argv, char **envp) {
   } else if (argc < 2) {
     Emit("usage: ape   PROG [ARGV1,ARGV2,...]\n"
          "       ape - PROG [ARGV0,ARGV1,...]\n"
-         "actually portable executable loader silicon 1.7\n"
+         "actually portable executable loader silicon 1.8\n"
          "copyright 2023 justine alexandra roberts tunney\n"
          "https://justine.lol/ape.html\n");
     _exit(1);
@@ -881,8 +974,8 @@ int main(int argc, char **argv, char **envp) {
   pe = ebuf->buf + rc;
 
   /* resolve argv[0] to reflect path search */
-  if ((argc > 0 && *prog != '/' && *exe == '/' && !StrCmp(prog, argv[0])) ||
-      !StrCmp(BaseName(prog), argv[0])) {
+  if (argc > 0 && ((*prog != '/' && *exe == '/' && !StrCmp(prog, argv[0])) ||
+                   !StrCmp(BaseName(prog), argv[0]))) {
     argv[0] = exe;
   }
 

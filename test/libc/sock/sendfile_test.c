@@ -38,11 +38,10 @@
 #include "libc/testlib/testlib.h"
 #include "libc/x/x.h"
 
-char testlib_enable_tmp_setup_teardown;
-
 void SetUpOnce(void) {
   if (IsNetbsd()) exit(0);
   if (IsOpenbsd()) exit(0);
+  testlib_enable_tmp_setup_teardown();
   ASSERT_SYS(0, 0, pledge("stdio rpath wpath cpath proc inet", 0));
 }
 

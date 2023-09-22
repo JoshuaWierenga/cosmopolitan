@@ -20,7 +20,6 @@
 #include "libc/calls/calls.h"
 #include "libc/dce.h"
 #include "libc/errno.h"
-#include "libc/fmt/fmt.h"
 #include "libc/intrin/bits.h"
 #include "libc/limits.h"
 #include "libc/log/libfatal.internal.h"
@@ -29,6 +28,7 @@
 #include "libc/runtime/runtime.h"
 #include "libc/runtime/symbols.internal.h"
 #include "libc/stdio/rand.h"
+#include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/map.h"
 #include "libc/sysv/consts/prot.h"
@@ -216,7 +216,7 @@ TEST(ksnprintf, testSymbols) {
   if (hassymbols) {
     ASSERT_STREQ("&strlen", b[0]);
   } else {
-    ksnprintf(b[1], 32, "&%x", strlen);
+    ksnprintf(b[1], 32, "&%lx", strlen);
     ASSERT_STREQ(b[1], b[0]);
   }
 }

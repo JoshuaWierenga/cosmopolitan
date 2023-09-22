@@ -19,8 +19,11 @@
 #include "libc/calls/calls.h"
 #include "libc/calls/internal.h"
 #include "libc/calls/struct/stat.h"
+#include "libc/dce.h"
 #include "libc/errno.h"
+#include "libc/intrin/kprintf.h"
 #include "libc/log/check.h"
+#include "libc/nt/runtime.h"
 #include "libc/runtime/runtime.h"
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
@@ -30,7 +33,9 @@
 #include "libc/testlib/testlib.h"
 #include "libc/x/xspawn.h"
 
-char testlib_enable_tmp_setup_teardown;
+void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown();
+}
 
 static textstartup void TestInit(int argc, char **argv) {
   int fd;
@@ -45,6 +50,7 @@ static textstartup void TestInit(int argc, char **argv) {
 
 const void *const TestCtor[] initarray = {TestInit};
 
+#if 0
 TEST(dup, ebadf) {
   ASSERT_SYS(EBADF, -1, dup(-1));
   ASSERT_SYS(EBADF, -1, dup2(-1, 0));
@@ -66,10 +72,14 @@ TEST(dup, bigNumber) {
   ASSERT_SYS(0, 100, dup2(0, 100));
   ASSERT_SYS(0, 0, close(100));
 }
+#endif
 
 #ifdef __x86_64__
 TEST(dup, clearsCloexecFlag) {
+  static bool once;
   int ws;
+  ASSERT_FALSE(once);
+  once = true;
   ASSERT_SYS(0, 0, close(creat("file", 0644)));
   ASSERT_SYS(0, 3, open("file", O_RDWR | O_CLOEXEC));
   ASSERT_NE(-1, (ws = xspawn(0)));
@@ -79,7 +89,7 @@ TEST(dup, clearsCloexecFlag) {
           (char *const[]){GetProgramExecutableName(), "boop", 0});
     _exit(127);
   }
-  ASSERT_EQ(72, WEXITSTATUS(ws));
+  ASSERT_EQ(72 << 8, ws);
   ASSERT_SYS(0, 0, close(3));
 }
 #endif

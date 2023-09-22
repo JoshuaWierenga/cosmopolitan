@@ -48,6 +48,7 @@ THIRD_PARTY_SQLITE3_A_DIRECTDEPS =					\
 	LIBC_INTRIN							\
 	LIBC_MEM							\
 	LIBC_NEXGEN32E							\
+	LIBC_PROC							\
 	LIBC_RUNTIME							\
 	LIBC_STDIO							\
 	LIBC_STR							\
@@ -78,8 +79,7 @@ o/$(MODE)/third_party/sqlite3/sqlite3.com.dbg:				\
 o/$(MODE)/third_party/sqlite3/sqlite3.com:				\
 		o/$(MODE)/third_party/sqlite3/sqlite3.com.dbg		\
 		o/$(MODE)/third_party/zip/zip.com			\
-		o/$(MODE)/tool/build/symtab.com				\
-		$(VM)
+		o/$(MODE)/tool/build/symtab.com
 	@$(MAKE_OBJCOPY)
 	@$(MAKE_SYMTAB_CREATE)
 	@$(MAKE_SYMTAB_ZIP)

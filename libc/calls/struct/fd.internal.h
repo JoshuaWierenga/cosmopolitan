@@ -1,5 +1,7 @@
 #ifndef COSMOPOLITAN_LIBC_CALLS_STRUCT_FD_INTERNAL_H_
 #define COSMOPOLITAN_LIBC_CALLS_STRUCT_FD_INTERNAL_H_
+#include "libc/nt/struct/overlapped.h"
+#include "libc/thread/thread.h"
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 COSMOPOLITAN_C_START_
 
@@ -19,20 +21,22 @@ COSMOPOLITAN_C_START_
 
 #define kFdTtyEchoing 1 /* read()→write() (ECHO && !ICANON) */
 #define kFdTtyEchoRaw 2 /* don't ^X visualize control codes */
-#define kFdTtyMunging 4 /* enable input / output remappings */
+#define kFdTtyUncanon 4 /* enables non-canonical (raw) mode */
 #define kFdTtyNoCr2Nl 8 /* don't map \r → \n (a.k.a !ICRNL) */
 #define kFdTtyNoIsigs 16
+#define kFdTtyNoBlock 32
+#define kFdTtyXtMouse 64
 
 struct Fd {
   char kind;
-  bool zombie;
+  bool eoftty;
   bool dontclose;
-  char buflen;
-  char buf[4];
   unsigned flags;
   unsigned mode;
   int64_t handle;
   int64_t extra;
+  int64_t pointer;
+  pthread_mutex_t lock;
 };
 
 struct StdinRelay {
@@ -42,6 +46,7 @@ struct StdinRelay {
   int64_t reader; /* ReadFile() use this instead */
   int64_t writer; /* only used by WinStdinThread */
   int64_t thread; /* handle for the stdio thread */
+  struct NtOverlapped overlap;
 };
 
 struct Fds {
@@ -50,11 +55,6 @@ struct Fds {
   struct Fd *p, *e;
   struct StdinRelay stdin;
 };
-
-void WinMainStdin(void);
-int64_t __resolve_stdin_handle(int64_t);
-int __munge_terminal_input(char *, uint32_t *);
-void __echo_terminal_input(struct Fd *, char *, size_t);
 
 COSMOPOLITAN_C_END_
 #endif /* !(__ASSEMBLER__ + __LINKER__ + 0) */

@@ -18,11 +18,13 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/struct/sigaction.h"
 #include "libc/calls/calls.h"
+#include "libc/calls/pledge.h"
 #include "libc/calls/struct/rusage.h"
 #include "libc/calls/struct/sigaction.h"
 #include "libc/calls/struct/siginfo.h"
 #include "libc/calls/struct/sigset.h"
 #include "libc/calls/struct/sigset.internal.h"
+#include "libc/calls/struct/ucontext.internal.h"
 #include "libc/calls/syscall_support-sysv.internal.h"
 #include "libc/calls/ucontext.h"
 #include "libc/dce.h"
@@ -31,11 +33,14 @@
 #include "libc/nexgen32e/vendor.internal.h"
 #include "libc/runtime/internal.h"
 #include "libc/runtime/runtime.h"
+#include "libc/runtime/syslib.internal.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/sa.h"
 #include "libc/sysv/consts/sig.h"
 #include "libc/sysv/consts/uc.h"
+#include "libc/testlib/subprocess.h"
 #include "libc/testlib/testlib.h"
+#include "libc/thread/thread.h"
 #include "third_party/xed/x86.h"
 
 struct sigaction oldsa;
@@ -52,6 +57,54 @@ void OnSigInt(int sig) {
 
 void SetUp(void) {
   gotsigint = false;
+}
+
+void TearDown(void) {
+  sigset_t ss;
+  sigprocmask(SIG_SETMASK, 0, &ss);
+  ASSERT_TRUE(sigisemptyset(&ss));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// test that signal handlers expose cpu state, and let it be changed arbitrarily
+
+void *Gateway(void *arg) {
+  __builtin_trap();
+}
+
+void PromisedLand(void *arg) {
+  sigset_t ss;
+  CheckStackIsAligned();
+  sigprocmask(SIG_SETMASK, 0, &ss);
+  ASSERT_TRUE(sigismember(&ss, SIGUSR1));
+  pthread_exit(arg);
+}
+
+void Teleporter(int sig, struct siginfo *si, void *ctx) {
+  ucontext_t *uc = ctx;
+  sigaddset(&uc->uc_sigmask, SIGUSR1);
+  uc->uc_mcontext.PC = (uintptr_t)PromisedLand;
+  uc->uc_mcontext.SP &= -16;
+#ifdef __x86_64__
+  uc->uc_mcontext.SP -= 8;
+#endif
+}
+
+TEST(sigaction, handlersCanMutateMachineState) {
+  void *rc;
+  sigset_t ss;
+  pthread_t t;
+  struct sigaction oldill, oldtrap;
+  struct sigaction sa = {.sa_sigaction = Teleporter, .sa_flags = SA_SIGINFO};
+  sigprocmask(SIG_SETMASK, 0, &ss);
+  ASSERT_FALSE(sigismember(&ss, SIGUSR1));
+  ASSERT_SYS(0, 0, sigaction(SIGILL, &sa, &oldill));
+  ASSERT_SYS(0, 0, sigaction(SIGTRAP, &sa, &oldtrap));
+  ASSERT_EQ(0, pthread_create(&t, 0, Gateway, (void *)42L));
+  ASSERT_EQ(0, pthread_join(t, &rc));
+  ASSERT_EQ(42, (uintptr_t)rc);
+  ASSERT_SYS(0, 0, sigaction(SIGILL, &oldill, 0));
+  ASSERT_SYS(0, 0, sigaction(SIGTRAP, &oldtrap, 0));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -111,7 +164,7 @@ TEST(sigaction, testPingPongParentChildWithSigint) {
   EXPECT_EQ(0, WEXITSTATUS(status));
   EXPECT_EQ(0, WTERMSIG(status));
   EXPECT_SYS(0, 0, sigaction(SIGINT, &oldint, 0));
-  EXPECT_SYS(0, 0, sigprocmask(SIG_BLOCK, &oldmask, 0));
+  EXPECT_SYS(0, 0, sigprocmask(SIG_SETMASK, &oldmask, 0));
 }
 
 #ifdef __x86_64__
@@ -178,14 +231,14 @@ void OnSignal(int sig, siginfo_t *si, void *ctx) {
 TEST(sigaction, ignoringSignalDiscardsSignal) {
   struct sigaction sa = {.sa_sigaction = OnSignal, .sa_flags = SA_SIGINFO};
   ASSERT_EQ(0, sigaction(SIGUSR1, &sa, NULL));
-  sigset_t blocked;
+  sigset_t blocked, oldmask;
   sigemptyset(&blocked);
   sigaddset(&blocked, SIGUSR1);
-  ASSERT_EQ(0, sigprocmask(SIG_SETMASK, &blocked, NULL));
+  ASSERT_EQ(0, sigprocmask(SIG_SETMASK, &blocked, &oldmask));
   ASSERT_EQ(0, raise(SIGUSR1));
   ASSERT_NE(SIG_ERR, signal(SIGUSR1, SIG_IGN));
   ASSERT_EQ(0, sigaction(SIGUSR1, &sa, NULL));
-  ASSERT_EQ(0, sigprocmask(SIG_UNBLOCK, &blocked, NULL));
+  ASSERT_EQ(0, sigprocmask(SIG_SETMASK, &oldmask, NULL));
   EXPECT_EQ(0, OnSignalCnt);
 }
 
@@ -231,7 +284,6 @@ void OnSigMask(int sig, struct siginfo *si, void *ctx) {
 }
 
 TEST(uc_sigmask, signalHandlerCanChangeSignalMaskOfTrappedThread) {
-  if (IsWindows()) return;  // TODO(jart): uc_sigmask support on windows
   sigset_t want, got;
   struct sigaction oldsa;
   struct sigaction sa = {.sa_sigaction = OnSigMask, .sa_flags = SA_SIGINFO};
@@ -264,4 +316,89 @@ TEST(sig_ign, discardsPendingSignalsEvenIfBlocked) {
   ASSERT_SYS(0, 0, sigprocmask(SIG_UNBLOCK, &block, 0));
   ASSERT_SYS(0, 0, sigaction(SIGUSR1, &oldsa, 0));
   ASSERT_SYS(0, 0, sigprocmask(SIG_SETMASK, &oldmask, 0));
+}
+
+void AutoMask(int sig, struct siginfo *si, void *ctx) {
+  sigset_t ss;
+  ucontext_t *uc = ctx;
+  sigprocmask(SIG_SETMASK, 0, &ss);
+  EXPECT_FALSE(sigismember(&uc->uc_sigmask, SIGUSR2));  // original mask
+  EXPECT_TRUE(sigismember(&ss, SIGUSR2));               // temporary mask
+}
+
+TEST(sigaction, signalBeingDeliveredGetsAutoMasked) {
+  sigset_t ss;
+  struct sigaction os, sa = {.sa_sigaction = AutoMask, .sa_flags = SA_SIGINFO};
+  ASSERT_SYS(0, 0, sigaction(SIGUSR2, &sa, &os));
+  raise(SIGUSR2);
+  ASSERT_SYS(0, 0, sigaction(SIGUSR2, &os, 0));
+  sigprocmask(SIG_SETMASK, 0, &ss);
+  EXPECT_FALSE(sigismember(&ss, SIGUSR2));  // original mask
+}
+
+void NoDefer(int sig, struct siginfo *si, void *ctx) {
+  sigset_t ss;
+  ucontext_t *uc = ctx;
+  sigprocmask(SIG_SETMASK, 0, &ss);
+  EXPECT_FALSE(sigismember(&uc->uc_sigmask, SIGUSR2));
+  EXPECT_FALSE(sigismember(&ss, SIGUSR2));
+}
+
+TEST(sigaction, NoDefer) {
+  struct sigaction os;
+  struct sigaction sa = {
+      .sa_sigaction = NoDefer,
+      .sa_flags = SA_SIGINFO | SA_NODEFER,
+  };
+  ASSERT_SYS(0, 0, sigaction(SIGUSR2, &sa, &os));
+  raise(SIGUSR2);
+  ASSERT_SYS(0, 0, sigaction(SIGUSR2, &os, 0));
+}
+
+int *segfaults;
+
+void OnSegfault(int sig) {
+  if (++*segfaults == 10000) {
+    _Exit(0);
+  }
+}
+
+dontubsan dontasan int Segfault(char *p) {
+  return *p;
+}
+
+int (*pSegfault)(char *) = Segfault;
+
+TEST(sigaction, returnFromSegvHandler_loopsForever) {
+  if (IsXnu()) return;  // seems busted
+  segfaults = _mapshared(sizeof(*segfaults));
+  SPAWN(fork);
+  signal(SIGSEGV, OnSegfault);
+  _Exit(pSegfault(0));
+  EXITS(0);
+  ASSERT_EQ(10000, *segfaults);
+  munmap(segfaults, sizeof(*segfaults));
+}
+
+TEST(sigaction, ignoreSigSegv_notPossible) {
+  if (IsXnu()) return;  // seems busted
+  SPAWN(fork);
+  signal(SIGSEGV, SIG_IGN);
+  _Exit(pSegfault(0));
+  TERMS(SIGSEGV);
+}
+
+TEST(sigaction, killSigSegv_canBeIgnored) {
+  int child, ws;
+  if (IsWindows()) return;  // TODO
+  sighandler_t old = signal(SIGSEGV, SIG_IGN);
+  ASSERT_NE(-1, (child = fork()));
+  while (!child) {
+    pause();
+  }
+  ASSERT_SYS(0, 0, kill(child, SIGSEGV));
+  EXPECT_SYS(0, 0, kill(child, SIGTERM));
+  EXPECT_SYS(0, child, wait(&ws));
+  EXPECT_EQ(SIGTERM, ws);
+  signal(SIGSEGV, old);
 }

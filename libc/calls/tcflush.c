@@ -23,10 +23,14 @@
 #include "libc/calls/syscall_support-nt.internal.h"
 #include "libc/calls/termios.h"
 #include "libc/dce.h"
+#include "libc/errno.h"
 #include "libc/fmt/itoa.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/mem/alloca.h"
 #include "libc/nt/comms.h"
+#include "libc/nt/console.h"
+#include "libc/sysv/consts/fileno.h"
+#include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/termios.h"
 #include "libc/sysv/errfuns.h"
 
@@ -45,18 +49,25 @@ static const char *DescribeFlush(char buf[12], int action) {
 }
 
 static dontinline textwindows int sys_tcflush_nt(int fd, int queue) {
-  bool32 ok;
-  int64_t h;
-  if (!__isfdopen(fd)) return ebadf();
-  ok = true;
-  h = g_fds.p[fd].handle;
-  if (queue == TCIFLUSH || queue == TCIOFLUSH) {
-    ok &= !!PurgeComm(h, kNtPurgeRxclear);
+  if (!__isfdopen(fd)) {
+    return ebadf();
   }
-  if (queue == TCOFLUSH || queue == TCIOFLUSH) {
-    ok &= !!PurgeComm(h, kNtPurgeTxclear);
+  int64_t hConin;
+  if (__isfdkind(fd, kFdConsole)) {
+    hConin = g_fds.p[fd].handle;
+  } else if (fd == 0 || fd == 1 || fd == 2) {
+    hConin = g_fds.p[(fd = 0)].handle;
+  } else {
+    return enotty();
   }
-  return ok ? 0 : __winerr();
+  uint32_t inmode;
+  if (!GetConsoleMode(hConin, &inmode)) {
+    return enotty();
+  }
+  if (queue == TCOFLUSH) {
+    return 0;  // windows console output is never buffered
+  }
+  return FlushConsoleInputBytes(hConin);
 }
 
 /**
@@ -77,7 +88,9 @@ static dontinline textwindows int sys_tcflush_nt(int fd, int queue) {
  */
 int tcflush(int fd, int queue) {
   int rc;
-  if (fd < g_fds.n && g_fds.p[fd].kind == kFdZip) {
+  if (queue != TCIFLUSH && queue != TCOFLUSH && queue != TCIOFLUSH) {
+    rc = einval();
+  } else if (fd < g_fds.n && g_fds.p[fd].kind == kFdZip) {
     rc = enotty();
   } else if (IsLinux()) {
     rc = sys_ioctl(fd, TCFLSH, queue);

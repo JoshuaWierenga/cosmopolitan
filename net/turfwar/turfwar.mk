@@ -23,6 +23,7 @@ NET_TURFWAR_DIRECTDEPS =				\
 	LIBC_LOG					\
 	LIBC_MEM					\
 	LIBC_NEXGEN32E					\
+	LIBC_PROC					\
 	LIBC_RUNTIME					\
 	LIBC_SOCK					\
 	LIBC_STDIO					\
@@ -70,8 +71,7 @@ o/$(MODE)/net/turfwar/turfbean.com.dbg:			\
 o/$(MODE)/net/turfwar/turfbean.com:			\
 		o/$(MODE)/net/turfwar/turfbean.com.dbg	\
 		o/$(MODE)/third_party/zip/zip.com	\
-		o/$(MODE)/tool/build/symtab.com		\
-		$(VM)
+		o/$(MODE)/tool/build/symtab.com
 	@$(MAKE_OBJCOPY)
 	@$(MAKE_SYMTAB_CREATE)
 	@$(MAKE_SYMTAB_ZIP)

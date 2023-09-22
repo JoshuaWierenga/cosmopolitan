@@ -2,7 +2,7 @@
 #define COSMOPOLITAN_LIBC_THREAD_THREAD_H_
 
 #define PTHREAD_KEYS_MAX              128
-#define PTHREAD_STACK_MIN             262144
+#define PTHREAD_STACK_MIN             65536
 #define PTHREAD_DESTRUCTOR_ITERATIONS 4
 
 #define PTHREAD_BARRIER_SERIAL_THREAD 31337
@@ -97,10 +97,10 @@ typedef struct pthread_attr_s {
   int __schedparam;
   int __schedpolicy;
   int __contentionscope;
-  unsigned __guardsize;
-  unsigned __stacksize;
+  int __guardsize;
+  size_t __stacksize;
   uint32_t __sigmask[4];
-  char *__stackaddr;
+  void *__stackaddr;
 } pthread_attr_t;
 
 struct _pthread_cleanup_buffer {
@@ -194,13 +194,11 @@ int pthread_spin_unlock(pthread_spinlock_t *) paramsnonnull();
 int pthread_testcancel_np(void);
 int pthread_tryjoin_np(pthread_t, void **);
 int pthread_yield(void);
-void pthread_kill_siblings_np(void);
 pthread_id_np_t pthread_getthreadid_np(void);
 pthread_t pthread_self(void) pureconst;
 void *pthread_getspecific(pthread_key_t);
 void pthread_cleanup_pop(struct _pthread_cleanup_buffer *, int) paramsnonnull();
 void pthread_cleanup_push(struct _pthread_cleanup_buffer *, void (*)(void *), void *) paramsnonnull((1));
-void pthread_decimate_np(void);
 void pthread_exit(void *) wontreturn;
 void pthread_testcancel(void);
 

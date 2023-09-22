@@ -22,7 +22,9 @@
 #include "libc/errno.h"
 #include "libc/intrin/asan.internal.h"
 #include "libc/intrin/asancodes.h"
+#include "libc/intrin/describebacktrace.internal.h"
 #include "libc/intrin/directmap.internal.h"
+#include "libc/log/libfatal.internal.h"
 #include "libc/macros.internal.h"
 #include "libc/runtime/memtrack.internal.h"
 #include "libc/sysv/consts/map.h"
@@ -71,7 +73,7 @@ static void *_mapframe(void *p, int f) {
  * @return new value for `e` or null w/ errno
  * @raise ENOMEM if we require more vespene gas
  */
-dontasan void *_extend(void *p, size_t n, void *e, int f, intptr_t h) {
+void *_extend(void *p, size_t n, void *e, int f, intptr_t h) {
   char *q;
   unassert(!((uintptr_t)SHADOW(p) & (G - 1)));
   unassert((uintptr_t)p + (G << kAsanScale) <= h);

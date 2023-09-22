@@ -25,7 +25,6 @@
 #include "libc/sysv/consts/sa.h"
 #include "libc/sysv/consts/sig.h"
 #include "libc/testlib/testlib.h"
-#ifdef __x86_64__
 
 sigjmp_buf jb;
 volatile int sigs;
@@ -36,7 +35,6 @@ void OnSignal(int sig, siginfo_t *si, void *ctx) {
 }
 
 TEST(sigsetjmp, test) {
-  if (IsWindows()) return;  // no sigusr1 support
   sigset_t ss;
   int i, n = 1000;
   struct sigaction sa = {.sa_sigaction = OnSignal};
@@ -55,5 +53,3 @@ TEST(sigsetjmp, test) {
   ASSERT_EQ(1000, jumps);
   ASSERT_EQ(1000, sigs);
 }
-
-#endif /* __x86_64__ */

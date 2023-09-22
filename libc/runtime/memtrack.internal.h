@@ -2,7 +2,6 @@
 #define COSMOPOLITAN_LIBC_RUNTIME_MEMTRACK_H_
 #include "ape/sections.internal.h"
 #include "libc/dce.h"
-#include "libc/intrin/nopl.internal.h"
 #include "libc/macros.internal.h"
 #include "libc/nt/version.h"
 #include "libc/runtime/runtime.h"
@@ -12,19 +11,17 @@
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 COSMOPOLITAN_C_START_
 
-#define kAutomapStart         0x100080040000
-#define kAutomapSize          (kMemtrackStart - kAutomapStart)
-#define kMemtrackStart        0x1fe7fffc0000
-#define kMemtrackSize         (0x1ffffffc0000 - kMemtrackStart)
-#define kFixedmapStart        0x300000040000
-#define kFixedmapSize         (0x400000040000 - kFixedmapStart)
-#define kMemtrackFdsStart     0x6fe000040000
-#define kMemtrackFdsSize      (0x6feffffc0000 - kMemtrackFdsStart)
-#define kMemtrackZiposStart   0x6fd000040000
-#define kMemtrackZiposSize    (0x6fdffffc0000 - kMemtrackZiposStart)
-#define kMemtrackKmallocStart 0x6fc000040000
-#define kMemtrackKmallocSize  (0x6fcffffc0000 - kMemtrackKmallocStart)
-#define kMemtrackGran         (!IsAsan() ? FRAMESIZE : FRAMESIZE * 8)
+#define kAutomapStart       0x100080040000
+#define kAutomapSize        (kMemtrackStart - kAutomapStart)
+#define kMemtrackStart      0x1fe7fffc0000
+#define kMemtrackSize       (0x1ffffffc0000 - kMemtrackStart)
+#define kFixedmapStart      0x300000040000
+#define kFixedmapSize       (0x400000040000 - kFixedmapStart)
+#define kMemtrackFdsStart   0x6fe000040000
+#define kMemtrackFdsSize    (0x6feffffc0000 - kMemtrackFdsStart)
+#define kMemtrackZiposStart 0x6fd000040000
+#define kMemtrackZiposSize  (0x6fdffffc0000 - kMemtrackZiposStart)
+#define kMemtrackGran       (!IsAsan() ? FRAMESIZE : FRAMESIZE * 8)
 
 struct MemoryInterval {
   int x;
@@ -46,10 +43,8 @@ struct MemoryIntervals {
 
 extern struct MemoryIntervals _mmi;
 
-void __mmi_init(void);
 void __mmi_lock(void);
 void __mmi_unlock(void);
-void __mmi_funlock(void);
 bool IsMemtracked(int, int);
 void PrintSystemMappings(int);
 unsigned __find_memory(const struct MemoryIntervals *, int) nosideeffect;
@@ -62,14 +57,6 @@ int __untrack_memory(struct MemoryIntervals *, int, int,
 void __release_memory_nt(struct MemoryIntervals *, int, int);
 int __untrack_memories(void *, size_t);
 size_t __get_memtrack_size(struct MemoryIntervals *);
-
-#ifdef _NOPL0
-#define __mmi_lock()   _NOPL0("__threadcalls", __mmi_lock)
-#define __mmi_unlock() _NOPL0("__threadcalls", __mmi_unlock)
-#else
-#define __mmi_lock()   (__threaded ? __mmi_lock() : 0)
-#define __mmi_unlock() (__threaded ? __mmi_unlock() : 0)
-#endif
 
 #ifdef __x86_64__
 /*
@@ -130,11 +117,6 @@ forceinline pureconst bool IsGfdsFrame(int x) {
 forceinline pureconst bool IsZiposFrame(int x) {
   return (int)(kMemtrackZiposStart >> 16) <= x &&
          x <= (int)((kMemtrackZiposStart + kMemtrackZiposSize - 1) >> 16);
-}
-
-forceinline pureconst bool IsKmallocFrame(int x) {
-  return (int)(kMemtrackKmallocStart >> 16) <= x &&
-         x <= (int)((kMemtrackKmallocStart + kMemtrackKmallocSize - 1) >> 16);
 }
 
 forceinline pureconst bool IsShadowFrame(int x) {

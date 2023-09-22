@@ -19,9 +19,11 @@
 #include "libc/calls/syscall-nt.internal.h"
 #include "libc/calls/syscall-sysv.internal.h"
 #include "libc/dce.h"
+#include "libc/errno.h"
 #include "libc/intrin/asan.internal.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/intrin/weaken.h"
+#include "libc/log/log.h"
 #include "libc/runtime/runtime.h"
 #include "libc/runtime/zipos.internal.h"
 #include "libc/sysv/errfuns.h"
@@ -48,7 +50,15 @@
 int chdir(const char *path) {
   int rc;
   struct ZiposUri zipname;
-  GetProgramExecutableName();  // XXX: ugly workaround
+  if (_weaken(__get_tmpdir)) {
+    _weaken(__get_tmpdir)();
+  }
+  if (_weaken(GetAddr2linePath)) {
+    _weaken(GetAddr2linePath)();
+  }
+  if (_weaken(GetProgramExecutableName)) {
+    _weaken(GetProgramExecutableName)();
+  }
   if (!path || (IsAsan() && !__asan_is_valid_str(path))) {
     rc = efault();
   } else if (_weaken(__zipos_parseuri) &&

@@ -22,16 +22,20 @@
 #include "libc/calls/struct/itimerval.h"
 #include "libc/calls/struct/sigaction.h"
 #include "libc/calls/struct/stat.h"
+#include "libc/calls/struct/timespec.h"
 #include "libc/dns/dns.h"
 #include "libc/errno.h"
 #include "libc/fmt/conv.h"
 #include "libc/fmt/libgen.h"
 #include "libc/intrin/bits.h"
+#include "libc/intrin/kprintf.h"
 #include "libc/intrin/safemacros.internal.h"
 #include "libc/limits.h"
 #include "libc/log/check.h"
 #include "libc/log/log.h"
+#include "libc/macros.internal.h"
 #include "libc/mem/gc.h"
+#include "libc/mem/gc.internal.h"
 #include "libc/mem/mem.h"
 #include "libc/runtime/runtime.h"
 #include "libc/sock/ipclassify.internal.h"
@@ -50,7 +54,10 @@
 #include "libc/time/time.h"
 #include "libc/x/x.h"
 #include "libc/x/xasprintf.h"
+#include "libc/x/xsigaction.h"
 #include "net/https/https.h"
+#include "third_party/mbedtls/debug.h"
+#include "third_party/mbedtls/net_sockets.h"
 #include "third_party/mbedtls/ssl.h"
 #include "third_party/zlib/zlib.h"
 #include "tool/build/lib/eztls.h"
@@ -115,6 +122,9 @@ long g_backoff;
 char *g_runitd;
 jmp_buf g_jmpbuf;
 uint16_t g_sshport;
+int connect_latency;
+int execute_latency;
+int handshake_latency;
 char g_hostname[128];
 uint16_t g_runitdport;
 volatile bool alarmed;
@@ -143,8 +153,8 @@ void CheckExists(const char *path) {
 void Connect(void) {
   const char *ip4;
   int rc, err, expo;
-  long double t1, t2;
   struct addrinfo *ai;
+  struct timespec deadline;
   if ((rc = getaddrinfo(g_hostname, _gc(xasprintf("%hu", g_runitdport)),
                         &kResolvHints, &ai)) != 0) {
     FATALF("%s:%hu: EAI_%s %m", g_hostname, g_runitdport, gai_strerror(rc));
@@ -162,10 +172,12 @@ void Connect(void) {
   CHECK_NE(-1,
            (g_sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)));
   expo = INITIAL_CONNECT_TIMEOUT;
-  t1 = nowl();
+  deadline = timespec_add(timespec_real(),
+                          timespec_fromseconds(MAX_WAIT_CONNECT_SECONDS));
   LOGIFNEG1(sigaction(SIGALRM, &(struct sigaction){.sa_handler = OnAlarm}, 0));
   DEBUGF("connecting to %s (%hhu.%hhu.%hhu.%hhu) to run %s", g_hostname, ip4[0],
          ip4[1], ip4[2], ip4[3], g_prog);
+  struct timespec start = timespec_real();
 TryAgain:
   alarmed = false;
   LOGIFNEG1(setitimer(
@@ -174,11 +186,10 @@ TryAgain:
       NULL));
   rc = connect(g_sock, ai->ai_addr, ai->ai_addrlen);
   err = errno;
-  t2 = nowl();
   if (rc == -1) {
     if (err == EINTR) {
       expo *= 1.5;
-      if (t2 > t1 + MAX_WAIT_CONNECT_SECONDS) {
+      if (timespec_cmp(timespec_real(), deadline) >= 0) {
         FATALF("timeout connecting to %s (%hhu.%hhu.%hhu.%hhu:%d)", g_hostname,
                ip4[0], ip4[1], ip4[2], ip4[3], ntohs(ai->ai_addr4->sin_port));
         __builtin_unreachable();
@@ -192,6 +203,7 @@ TryAgain:
   }
   setitimer(ITIMER_REAL, &(const struct itimerval){0}, 0);
   freeaddrinfo(ai);
+  connect_latency = timespec_tomicros(timespec_sub(timespec_real(), start));
 }
 
 bool Send(int tmpfd, const void *output, size_t outputsize) {
@@ -271,95 +283,117 @@ void RelayRequest(void) {
     for (i = 0; i < have; i += rc) {
       rc = mbedtls_ssl_write(&ezssl, buf + i, have - i);
       if (rc <= 0) {
-        TlsDie("relay request failed", rc);
+        EzTlsDie("relay request failed", rc);
       }
     }
   }
   CHECK_NE(0, transferred);
   rc = EzTlsFlush(&ezbio, 0, 0);
   if (rc < 0) {
-    TlsDie("relay request failed to flush", rc);
+    EzTlsDie("relay request failed to flush", rc);
   }
   close(13);
 }
 
-bool Recv(unsigned char *p, size_t n) {
-  size_t i, rc;
+bool Recv(char *p, int n) {
+  int i, rc;
   for (i = 0; i < n; i += rc) {
-    do {
-      rc = mbedtls_ssl_read(&ezssl, p + i, n - i);
-    } while (rc == MBEDTLS_ERR_SSL_WANT_READ);
+    do rc = mbedtls_ssl_read(&ezssl, p + i, n - i);
+    while (rc == MBEDTLS_ERR_SSL_WANT_READ);
     if (!rc) return false;
     if (rc < 0) {
-      TlsDie("read response failed", rc);
+      if (rc == MBEDTLS_ERR_NET_CONN_RESET) {
+        EzTlsDie("connection reset", rc);
+      } else {
+        EzTlsDie("read response failed", rc);
+      }
     }
   }
   return true;
 }
 
 int ReadResponse(void) {
-  int res;
-  size_t n;
-  uint32_t size;
-  unsigned char b[512];
-  for (res = -1; res == -1;) {
-    if (!Recv(b, 5)) break;
-    CHECK_EQ(RUNITD_MAGIC, READ32BE(b), "%#.5s", b);
-    switch (b[4]) {
-      case kRunitExit:
-        if (!Recv(b, 1)) break;
-        if ((res = *b)) {
-          WARNF("%s on %s exited with %d", g_prog, g_hostname, res);
-        }
+  int exitcode;
+  struct timespec start = timespec_real();
+  for (;;) {
+    char msg[5];
+    if (!Recv(msg, 5)) {
+      WARNF("%s didn't report status of %s", g_hostname, g_prog);
+      exitcode = 200;
+      break;
+    }
+    if (READ32BE(msg) != RUNITD_MAGIC) {
+      WARNF("%s sent corrupted data stream after running %s", g_hostname,
+            g_prog);
+      exitcode = 201;
+      break;
+    }
+    if (msg[4] == kRunitExit) {
+      if (!Recv(msg, 1)) {
+      TruncatedMessage:
+        WARNF("%s sent truncated message running %s", g_hostname, g_prog);
+        exitcode = 202;
         break;
-      case kRunitStderr:
-        if (!Recv(b, 4)) break;
-        size = READ32BE(b);
-        for (; size; size -= n) {
-          n = MIN(size, sizeof(b));
-          if (!Recv(b, n)) goto drop;
-          CHECK_EQ(n, write(2, b, n));
-        }
-        break;
-      default:
-        fprintf(stderr, "error: received invalid runit command\n");
-        _exit(1);
+      }
+      exitcode = *msg & 255;
+      if (exitcode) {
+        WARNF("%s says %s exited with %d", g_hostname, g_prog, exitcode);
+      } else {
+        VERBOSEF("%s says %s exited with %d", g_hostname, g_prog, exitcode);
+      }
+      mbedtls_ssl_close_notify(&ezssl);
+      break;
+    } else if (msg[4] == kRunitStdout || msg[4] == kRunitStderr) {
+      if (!Recv(msg, 4)) goto TruncatedMessage;
+      int n = READ32BE(msg);
+      char *s = malloc(n);
+      if (!Recv(s, n)) goto TruncatedMessage;
+      write(2, s, n);
+      free(s);
+    } else {
+      WARNF("%s sent message with unknown command %d after running %s",
+            g_hostname, msg[4], g_prog);
+      exitcode = 203;
+      break;
     }
   }
-drop:
+  execute_latency = timespec_tomicros(timespec_sub(timespec_real(), start));
   close(g_sock);
-  return res;
-}
-
-static inline bool IsElf(const char *p, size_t n) {
-  return n >= 4 && READ32LE(p) == READ32LE("\177ELF");
-}
-
-static inline bool IsMachO(const char *p, size_t n) {
-  return n >= 4 && READ32LE(p) == 0xFEEDFACEu + 1;
+  return exitcode;
 }
 
 int RunOnHost(char *spec) {
-  int rc;
+  int err;
   char *p;
   for (p = spec; *p; ++p) {
     if (*p == ':') *p = ' ';
   }
-  CHECK_GE(sscanf(spec, "%100s %hu %hu", g_hostname, &g_runitdport, &g_sshport),
-           1);
+  int got =
+      sscanf(spec, "%100s %hu %hu", g_hostname, &g_runitdport, &g_sshport);
+  if (got < 1) {
+    kprintf("what on earth %#s -> %d\n", spec, got);
+    fprintf(stderr, "what on earth %#s -> %d\n", spec, got);
+    exit(1);
+  }
   if (!strchr(g_hostname, '.')) strcat(g_hostname, ".test.");
   DEBUGF("connecting to %s port %d", g_hostname, g_runitdport);
   for (;;) {
     Connect();
     EzFd(g_sock);
-    if (!(rc = EzHandshake2())) {
-      break;
-    }
-    WARNF("got reset in handshake -0x%04x", rc);
+    struct timespec start = timespec_real();
+    err = EzHandshake2();
+    handshake_latency = timespec_tomicros(timespec_sub(timespec_real(), start));
+    if (!err) break;
+    WARNF("handshake with %s:%d failed -0x%04x (%s)",  //
+          g_hostname, g_runitdport, err, GetTlsError(err));
     close(g_sock);
+    return 1;
   }
   RelayRequest();
-  return ReadResponse();
+  int rc = ReadResponse();
+  kprintf("%s on %-16s %'11d µs %'8ld µs %'8ld µs\n", basename(g_prog),
+          g_hostname, execute_latency, connect_latency, handshake_latency);
+  return rc;
 }
 
 bool IsParallelBuild(void) {
@@ -454,6 +488,8 @@ int SpawnSubprocesses(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   ShowCrashReports();
+  signal(SIGPIPE, SIG_IGN);
+  // mbedtls_debug_threshold = 3;
   if (getenv("DEBUG")) {
     __log_level = kLogDebug;
   }

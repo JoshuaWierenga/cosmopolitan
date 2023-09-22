@@ -100,21 +100,23 @@ endif
 endif
 
 .PLEDGE = stdio rpath wpath cpath fattr proc
-.UNVEIL =			\
-	libc/integral		\
-	libc/stdbool.h		\
-	libc/disclaimer.inc	\
-	rwc:/dev/shm		\
-	rx:build/bootstrap	\
-	rx:o/third_party/gcc	\
-	r:build/portcosmo.h	\
-	/proc/stat		\
-	rw:/dev/null		\
-	rw:/dev/full		\
-	w:o/stack.log		\
-	/etc/hosts		\
-	~/.runit.psk		\
-	/proc/self/status	\
+.UNVEIL =					\
+	libc/integral				\
+	libc/stdbool.h				\
+	libc/disclaimer.inc			\
+	rwc:/dev/shm				\
+	rx:build/bootstrap			\
+	rx:o/third_party/gcc			\
+	r:build/portcosmo.h			\
+	/proc/stat				\
+	rw:/dev/null				\
+	rw:/dev/full				\
+	w:o/stack.log				\
+	/etc/hosts				\
+	~/.runit.psk				\
+	/proc/self/status			\
+	rx:/usr/bin/qemu-aarch64		\
+	rx:o/third_party/qemu/qemu-aarch64	\
 	/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 
 PKGS =
@@ -147,8 +149,9 @@ include third_party/dlmalloc/dlmalloc.mk	#─┘
 include libc/mem/mem.mk				#─┐
 include third_party/gdtoa/gdtoa.mk		# ├──DYNAMIC RUNTIME
 include third_party/nsync/mem/mem.mk		# │  You can now use stdio
-include libc/thread/thread.mk			# │  You can finally call malloc()
-include tool/hello/hello.mk			# │
+include libc/proc/proc.mk			# │  You can now use threads
+include libc/thread/thread.mk			# │  You can now use processes
+include tool/hello/hello.mk			# │  You can finally call malloc()
 include third_party/zlib/zlib.mk		# │
 include libc/stdio/stdio.mk			# │
 include libc/time/time.mk			# │
@@ -244,6 +247,7 @@ include test/libc/xed/test.mk
 include test/libc/fmt/test.mk
 include test/libc/dns/test.mk
 include test/libc/time/test.mk
+include test/libc/proc/test.mk
 include test/libc/stdio/test.mk
 include test/libc/release/test.mk
 include test/libc/test.mk
@@ -332,6 +336,7 @@ COSMOPOLITAN_OBJECTS =			\
 	THIRD_PARTY_GDTOA		\
 	THIRD_PARTY_REGEX		\
 	LIBC_THREAD			\
+	LIBC_PROC			\
 	THIRD_PARTY_NSYNC_MEM		\
 	LIBC_MEM			\
 	THIRD_PARTY_DLMALLOC		\
@@ -377,6 +382,7 @@ COSMOPOLITAN_HEADERS =			\
 	LIBC_RUNTIME			\
 	LIBC_SOCK			\
 	LIBC_STDIO			\
+	LIBC_PROC			\
 	THIRD_PARTY_NSYNC		\
 	THIRD_PARTY_XED			\
 	LIBC_STR			\

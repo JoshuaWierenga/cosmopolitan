@@ -24,6 +24,7 @@
 #include "libc/calls/syscall_support-nt.internal.h"
 #include "libc/errno.h"
 #include "libc/macros.internal.h"
+#include "libc/nt/console.h"
 #include "libc/nt/createfile.h"
 #include "libc/nt/enum/accessmask.h"
 #include "libc/nt/enum/creationdisposition.h"
@@ -129,12 +130,11 @@ static textwindows int64_t sys_open_nt_impl(int dirfd, const char *path,
 
   // open the file, following symlinks
   int e = errno;
-  int64_t hand = CreateFile(path16, perm | extra_perm, share, &kNtIsInheritable,
-                            disp, attr | extra_attr, 0);
+  int64_t hand = CreateFile(path16, perm | extra_perm, share, 0, disp,
+                            attr | extra_attr, 0);
   if (hand == -1 && errno == EACCES && (flags & O_ACCMODE) == O_RDONLY) {
     errno = e;
-    hand = CreateFile(path16, perm, share, &kNtIsInheritable, disp,
-                      attr | extra_attr, 0);
+    hand = CreateFile(path16, perm, share, 0, disp, attr | extra_attr, 0);
   }
 
   return __fix_enotdir(hand, path16);
@@ -144,34 +144,21 @@ static textwindows int sys_open_nt_console(int dirfd,
                                            const struct NtMagicPaths *mp,
                                            uint32_t flags, int32_t mode,
                                            size_t fd) {
-  if (GetFileType(g_fds.p[STDIN_FILENO].handle) == kNtFileTypeChar &&
-      GetFileType(g_fds.p[STDOUT_FILENO].handle) == kNtFileTypeChar) {
-    // this is an ugly hack that works for observed usage patterns
-    g_fds.p[fd].handle = g_fds.p[STDIN_FILENO].handle;
-    g_fds.p[fd].extra = g_fds.p[STDOUT_FILENO].handle;
-    g_fds.p[STDOUT_FILENO].dontclose = true;
-    g_fds.p[STDIN_FILENO].dontclose = true;
-    g_fds.p[fd].dontclose = true;
-  } else if ((g_fds.p[fd].handle = sys_open_nt_impl(
-                  dirfd, mp->conin, (flags & ~O_ACCMODE) | O_RDONLY, mode,
-                  kNtFileFlagOverlapped)) != -1) {
-    g_fds.p[fd].extra = sys_open_nt_impl(
-        dirfd, mp->conout, (flags & ~O_ACCMODE) | O_WRONLY, mode, 0);
-    npassert(g_fds.p[fd].extra != -1);
-  } else {
-    return -1;
-  }
   g_fds.p[fd].kind = kFdConsole;
   g_fds.p[fd].flags = flags;
   g_fds.p[fd].mode = mode;
+  g_fds.p[fd].handle = CreateFile(u"CONIN$", kNtGenericRead | kNtGenericWrite,
+                                  kNtFileShareRead, 0, kNtOpenExisting, 0, 0);
+  g_fds.p[fd].extra = CreateFile(u"CONOUT$", kNtGenericRead | kNtGenericWrite,
+                                 kNtFileShareWrite, 0, kNtOpenExisting, 0, 0);
   return fd;
 }
 
 static textwindows int sys_open_nt_file(int dirfd, const char *file,
                                         uint32_t flags, int32_t mode,
                                         size_t fd) {
-  if ((g_fds.p[fd].handle = sys_open_nt_impl(dirfd, file, flags, mode, 0)) !=
-      -1) {
+  if ((g_fds.p[fd].handle = sys_open_nt_impl(dirfd, file, flags, mode,
+                                             kNtFileFlagOverlapped)) != -1) {
     g_fds.p[fd].kind = kFdFile;
     g_fds.p[fd].flags = flags;
     g_fds.p[fd].mode = mode;
@@ -187,7 +174,7 @@ textwindows int sys_open_nt(int dirfd, const char *file, uint32_t flags,
   ssize_t rc;
   __fds_lock();
   if ((rc = fd = __reservefd_unlocked(-1)) != -1) {
-    if ((flags & O_ACCMODE) == O_RDWR && !strcmp(file, kNtMagicPaths.devtty)) {
+    if (!strcmp(file, kNtMagicPaths.devtty)) {
       rc = sys_open_nt_console(dirfd, &kNtMagicPaths, flags, mode, fd);
     } else {
       rc = sys_open_nt_file(dirfd, file, flags, mode, fd);

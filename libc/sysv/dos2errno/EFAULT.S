@@ -11,6 +11,5 @@
 	.globl	kDos2Errno.EFAULT
 	.type	kDos2Errno.EFAULT,@object
 kDos2Errno.EFAULT:
-	.e	kNtErrorInsufficientBuffer,EFAULT
 	.e	kNtErrorNoaccess,EFAULT
 	.e	WSAEFAULT,EFAULT

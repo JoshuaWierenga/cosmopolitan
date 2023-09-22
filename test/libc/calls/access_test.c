@@ -28,9 +28,8 @@
 #include "libc/testlib/testlib.h"
 #include "libc/x/x.h"
 
-char testlib_enable_tmp_setup_teardown;
-
 void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown();
   ASSERT_SYS(0, 0, pledge("stdio rpath wpath cpath fattr", 0));
 }
 
@@ -62,7 +61,7 @@ TEST(access, test) {
 }
 
 TEST(access, testRequestWriteOnReadOnly_returnsEaccess) {
-  return; /* TODO(jart): maybe we need root to help? */
+  if (1) return;  // TODO(jart): maybe we need root to help?
   ASSERT_SYS(ENOENT, -1, access("file", F_OK));
   ASSERT_SYS(0, 0, close(creat("file", 0444)));
   ASSERT_SYS(0, 0, access("file", F_OK));
@@ -76,4 +75,9 @@ TEST(access, testRequestWriteOnReadOnly_returnsEaccess) {
 
 TEST(access, runThisExecutable) {
   ASSERT_SYS(0, 0, access(GetProgramExecutableName(), R_OK | X_OK));
+}
+
+TEST(access, textFileIsntExecutable) {
+  ASSERT_SYS(0, 0, touch("foo.txt", 0644));
+  ASSERT_SYS(EACCES, -1, access("foo.txt", R_OK | X_OK));
 }

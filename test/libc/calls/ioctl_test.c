@@ -72,7 +72,6 @@ TEST(siocgifconf, test) {
   ASSERT_NE(-1, close(socketfd));
 }
 
-#ifdef __x86_64__
 TEST(siocgifconf, mkntenvblock_systemroot) {
   if (__argc != 1) return;
   SPAWN(fork);
@@ -81,7 +80,6 @@ TEST(siocgifconf, mkntenvblock_systemroot) {
   abort();
   EXITS(0);
 }
-#endif
 
 TEST(fionread, pipe) {
   int pfds[2];
@@ -95,5 +93,17 @@ TEST(fionread, pipe) {
   // ASSERT_SYS(0, 0, ioctl(pfds[1], FIONREAD, &pending));
   // ASSERT_EQ(2, pending);
   ASSERT_SYS(0, 0, close(pfds[1]));
+  ASSERT_SYS(0, 0, close(pfds[0]));
+}
+
+TEST(fionread, eof_returnsZeroWithoutError) {
+  char buf[8];
+  int pfds[2];
+  int pending;
+  ASSERT_SYS(0, 0, pipe(pfds));
+  ASSERT_SYS(0, 0, close(pfds[1]));
+  ASSERT_SYS(0, 0, ioctl(pfds[0], FIONREAD, &pending));
+  ASSERT_EQ(0, pending);
+  ASSERT_SYS(0, 0, read(pfds[0], buf, 8));
   ASSERT_SYS(0, 0, close(pfds[0]));
 }

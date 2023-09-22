@@ -31,6 +31,7 @@
 #include "libc/macros.internal.h"
 #include "libc/mem/alloca.h"
 #include "libc/mem/mem.h"
+#include "libc/nt/console.h"
 #include "libc/nt/enum/filetype.h"
 #include "libc/nt/errors.h"
 #include "libc/nt/files.h"
@@ -40,6 +41,7 @@
 #include "libc/nt/struct/ipadapteraddresses.h"
 #include "libc/nt/winsock.h"
 #include "libc/runtime/runtime.h"
+#include "libc/runtime/stack.h"
 #include "libc/sock/internal.h"
 #include "libc/sock/struct/ifconf.h"
 #include "libc/sock/struct/ifreq.h"
@@ -52,10 +54,6 @@
 #include "libc/sysv/consts/sio.h"
 #include "libc/sysv/consts/termios.h"
 #include "libc/sysv/errfuns.h"
-
-#ifdef __x86_64__
-__static_yoink("WinMainStdin");
-#endif
 
 /* Maximum number of unicast addresses handled for each interface */
 #define MAX_UNICAST_ADDR 32
@@ -93,12 +91,12 @@ static int ioctl_default(int fd, unsigned long request, void *arg) {
 
 static int ioctl_fionread(int fd, uint32_t *arg) {
   int rc;
+  uint32_t cm;
   int64_t handle;
-  uint32_t avail;
   if (!IsWindows()) {
     return sys_ioctl(fd, FIONREAD, arg);
   } else if (__isfdopen(fd)) {
-    handle = __resolve_stdin_handle(g_fds.p[fd].handle);
+    handle = g_fds.p[fd].handle;
     if (g_fds.p[fd].kind == kFdSocket) {
       if ((rc = _weaken(__sys_ioctlsocket_nt)(handle, FIONREAD, arg)) != -1) {
         return rc;
@@ -106,12 +104,18 @@ static int ioctl_fionread(int fd, uint32_t *arg) {
         return _weaken(__winsockerr)();
       }
     } else if (GetFileType(handle) == kNtFileTypePipe) {
+      uint32_t avail;
       if (PeekNamedPipe(handle, 0, 0, 0, &avail, 0)) {
         *arg = avail;
+        return 0;
+      } else if (GetLastError() == kNtErrorBrokenPipe) {
         return 0;
       } else {
         return __winerr();
       }
+    } else if (GetConsoleMode(handle, &cm)) {
+      int bytes = CountConsoleInputBytes(handle);
+      return MAX(0, bytes);
     } else {
       return eopnotsupp();
     }
@@ -485,8 +489,12 @@ static int ioctl_siocgifconf_sysv(int fd, struct ifconf *ifc) {
   if (IsLinux()) {
     return sys_ioctl(fd, SIOCGIFCONF, ifc);
   }
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Walloca-larger-than="
   bufMax = 15000; /* conservative guesstimate */
   b = alloca(bufMax);
+  CheckLargeStackAllocation(b, bufMax);
+#pragma GCC pop_options
   memcpy(ifcBsd, &bufMax, 8);                /* ifc_len */
   memcpy(ifcBsd + (IsXnu() ? 4 : 8), &b, 8); /* ifc_buf */
   if ((rc = sys_ioctl(fd, SIOCGIFCONF, &ifcBsd)) != -1) {
@@ -641,6 +649,7 @@ static int ioctl_siocgifflags(int fd, void *arg) {
  * - `FIONBIO` isn't polyfilled; use `fcntl(F_SETFL, O_NONBLOCK)`
  * - `FIOCLEX` isn't polyfilled; use `fcntl(F_SETFD, FD_CLOEXEC)`
  * - `FIONCLEX` isn't polyfilled; use `fcntl(F_SETFD, 0)`
+ * - `TIOCSCTTY` isn't polyfilled; use `login_tty()`
  * - `TCGETS` isn't polyfilled; use tcgetattr()
  * - `TCSETS` isn't polyfilled; use tcsetattr()
  * - `TCSETSW` isn't polyfilled; use tcsetattr()

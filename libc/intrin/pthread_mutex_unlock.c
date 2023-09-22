@@ -17,14 +17,12 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
-#include "libc/calls/state.internal.h"
 #include "libc/errno.h"
 #include "libc/intrin/atomic.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/intrin/weaken.h"
 #include "libc/runtime/internal.h"
 #include "libc/thread/thread.h"
-#include "libc/thread/tls.h"
 #include "third_party/nsync/mu.h"
 
 /**
@@ -39,12 +37,9 @@
 int pthread_mutex_unlock(pthread_mutex_t *mutex) {
   int t;
 
-  if (__vforked) return 0;
-
   LOCKTRACE("pthread_mutex_unlock(%t)", mutex);
 
-  if (__tls_enabled &&                               //
-      mutex->_type == PTHREAD_MUTEX_NORMAL &&        //
+  if (mutex->_type == PTHREAD_MUTEX_NORMAL &&        //
       mutex->_pshared == PTHREAD_PROCESS_PRIVATE &&  //
       _weaken(nsync_mu_unlock)) {
     _weaken(nsync_mu_unlock)((nsync_mu *)mutex);

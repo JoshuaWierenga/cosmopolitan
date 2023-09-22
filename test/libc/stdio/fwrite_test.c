@@ -34,7 +34,10 @@
 
 FILE *f;
 char buf[512];
-char testlib_enable_tmp_setup_teardown;
+
+void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown();
+}
 
 TEST(fwrite, test) {
   ASSERT_NE(NULL, (f = fopen(PATH, "wb")));
@@ -53,7 +56,6 @@ TEST(fwrite, test) {
   ASSERT_NE(NULL, (f = fopen(PATH, "a+b")));
   EXPECT_EQ(5, fwrite("hello", 1, 5, f));
   EXPECT_NE(-1, fclose(f));
-  if (IsWindows()) return;
   ASSERT_NE(NULL, (f = fopen(PATH, "r")));
   EXPECT_EQ(10, fread(buf, 1, 10, f));
   EXPECT_TRUE(!memcmp(buf, "hellohello", 10));
@@ -77,7 +79,6 @@ TEST(fwrite, testSmallBuffer) {
   setbuffer(f, gc(malloc(1)), 1);
   EXPECT_EQ(5, fwrite("hello", 1, 5, f));
   EXPECT_NE(-1, fclose(f));
-  if (IsWindows()) return;
   ASSERT_NE(NULL, (f = fopen(PATH, "r")));
   setbuffer(f, gc(malloc(1)), 1);
   EXPECT_EQ(10, fread(buf, 1, 10, f));
@@ -106,7 +107,6 @@ TEST(fwrite, testLineBuffer) {
   setvbuf(f, NULL, _IOLBF, 64);
   EXPECT_EQ(5, fwrite("heyy\n", 1, 5, f));
   EXPECT_NE(-1, fclose(f));
-  if (IsWindows()) return;
   ASSERT_NE(NULL, (f = fopen(PATH, "r")));
   setvbuf(f, NULL, _IOLBF, 64);
   EXPECT_EQ(10, fread(buf, 1, 10, f));
@@ -131,7 +131,6 @@ TEST(fwrite, testNoBuffer) {
   setvbuf(f, NULL, _IONBF, 64);
   EXPECT_EQ(5, fwrite("heyy\n", 1, 5, f));
   EXPECT_NE(-1, fclose(f));
-  if (IsWindows()) return;
   ASSERT_NE(NULL, (f = fopen(PATH, "r")));
   setvbuf(f, NULL, _IONBF, 64);
   EXPECT_EQ(10, fread(buf, 1, 10, f));

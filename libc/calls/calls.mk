@@ -65,50 +65,11 @@ $(LIBC_CALLS_A).pkg:					\
 		$(LIBC_CALLS_A_OBJS)			\
 		$(foreach x,$(LIBC_CALLS_A_DIRECTDEPS),$($(x)_A).pkg)
 
-# we can't use sanitizers because:
-#   we're on a stack owned by win32 without tls
-o/$(MODE)/libc/calls/onntconsoleevent.o: private	\
-		COPTS +=				\
-			-ffreestanding			\
-			-fno-sanitize=all
-
-# we can't use asan because:
-#   siginfo_t memory is owned by kernels
-o/$(MODE)/libc/calls/siginfo2cosmo.o: private		\
-		COPTS +=				\
-			-ffreestanding			\
-			-fno-sanitize=address
-
-# we can't use asan because:
-#   ucontext_t memory is owned by xnu kernel
-o/$(MODE)/libc/calls/sigenter-xnu.o: private		\
-		COPTS +=				\
-			-ffreestanding			\
-			-fno-sanitize=address
-
-# we can't use asan because:
-#   vdso memory is owned by linux kernel
-o/$(MODE)/libc/calls/vdsofunc.greg.o: private		\
-		COPTS +=				\
-			-ffreestanding			\
-			-fno-sanitize=address
-
-# we can't use asan because:
-#   ntspawn allocates 128kb of heap memory via win32
-o/$(MODE)/libc/calls/ntspawn.o				\
-o/$(MODE)/libc/calls/mkntcmdline.o			\
-o/$(MODE)/libc/calls/mkntenvblock.o: private		\
-		COPTS +=				\
-			-ffreestanding			\
-			-fno-sanitize=address
-
-# we can't use sanitizers because:
-#   windows owns the data structure
-o/$(MODE)/libc/calls/wincrash.o				\
-o/$(MODE)/libc/calls/ntcontext2linux.o: private		\
+$(LIBC_CALLS_A_OBJS): private				\
 		COPTS +=				\
 			-fno-sanitize=all		\
-			-fpatchable-function-entry=0,0
+			-Wframe-larger-than=4096	\
+			-Walloca-larger-than=4096
 
 ifneq ($(ARCH), aarch64)
 # we always want -O3 because:
@@ -125,21 +86,6 @@ o/$(MODE)/libc/calls/ntcontext2linux.o: private		\
 			-O3				\
 			-mstringop-strategy=loop
 endif
-
-# we must disable static stack safety because:
-#   these functions use alloca(n)
-o/$(MODE)/libc/calls/execl.o				\
-o/$(MODE)/libc/calls/execle.o				\
-o/$(MODE)/libc/calls/execlp.o				\
-o/$(MODE)/libc/calls/execvpe.o				\
-o/$(MODE)/libc/calls/statfs.o				\
-o/$(MODE)/libc/calls/fstatfs.o				\
-o/$(MODE)/libc/calls/execve-sysv.o			\
-o/$(MODE)/libc/calls/readlinkat-nt.o			\
-o/$(MODE)/libc/calls/execve-nt.greg.o			\
-o/$(MODE)/libc/calls/mkntenvblock.o: private		\
-		CPPFLAGS +=				\
-			-DSTACK_FRAME_UNLIMITED
 
 # we always want -Os because:
 #   va_arg codegen is very bloated in default mode
@@ -173,24 +119,6 @@ o/$(MODE)/libc/calls/timeval_frommicros.o: private	\
 		CFLAGS +=				\
 			-O2
 
-# privileged functions
-o/$(MODE)/libc/calls/sigenter-freebsd.o			\
-o/$(MODE)/libc/calls/sigenter-netbsd.o			\
-o/$(MODE)/libc/calls/sigenter-openbsd.o			\
-o/$(MODE)/libc/calls/sigenter-linux.o			\
-o/$(MODE)/libc/calls/sigenter-xnu.o			\
-o/$(MODE)/libc/calls/pledge-linux.o			\
-o/$(MODE)/libc/calls/siginfo2cosmo.o: private		\
-		CFLAGS +=				\
-			-ffreestanding			\
-			-fno-sanitize=all		\
-			-fno-stack-protector
-
-o/$(MODE)/libc/calls/pledge-linux.o			\
-o/$(MODE)/libc/calls/unveil.o: private			\
-		CFLAGS +=				\
-			-DSTACK_FRAME_UNLIMITED
-
 ifeq ($(ARCH), aarch64)
 o/$(MODE)/libc/calls/sigaction.o: private CFLAGS += -mcmodel=large
 o/$(MODE)/libc/calls/getloadavg-nt.o: private CFLAGS += -ffreestanding
@@ -212,7 +140,7 @@ o/$(MODE)/libc/calls/swapcontext.o: libc/calls/swapcontext.S
 	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
 o/$(MODE)/libc/calls/tailcontext.o: libc/calls/tailcontext.S
 	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
-o/$(MODE)/libc/calls/switchstacks.o: libc/calls/switchstacks.S
+o/$(MODE)/libc/calls/stackjump.o: libc/calls/stackjump.S
 	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
 
 LIBC_CALLS_LIBS = $(foreach x,$(LIBC_CALLS_ARTIFACTS),$($(x)))

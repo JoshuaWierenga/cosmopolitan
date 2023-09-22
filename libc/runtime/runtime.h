@@ -8,8 +8,10 @@ COSMOPOLITAN_C_START_
 
 #ifdef __x86_64__
 typedef long jmp_buf[8];
+typedef long sigjmp_buf[12];
 #elif defined(__aarch64__)
 typedef long jmp_buf[22];
+typedef long sigjmp_buf[26];
 #elif defined(__powerpc64__)
 typedef unsigned __int128 jmp_buf[32];
 #elif defined(__s390x__)
@@ -17,8 +19,6 @@ typedef unsigned long jmp_buf[18];
 #elif defined(__riscv)
 typedef unsigned long jmp_buf[26];
 #endif
-
-typedef long sigjmp_buf[12];
 
 void mcount(void);
 int daemon(int, int);
@@ -79,7 +79,6 @@ extern int __strace;
 extern int __ftrace;
 extern uint64_t __syscount;
 extern uint64_t kStartTsc;
-extern char kTmpPath[];
 extern const char kNtSystemDirectory[];
 extern const char kNtWindowsDirectory[];
 extern size_t __virtualmax;
@@ -94,6 +93,7 @@ void __printargs(const char *);
 int ftrace_install(void);
 int ftrace_enabled(int);
 int strace_enabled(int);
+bool strace_enter(void);
 void _bt(const char *, ...);
 void __print_maps(void);
 long _GetMaxFd(void);
@@ -115,6 +115,8 @@ void __paginate(int, const char *);
 void _weakfree(void *);
 void *_mapanon(size_t) attributeallocsize((1)) mallocesque;
 void *_mapshared(size_t) attributeallocsize((1)) mallocesque;
+void CheckForMemoryLeaks(void);
+void CheckForFileLeaks(void);
 void __enable_threads(void);
 void __oom_hook(size_t);
 bool _isheap(void *);
@@ -136,6 +138,19 @@ int __get_arg_max(void) pureconst;
 int __get_cpu_count(void) pureconst;
 long __get_avphys_pages(void) pureconst;
 long __get_phys_pages(void) pureconst;
+long __get_minsigstksz(void) pureconst;
+void __get_main_stack(void **, size_t *, int *);
+long __get_safe_size(long, long);
+char *__get_tmpdir(void);
+__funline int __trace_disabled(int x) {
+  return 0;
+}
+#ifndef FTRACE
+#define ftrace_enabled __trace_disabled
+#endif
+#ifndef SYSDEBUG
+#define strace_enabled __trace_disabled
+#endif
 #endif /* _COSMO_SOURCE */
 
 COSMOPOLITAN_C_END_

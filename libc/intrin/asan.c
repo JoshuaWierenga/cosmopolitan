@@ -17,14 +17,17 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/state.internal.h"
+#include "libc/calls/struct/rlimit.h"
+#include "libc/calls/struct/rlimit.internal.h"
 #include "libc/calls/syscall-sysv.internal.h"
 #include "libc/dce.h"
+#include "libc/errno.h"
 #include "libc/intrin/asan.internal.h"
 #include "libc/intrin/atomic.h"
 #include "libc/intrin/bits.h"
 #include "libc/intrin/cmpxchg.h"
+#include "libc/intrin/describebacktrace.internal.h"
 #include "libc/intrin/directmap.internal.h"
-#include "libc/intrin/kmalloc.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/leaky.internal.h"
 #include "libc/intrin/likely.h"
@@ -40,6 +43,7 @@
 #include "libc/nt/enum/version.h"
 #include "libc/runtime/memtrack.internal.h"
 #include "libc/runtime/runtime.h"
+#include "libc/runtime/stack.h"
 #include "libc/runtime/symbols.internal.h"
 #include "libc/stdckdint.h"
 #include "libc/str/str.h"
@@ -47,6 +51,8 @@
 #include "libc/sysv/consts/auxv.h"
 #include "libc/sysv/consts/map.h"
 #include "libc/sysv/consts/prot.h"
+#include "libc/sysv/consts/rlim.h"
+#include "libc/sysv/consts/rlimit.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/tls.h"
 #include "third_party/dlmalloc/dlmalloc.h"
@@ -400,11 +406,9 @@ static bool __asan_is_mapped(int x) {
   // xxx: we can't lock because no reentrant locks yet
   int i;
   bool res;
-  struct MemoryIntervals *m;
   __mmi_lock();
-  m = _weaken(_mmi);
-  i = __find_memory(m, x);
-  res = i < m->i && x >= m->p[i].x;
+  i = __find_memory(&_mmi, x);
+  res = i < _mmi.i && x >= _mmi.p[i].x;
   __mmi_unlock();
   return res;
 }
@@ -770,7 +774,7 @@ static void __asan_report_memory_origin_image(intptr_t a, int z) {
   }
 }
 
-static dontasan void __asan_onmemory(void *x, void *y, size_t n, void *a) {
+static void __asan_onmemory(void *x, void *y, size_t n, void *a) {
   const unsigned char *p = x;
   struct ReportOriginHeap *t = a;
   if ((p <= t->a && t->a < p + n) ||
@@ -827,14 +831,18 @@ static void __asan_report_memory_origin(const unsigned char *addr, int size,
 static __wur __asan_die_f *__asan_report(const void *addr, int size,
                                          const char *message,
                                          signed char kind) {
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wframe-larger-than="
+  char buf[8192];
+  CheckLargeStackAllocation(buf, sizeof(buf));
+#pragma GCC pop_options
   int i;
   wint_t c;
   signed char t;
   uint64_t x, y, z;
-  char *p, *q, *buf, *base;
+  char *base, *q, *p = buf;
   struct MemoryIntervals *m;
   ftrace_enabled(-1);
-  p = buf = kmalloc(1024 * 1024);
   kprintf("\n\e[J\e[1;31masan error\e[0m: %s %d-byte %s at %p shadow %p\n",
           __asan_describe_access_poison(kind), size, message, addr,
           SHADOW(addr));
@@ -896,7 +904,7 @@ static __wur __asan_die_f *__asan_report(const void *addr, int size,
   p = __asan_format_section(p, _etext, _edata, ".data", addr);
   p = __asan_format_section(p, _end, _edata, ".bss", addr);
   __mmi_lock();
-  for (m = _weaken(_mmi), i = 0; i < m->i; ++i) {
+  for (m = &_mmi, i = 0; i < m->i; ++i) {
     x = m->p[i].x;
     y = m->p[i].y;
     p = __asan_format_interval(p, x << 16, (y << 16) + (FRAMESIZE - 1));
@@ -910,7 +918,7 @@ static __wur __asan_die_f *__asan_report(const void *addr, int size,
   *p = 0;
   kprintf("%s", buf);
   __asan_report_memory_origin(addr, size, kind);
-  kprintf("\nthe crash was caused by\n");
+  kprintf("\nthe crash was caused by %s\n", program_invocation_name);
   ftrace_enabled(+1);
   return __asan_die();
 }
@@ -1387,10 +1395,11 @@ void __asan_map_shadow(uintptr_t p, size_t n) {
   struct DirectMap sm;
   struct MemoryIntervals *m;
   if (OverlapsShadowSpace((void *)p, n)) {
-    kprintf("error: %p size %'zu overlaps shadow space\n", p, n);
+    kprintf("error: %p size %'zu overlaps shadow space: %s\n", p, n,
+            DescribeBacktrace(__builtin_frame_address(0)));
     _Exit(1);
   }
-  m = _weaken(_mmi);
+  m = &_mmi;
   a = (0x7fff8000 + (p >> 3)) >> 16;
   b = (0x7fff8000 + (p >> 3) + (n >> 3) + 0xffff) >> 16;
   for (; a <= b; a += i) {
@@ -1407,12 +1416,11 @@ void __asan_map_shadow(uintptr_t p, size_t n) {
     addr = (void *)ADDR_32_TO_48(a);
     prot = PROT_READ | PROT_WRITE;
     flag = MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS;
-    sm = _weaken(sys_mmap)(addr, size, prot, flag, -1, 0);
+    sm = sys_mmap(addr, size, prot, flag, -1, 0);
     if (sm.addr == MAP_FAILED ||
-        _weaken(__track_memory)(m, a, a + i - 1, sm.maphandle,
-                                PROT_READ | PROT_WRITE,
-                                MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, false,
-                                false, 0, size) == -1) {
+        __track_memory(m, a, a + i - 1, sm.maphandle, PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, false, false, 0,
+                       size) == -1) {
       kprintf("error: could not map asan shadow memory\n");
       __asan_die()();
       __asan_unreachable();
@@ -1420,38 +1428,6 @@ void __asan_map_shadow(uintptr_t p, size_t n) {
     __repstosb(addr, kAsanUnmapped, size);
   }
   __asan_unpoison((char *)p, n);
-}
-
-static size_t __asan_strlen(const char *s) {
-  size_t i = 0;
-  while (s[i]) ++i;
-  return i;
-}
-
-static textstartup void __asan_shadow_string(char *s) {
-  __asan_map_shadow((intptr_t)s, __asan_strlen(s) + 1);
-}
-
-static textstartup void __asan_shadow_auxv(intptr_t *auxv) {
-  size_t i;
-  for (i = 0; auxv[i]; i += 2) {
-    if (_weaken(AT_RANDOM) && auxv[i] == *_weaken(AT_RANDOM)) {
-      __asan_map_shadow(auxv[i + 1], 16);
-    } else if (_weaken(AT_EXECFN) && auxv[i] == *_weaken(AT_EXECFN)) {
-      __asan_shadow_string((char *)auxv[i + 1]);
-    } else if (_weaken(AT_PLATFORM) && auxv[i] == *_weaken(AT_PLATFORM)) {
-      __asan_shadow_string((char *)auxv[i + 1]);
-    }
-  }
-  __asan_map_shadow((uintptr_t)auxv, (i + 2) * sizeof(intptr_t));
-}
-
-static textstartup void __asan_shadow_string_list(char **list) {
-  size_t i;
-  for (i = 0; list[i]; ++i) {
-    __asan_shadow_string(list[i]);
-  }
-  __asan_map_shadow((uintptr_t)list, (i + 1) * sizeof(char *));
 }
 
 static textstartup void __asan_shadow_mapping(struct MemoryIntervals *m,
@@ -1467,25 +1443,33 @@ static textstartup void __asan_shadow_mapping(struct MemoryIntervals *m,
 
 static textstartup void __asan_shadow_existing_mappings(void) {
   __asan_shadow_mapping(&_mmi, 0);
-  __asan_map_shadow(GetStackAddr(), GetStackSize());
-  __asan_poison((void *)GetStackAddr(), getauxval(AT_PAGESZ),
-                kAsanStackOverflow);
+  if (!IsWindows()) {
+    int guard;
+    void *addr;
+    size_t size;
+    __get_main_stack(&addr, &size, &guard);
+    __asan_map_shadow((uintptr_t)addr, size);
+    __asan_poison(addr, guard, kAsanStackOverflow);
+  }
+}
+
+static size_t __asan_strlen(const char *s) {
+  size_t i = 0;
+  while (s[i]) ++i;
+  return i;
 }
 
 forceinline ssize_t __write_str(const char *s) {
   return sys_write(2, s, __asan_strlen(s));
 }
 
-void __asan_init(int argc, char **argv, char **envp, intptr_t *auxv) {
+void __asan_init(int argc, char **argv, char **envp, unsigned long *auxv) {
   static bool once;
   if (!_cmpxchg(&once, false, true)) return;
   if (IsWindows() && NtGetVersion() < kNtVersionWindows10) {
     __write_str("error: asan binaries require windows10\r\n");
     _Exit(0); /* So `make MODE=dbg test` passes w/ Windows7 */
   }
-  REQUIRE(_mmi);
-  REQUIRE(sys_mmap);
-  REQUIRE(__track_memory);
   if (_weaken(hook_malloc) || _weaken(hook_calloc) || _weaken(hook_realloc) ||
       _weaken(hook_realloc_in_place) || _weaken(hook_free) ||
       _weaken(hook_malloc_usable_size)) {
@@ -1500,9 +1484,6 @@ void __asan_init(int argc, char **argv, char **envp, intptr_t *auxv) {
   if (!IsWindows()) {
     sys_mprotect((void *)0x7fff8000, 0x10000, PROT_READ);
   }
-  __asan_shadow_string_list(argv);
-  __asan_shadow_string_list(envp);
-  __asan_shadow_auxv(auxv);
   __asan_install_malloc_hooks();
   STRACE("    _    ____    _    _   _ ");
   STRACE("   / \\  / ___|  / \\  | \\ | |");

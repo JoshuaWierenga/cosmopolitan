@@ -6,10 +6,8 @@
 #include "libc/dce.h"
 #include "libc/macros.internal.h"
 
-#define kSigactionMinRva 8 /* >SIG_{ERR,DFL,IGN,...} */
-
+#define kSigactionMinRva  8 /* >SIG_{ERR,DFL,IGN,...} */
 #define kSigOpRestartable 1
-#define kSigOpNochld      2
 
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 COSMOPOLITAN_C_START_
@@ -26,7 +24,11 @@ void __releasefd(int);
 int __ensurefds(int);
 int __ensurefds_unlocked(int);
 void __printfds(void);
-uint32_t __synthesize_uid(void);
+uint32_t sys_getuid_nt(void);
+int __pause_thread(uint32_t);
+int IsWindowsExecutable(int64_t);
+int CountConsoleInputBytes(int64_t);
+int FlushConsoleInputBytes(int64_t);
 
 forceinline int64_t __getfdhandleactual(int fd) {
   return g_fds.p[fd].handle;

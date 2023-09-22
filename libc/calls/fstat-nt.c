@@ -101,7 +101,11 @@ textwindows int sys_fstat_nt(int64_t handle, struct stat *out_st) {
       if (!GetFileInformationByHandle(handle, &wst)) {
         return __winerr();
       }
-      st.st_mode = 0555 & ~umask;
+      st.st_mode = 0444 & ~umask;
+      if ((wst.dwFileAttributes & kNtFileAttributeDirectory) ||
+          IsWindowsExecutable(handle)) {
+        st.st_mode |= 0111 & ~umask;
+      }
       st.st_flags = wst.dwFileAttributes;
       if (!(wst.dwFileAttributes & kNtFileAttributeReadonly)) {
         st.st_mode |= 0222 & ~umask;
@@ -122,7 +126,7 @@ textwindows int sys_fstat_nt(int64_t handle, struct stat *out_st) {
       } else {
         st.st_ctim = st.st_mtim;
       }
-      st.st_gid = st.st_uid = __synthesize_uid();
+      st.st_gid = st.st_uid = sys_getuid_nt();
       st.st_size = (wst.nFileSizeHigh + 0ull) << 32 | wst.nFileSizeLow;
       st.st_dev = wst.dwVolumeSerialNumber;
       st.st_ino = (wst.nFileIndexHigh + 0ull) << 32 | wst.nFileIndexLow;

@@ -18,7 +18,6 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/intrin/describeflags.internal.h"
 
-// TODO(jart): Fork this function into ASAN and non-ASAN versions.
 const char *DescribeFlags(char *p, size_t n, const struct DescribeFlags *d,
                           size_t m, const char *prefix, unsigned x) {
   bool t;

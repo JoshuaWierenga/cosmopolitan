@@ -478,13 +478,11 @@ THIRD_PARTY_PYTHON_STAGE1_A_DEPS =					\
 	$(call uniq,$(foreach x,$(THIRD_PARTY_PYTHON_STAGE1_A_DIRECTDEPS),$($(x))))
 
 o//third_party/python/Python/importlib.inc:				\
-		$(VM)							\
 		o/$(MODE)/third_party/python/freeze.com			\
 		third_party/python/Lib/importlib/_bootstrap.py
 	@$(COMPILE) -AFREEZE -wT$@ $^ $@
 
 o//third_party/python/Python/importlib_external.inc:			\
-		$(VM)							\
 		o/$(MODE)/third_party/python/freeze.com			\
 		third_party/python/Lib/importlib/_bootstrap_external.py
 	@$(COMPILE) -AFREEZE -wT$@ $^ $@
@@ -1169,6 +1167,7 @@ THIRD_PARTY_PYTHON_STAGE2_A_DIRECTDEPS =				\
 	LIBC_MEM							\
 	LIBC_NEXGEN32E							\
 	LIBC_NT_KERNEL32						\
+	LIBC_PROC							\
 	LIBC_RUNTIME							\
 	LIBC_THREAD							\
 	LIBC_SOCK							\
@@ -2189,10 +2188,10 @@ o/$(MODE)/third_party/python/Lib/test/test_signal.py.runs:		\
 o/$(MODE)/third_party/python/Lib/test/test_timeout.py.runs:		\
 		private .PLEDGE = stdio rpath wpath cpath fattr proc inet
 
-PYTHONTESTER = $(VM) o/$(MODE)/third_party/python/pythontester.com
+PYTHONTESTER = o/$(MODE)/third_party/python/pythontester.com
 
 o/$(MODE)/third_party/python/Lib/test/test_grammar.py.runs: $(PYTHONTESTER)
-	$(COMPILE) -ACHECK -wtT$@ $(PYHARNESSARGS) $(PYTHONTESTER) -m test.test_grammar $(PYTESTARGS)
+	@$(COMPILE) -ACHECK -wtT$@ $(PYHARNESSARGS) $(PYTHONTESTER) -m test.test_grammar $(PYTESTARGS)
 
 o/$(MODE)/third_party/python/Lib/test/test_set.py.runs: $(PYTHONTESTER)
 	@$(COMPILE) -ACHECK -wtT$@ $(PYHARNESSARGS) $(PYTHONTESTER) -m test.test_set $(PYTESTARGS)
@@ -4059,8 +4058,7 @@ o/$(MODE)/third_party/python/python.com.dbg:				\
 o/$(MODE)/third_party/python/python.com:				\
 		o/$(MODE)/third_party/python/python.com.dbg		\
 		o/$(MODE)/third_party/zip/zip.com			\
-		o/$(MODE)/tool/build/symtab.com				\
-		$(VM)
+		o/$(MODE)/tool/build/symtab.com
 	@$(MAKE_OBJCOPY)
 	@$(MAKE_SYMTAB_CREATE)
 	@$(MAKE_SYMTAB_ZIP)

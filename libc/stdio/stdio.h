@@ -1,11 +1,12 @@
 #ifndef COSMOPOLITAN_LIBC_STDIO_H_
 #define COSMOPOLITAN_LIBC_STDIO_H_
 
-#define EOF    -1  /* end of file */
-#define WEOF   -1u /* end of file (multibyte) */
-#define _IOFBF 0   /* fully buffered */
-#define _IOLBF 1   /* line buffered */
-#define _IONBF 2   /* no buffering */
+#define EOF      -1  /* end of file */
+#define WEOF     -1u /* end of file (multibyte) */
+#define _IOFBF   0   /* fully buffered */
+#define _IOLBF   1   /* line buffered */
+#define _IONBF   2   /* no buffering */
+#define _CS_PATH 0
 
 #define L_tmpnam     20
 #define L_ctermid    20
@@ -80,6 +81,7 @@ int setvbuf(FILE *, char *, int, size_t);
 int pclose(FILE *);
 char *ctermid(char *);
 void perror(const char *) relegated;
+size_t confstr(int, char *, size_t);
 
 typedef uint64_t fpos_t;
 char *gets(char *) paramsnonnull();
@@ -108,6 +110,14 @@ int vscanf(const char *, va_list);
 int fscanf(FILE *, const char *, ...) scanfesque(2);
 int vfscanf(FILE *, const char *, va_list);
 
+int snprintf(char *, size_t, const char *, ...)
+    printfesque(3) dontthrow nocallback;
+int vsnprintf(char *, size_t, const char *, va_list)
+dontthrow nocallback;
+int sprintf(char *, const char *, ...) dontthrow nocallback;
+int vsprintf(char *, const char *, va_list)
+dontthrow nocallback;
+
 int fwprintf(FILE *, const wchar_t *, ...);
 int fwscanf(FILE *, const wchar_t *, ...);
 int swprintf(wchar_t *, size_t, const wchar_t *, ...);
@@ -121,6 +131,9 @@ int vwscanf(const wchar_t *, va_list);
 int wprintf(const wchar_t *, ...);
 int wscanf(const wchar_t *, ...);
 int fwide(FILE *, int);
+
+int sscanf(const char *, const char *, ...) scanfesque(2);
+int vsscanf(const char *, const char *, va_list);
 
 /*───────────────────────────────────────────────────────────────────────────│─╗
 │ cosmopolitan § standard i/o » allocating                                 ─╬─│┼

@@ -32,18 +32,14 @@
 #ifdef __x86_64__
 
 privileged void __sigenter_wsl(int sig, struct siginfo *info, ucontext_t *ctx) {
-  int i, rva, flags;
-  rva = __sighandrvas[sig & (NSIG - 1)];
+  int rva, flags;
+  rva = __sighandrvas[sig];
   if (rva >= kSigactionMinRva) {
-    flags = __sighandflags[sig & (NSIG - 1)];
+    flags = __sighandflags[sig];
     // WSL1 doesn't set the fpregs field.
     // https://github.com/microsoft/WSL/issues/2555
     if ((flags & SA_SIGINFO) && UNLIKELY(!ctx->uc_mcontext.fpregs)) {
       ctx->uc_mcontext.fpregs = &ctx->__fpustate;
-      for (i = 0; i < 8; ++i) {
-        long double nan = NAN;
-        __memcpy(ctx->__fpustate.st + i, &nan, 16);
-      }
     }
     ((sigaction_f)(__executable_start + rva))(sig, info, ctx);
   }

@@ -34,7 +34,7 @@ COSMOPOLITAN_C_START_
 int64_t CreateThread(const struct NtSecurityAttributes *lpThreadAttributes,
                      size_t dwStackSize, void *lpStartAddress,
                      void *lpParameter, uint32_t dwCreationFlags,
-                     uint32_t *opt_lpThreadId);
+                     uint32_t *opt_lpThreadId) paramsnonnull((3));
 
 void ExitThread(uint32_t dwExitCode) wontreturn;
 int64_t GetCurrentThread(void);
@@ -64,6 +64,7 @@ void *TlsGetValue(uint32_t);
 uint32_t SuspendThread(int64_t hThread);
 uint32_t ResumeThread(int64_t hThread);
 bool32 GetThreadContext(int64_t hThread, struct NtContext *in_out_lpContext);
+bool32 SetThreadContext(int64_t hThread, const struct NtContext *lpContext);
 
 #if ShouldUseMsabiAttribute()
 #include "libc/nt/thunk/thread.inc"

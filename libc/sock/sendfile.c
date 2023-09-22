@@ -17,6 +17,7 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
+#include "libc/calls/bo.internal.h"
 #include "libc/calls/calls.h"
 #include "libc/calls/internal.h"
 #include "libc/calls/sig.internal.h"
@@ -39,19 +40,25 @@
 #include "libc/sock/sendfile.internal.h"
 #include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
+#include "libc/thread/posixthread.internal.h"
 
 // sendfile() isn't specified as raising eintr
 static textwindows int SendfileBlock(int64_t handle,
                                      struct NtOverlapped *overlapped) {
+  struct PosixThread *pt;
   uint32_t i, got, flags = 0;
   if (WSAGetLastError() != kNtErrorIoPending &&
       WSAGetLastError() != WSAEINPROGRESS) {
     NTTRACE("TransmitFile failed %lm");
     return __winsockerr();
   }
+  pt = _pthread_self();
+  pt->abort_errno = 0;
+  pt->ioverlap = overlapped;
+  pt->iohandle = handle;
   for (;;) {
     i = WSAWaitForMultipleEvents(1, &overlapped->hEvent, true,
-                                 __SIG_POLLING_INTERVAL_MS, true);
+                                 __SIG_IO_INTERVAL_MS, true);
     if (i == kNtWaitFailed) {
       NTTRACE("WSAWaitForMultipleEvents failed %lm");
       return __winsockerr();
@@ -64,9 +71,14 @@ static textwindows int SendfileBlock(int64_t handle,
       break;
     }
   }
+  pt->ioverlap = 0;
+  pt->iohandle = 0;
   if (WSAGetOverlappedResult(handle, overlapped, &got, false, &flags)) {
     return got;
   } else {
+    if (WSAGetLastError() == kNtErrorOperationAborted) {
+      errno = pt->abort_errno;
+    }
     return -1;
   }
 }
@@ -98,13 +110,15 @@ static dontinline textwindows ssize_t sys_sendfile_nt(
     return ebadf();
   }
   struct NtOverlapped ov = {
-      .Pointer = (void *)(intptr_t)offset,
+      .Pointer = offset,
       .hEvent = WSACreateEvent(),
   };
   if (TransmitFile(oh, ih, uptobytes, 0, &ov, 0, 0)) {
     rc = uptobytes;
   } else {
+    BEGIN_BLOCKING_OPERATION;
     rc = SendfileBlock(oh, &ov);
+    END_BLOCKING_OPERATION;
   }
   if (rc != -1) {
     if (opt_in_out_inoffset) {
@@ -205,3 +219,5 @@ ssize_t sendfile(int outfd, int infd, int64_t *opt_in_out_inoffset,
          DescribeInOutInt64(rc, opt_in_out_inoffset), uptobytes, rc);
   return rc;
 }
+
+__weak_reference(sendfile, sendfile64);

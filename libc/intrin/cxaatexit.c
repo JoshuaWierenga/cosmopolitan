@@ -16,7 +16,6 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/assert.h"
 #include "libc/intrin/bsr.h"
 #include "libc/intrin/cxaatexit.internal.h"
 #include "libc/intrin/strace.internal.h"
@@ -42,7 +41,7 @@ __static_yoink("__cxa_finalize");
  * @return 0 on success or nonzero w/ errno
  * @note folks have forked libc in past just to unbloat atexit()
  */
-dontasan int __cxa_atexit(void *fp, void *arg, void *pred) {
+int __cxa_atexit(void *fp, void *arg, void *pred) {
   /* asan runtime depends on this function */
   unsigned i;
   struct CxaAtexitBlock *b, *b2;
@@ -60,7 +59,6 @@ dontasan int __cxa_atexit(void *fp, void *arg, void *pred) {
     }
   }
   i = _bsr(~b->mask);
-  unassert(i < ARRAYLEN(b->p));
   b->mask |= 1u << i;
   b->p[i].fp = fp;
   b->p[i].arg = arg;

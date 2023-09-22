@@ -104,7 +104,6 @@ imp	'GetConsoleSelectionInfo'				GetConsoleSelectionInfo					kernel32	1
 imp	'GetConsoleTitle'					GetConsoleTitleW					kernel32	2
 imp	'GetConsoleWindow'					GetConsoleWindow					kernel32	0
 imp	'GetCurrentDirectory'					GetCurrentDirectoryW					kernel32	2
-imp	'GetCurrentProcess'					GetCurrentProcess					kernel32	0
 imp	'GetCurrentProcessId'					GetCurrentProcessId					kernel32	0
 imp	'GetCurrentThread'					GetCurrentThread					kernel32	0
 imp	'GetCurrentThreadId'					GetCurrentThreadId					kernel32	0
@@ -245,7 +244,6 @@ imp	'SetErrorMode'						SetErrorMode						kernel32	1
 imp	'SetEvent'						SetEvent						kernel32	1
 imp	'SetFileAttributes'					SetFileAttributesW					kernel32	2
 imp	'SetFileCompletionNotificationModes'			SetFileCompletionNotificationModes			kernel32	2
-imp	'SetFilePointer'					SetFilePointer						kernel32	4
 imp	'SetFilePointerEx'					SetFilePointerEx					kernel32	4
 imp	'SetFileTime'						SetFileTime						kernel32	4
 imp	'SetFileValidData'					SetFileValidData					kernel32	2
@@ -260,6 +258,7 @@ imp	'SetProcessWorkingSetSize'				SetProcessWorkingSetSize				kernel32	3
 imp	'SetProcessWorkingSetSizeEx'				SetProcessWorkingSetSizeEx				kernel32	4
 imp	'SetStdHandle'						SetStdHandle						kernel32	2
 imp	'SetThreadAffinityMask'					SetThreadAffinityMask					kernel32	2
+imp	'SetThreadContext'					SetThreadContext					kernel32	2
 imp	'SetThreadPriority'					SetThreadPriority					kernel32	2
 imp	'SetThreadPriorityBoost'				SetThreadPriorityBoost					kernel32	2
 imp	'SetUnhandledExceptionFilter'				SetUnhandledExceptionFilter				kernel32	1

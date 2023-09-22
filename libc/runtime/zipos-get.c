@@ -23,7 +23,6 @@
 #include "libc/cosmo.h"
 #include "libc/fmt/conv.h"
 #include "libc/intrin/cmpxchg.h"
-#include "libc/intrin/kmalloc.h"
 #include "libc/intrin/promises.internal.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/macros.internal.h"
@@ -63,8 +62,7 @@ static void __zipos_dismiss(uint8_t *map, const uint8_t *cdir, long pg) {
   mo = ROUNDDOWN(lo, FRAMESIZE);
   if (mo) munmap(map, mo);
 
-  // this is supposed to reduce our rss usage but does it
-  pg = getauxval(AT_PAGESZ);
+  // this is supposed to reduce our rss usage but does it really?
   lo = ROUNDDOWN(lo, pg);
   hi = MIN(ROUNDUP(hi, pg), ROUNDDOWN(c, pg));
   if (hi > lo) {
@@ -91,7 +89,7 @@ static int __zipos_compare_names(const void *a, const void *b, void *c) {
 static void __zipos_generate_index(struct Zipos *zipos) {
   size_t c, i;
   zipos->records = GetZipCdirRecords(zipos->cdir);
-  zipos->index = kmalloc(zipos->records * sizeof(size_t));
+  zipos->index = _mapanon(zipos->records * sizeof(size_t));
   for (i = 0, c = GetZipCdirOffset(zipos->cdir); i < zipos->records;
        ++i, c += ZIP_CFILE_HDRSIZE(zipos->map + c)) {
     zipos->index[i] = c;

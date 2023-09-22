@@ -18,7 +18,6 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
 #include "libc/runtime/internal.h"
-#include "libc/stdio/lock.internal.h"
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 #include "libc/testlib/ezbench.h"
@@ -26,7 +25,10 @@
 
 FILE *f;
 char buf[512];
-char testlib_enable_tmp_setup_teardown;
+
+void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown();
+}
 
 TEST(fputc, test) {
   ASSERT_NE(NULL, (f = fopen("hog", "w+")));
@@ -66,7 +68,6 @@ TEST(fgetc, testUnbuffered) {
 }
 
 BENCH(fputc, bench) {
-  __enable_threads();
   FILE *f;
   ASSERT_NE(NULL, (f = fopen("/dev/null", "w")));
   EZBENCH2("fputc", donothing, fputc('E', f));

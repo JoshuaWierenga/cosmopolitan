@@ -47,7 +47,7 @@ dos	kNtErrorGenFailure              EACCES
 dos	kNtErrorGracefulDisconnect	EPIPE
 dos	kNtErrorHostDown                EHOSTUNREACH
 dos	kNtErrorHostUnreachable         EHOSTUNREACH
-dos	kNtErrorInsufficientBuffer	EFAULT
+dos	kNtErrorInsufficientBuffer	ENOBUFS
 dos	kNtErrorNoaccess                EFAULT
 dos	kNtErrorInvalidAddress          EADDRNOTAVAIL
 dos	kNtErrorNotAReparsePoint	EINVAL
@@ -89,6 +89,8 @@ dos	kNtErrorUnexpNetErr             ECONNABORTED
 dos	kNtErrorWorkingSetQuota         ENOMEM
 dos	kNtErrorWriteProtect            EACCES
 dos	kNtErrorWrongDisk               EACCES
+dos	kNtErrorExeMarkedInvalid	ENOEXEC
+dos	kNtErrorExeMachineTypeMismatch	ENOEXEC
 dos	WSAEACCES                       EACCES
 dos	WSAEDISCON                      EPIPE
 dos	WSAEFAULT                       EFAULT

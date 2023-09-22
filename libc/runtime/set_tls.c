@@ -20,7 +20,6 @@
 #include "libc/calls/calls.h"
 #include "libc/calls/syscall-sysv.internal.h"
 #include "libc/dce.h"
-#include "libc/errno.h"
 #include "libc/nexgen32e/msr.internal.h"
 #include "libc/nt/thread.h"
 #include "libc/sysv/consts/arch.h"
@@ -34,7 +33,6 @@ textstartup void __set_tls(struct CosmoTib *tib) {
 #ifdef __x86_64__
   // ask the operating system to change the x86 segment register
   if (IsWindows()) {
-    __tls_index = TlsAlloc();
     npassert(0 <= __tls_index && __tls_index < 64);
     asm("mov\t%1,%%gs:%0" : "=m"(*((long *)0x1480 + __tls_index)) : "r"(tib));
   } else if (IsFreebsd()) {
@@ -50,9 +48,7 @@ textstartup void __set_tls(struct CosmoTib *tib) {
     sys_set_tls(tib);
   } else if (IsXnu()) {
     // thread_fast_set_cthread_self has a weird ABI
-    int e = errno;
     sys_set_tls((intptr_t)tib - 0x30);
-    errno = e;
   } else {
     uint64_t val = (uint64_t)tib;
     asm volatile("wrmsr"

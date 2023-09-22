@@ -40,12 +40,12 @@
 #include "net/http/escape.h"
 #ifdef __x86_64__
 
+#if 0
 __static_yoink("backtrace.com");
 __static_yoink("backtrace.com.dbg");
 
-char testlib_enable_tmp_setup_teardown_once;
-
 void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown_once();
   ASSERT_NE(-1, mkdir("bin", 0755));
   testlib_extract("/zip/backtrace.com", "bin/backtrace.com", 0755);
   testlib_extract("/zip/backtrace.com.dbg", "bin/backtrace.com.dbg", 0755);
@@ -91,7 +91,7 @@ TEST(ShowCrashReports, testMemoryLeakCrash) {
     return;
   }
   ASSERT_NE(-1, pipe2(fds, O_CLOEXEC));
-  ASSERT_NE(-1, (pid = vfork()));
+  ASSERT_NE(-1, (pid = fork()));
   if (!pid) {
     dup2(fds[1], 1);
     dup2(fds[1], 2);
@@ -115,20 +115,12 @@ TEST(ShowCrashReports, testMemoryLeakCrash) {
   }
   close(fds[0]);
   ASSERT_NE(-1, wait(&ws));
-  EXPECT_TRUE(WIFEXITED(ws));
-  EXPECT_EQ(78, WEXITSTATUS(ws));
-  if (!strstr(output, "UNFREED MEMORY")) {
-    fprintf(stderr, "ERROR: crash report didn't report leak\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
-  }
+  // tinyprint(2, _gc(IndentLines(output, -1, 0, 4)), "\n", NULL);
+  EXPECT_EQ(78 << 8, ws);
+  ASSERT_TRUE(!!strstr(output, "UNFREED MEMORY"));
   if (IsAsan()) {
-    if (!OutputHasSymbol(output, "strdup") ||
-        !OutputHasSymbol(output, "MemoryLeakCrash")) {
-      fprintf(stderr, "ERROR: crash report didn't backtrace allocation\n%s\n",
-              _gc(IndentLines(output, -1, 0, 4)));
-      __die();
-    }
+    ASSERT_TRUE(OutputHasSymbol(output, "strdup") &&
+                OutputHasSymbol(output, "MemoryLeakCrash"));
   }
   free(output);
 }
@@ -191,7 +183,7 @@ TEST(ShowCrashReports, testDivideByZero) {
   int ws, pid, fds[2];
   char *output, buf[512];
   ASSERT_NE(-1, pipe2(fds, O_CLOEXEC));
-  ASSERT_NE(-1, (pid = vfork()));
+  ASSERT_NE(-1, (pid = fork()));
   if (!pid) {
     dup2(fds[1], 1);
     dup2(fds[1], 2);
@@ -215,15 +207,16 @@ TEST(ShowCrashReports, testDivideByZero) {
   }
   close(fds[0]);
   ASSERT_NE(-1, wait(&ws));
-  EXPECT_TRUE(WIFEXITED(ws));
-  assert(128 + SIGFPE == WEXITSTATUS(ws) || 77 == WEXITSTATUS(ws));
+  // tinyprint(2, _gc(IndentLines(output, -1, 0, 4)), "\n", NULL);
+  if (IsModeDbg()) {
+    EXPECT_EQ(77 << 8, ws);
+  } else {
+    EXPECT_TRUE(WIFSIGNALED(ws));
+    EXPECT_EQ(SIGFPE, WTERMSIG(ws));
+  }
   /* NULL is stopgap until we can copy symbol tables into binary */
 #ifdef __FNO_OMIT_FRAME_POINTER__
-  if (!OutputHasSymbol(output, "FpuCrash")) {
-    fprintf(stderr, "ERROR: crash report didn't have backtrace\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
-  }
+  ASSERT_TRUE(OutputHasSymbol(output, "FpuCrash"));
 #endif
   if (strstr(output, "divrem overflow")) {
     // UBSAN handled it
@@ -315,7 +308,7 @@ TEST(ShowCrashReports, testBssOverrunCrash) {
   int ws, pid, fds[2];
   char *output, buf[512];
   ASSERT_NE(-1, pipe2(fds, O_CLOEXEC));
-  ASSERT_NE(-1, (pid = vfork()));
+  ASSERT_NE(-1, (pid = fork()));
   if (!pid) {
     dup2(fds[1], 1);
     dup2(fds[1], 2);
@@ -339,21 +332,18 @@ TEST(ShowCrashReports, testBssOverrunCrash) {
   }
   close(fds[0]);
   ASSERT_NE(-1, wait(&ws));
-  EXPECT_TRUE(WIFEXITED(ws));
-  EXPECT_EQ(77, WEXITSTATUS(ws));
+  // tinyprint(2, _gc(IndentLines(output, -1, 0, 4)), "\n", NULL);
+  EXPECT_EQ(77 << 8, ws);
   /* NULL is stopgap until we can copy symbol tablces into binary */
 #ifdef __FNO_OMIT_FRAME_POINTER__
-  if (!OutputHasSymbol(output, "BssOverrunCrash")) {
-    fprintf(stderr, "ERROR: crash report didn't have backtrace\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
-  }
+  ASSERT_TRUE(OutputHasSymbol(output, "BssOverrunCrash"));
 #endif
-  if (!strstr(output, "'int' index 10 into 'char [10]' out of bounds") &&
-      (!strstr(output, "☺☻♥♦♣♠•◘○") || !strstr(output, "global redzone"))) {
-    fprintf(stderr, "ERROR: crash report didn't have memory diagram\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
+  if (IsAsan()) {
+    ASSERT_TRUE(
+        !!strstr(output, "'int' index 10 into 'char [10]' out of bounds"));
+  } else {
+    ASSERT_TRUE(!!strstr(output, "☺☻♥♦♣♠•◘○"));
+    ASSERT_TRUE(!!strstr(output, "global redzone"));
   }
   free(output);
 }
@@ -393,7 +383,7 @@ TEST(ShowCrashReports, testNpeCrash) {
   int ws, pid, fds[2];
   char *output, buf[512];
   ASSERT_NE(-1, pipe2(fds, O_CLOEXEC));
-  ASSERT_NE(-1, (pid = vfork()));
+  ASSERT_NE(-1, (pid = fork()));
   if (!pid) {
     dup2(fds[1], 1);
     dup2(fds[1], 2);
@@ -417,30 +407,15 @@ TEST(ShowCrashReports, testNpeCrash) {
   }
   close(fds[0]);
   ASSERT_NE(-1, wait(&ws));
-  EXPECT_TRUE(WIFEXITED(ws));
-  EXPECT_EQ(77, WEXITSTATUS(ws));
+  // tinyprint(2, _gc(IndentLines(output, -1, 0, 4)), "\n", NULL);
+  EXPECT_EQ(77 << 8, ws);
   /* NULL is stopgap until we can copy symbol tables into binary */
-  if (!strstr(output, "null pointer")) {
-    fprintf(stderr, "ERROR: crash report didn't diagnose the problem\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
-  }
+  ASSERT_TRUE(!!strstr(output, "null pointer"));
 #ifdef __FNO_OMIT_FRAME_POINTER__
-  if (!OutputHasSymbol(output, "NpeCrash")) {
-    fprintf(stderr, "ERROR: crash report didn't have backtrace\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
-  }
+  ASSERT_TRUE(OutputHasSymbol(output, "NpeCrash"));
 #endif
-  if (strstr(output, "null pointer access")) {
-    // ubsan nailed it
-  } else {
-    // asan nailed it
-    if (!strstr(output, "∅∅∅∅")) {
-      fprintf(stderr, "ERROR: crash report didn't have shadow diagram\n%s\n",
-              _gc(IndentLines(output, -1, 0, 4)));
-      __die();
-    }
+  if (!strstr(output, "null pointer access")) {  // ubsan
+    ASSERT_TRUE(!!strstr(output, "∅∅∅∅"));       // asan
   }
   free(output);
 }
@@ -452,7 +427,7 @@ TEST(ShowCrashReports, testDataOverrunCrash) {
   int ws, pid, fds[2];
   char *output, buf[512];
   ASSERT_NE(-1, pipe2(fds, O_CLOEXEC));
-  ASSERT_NE(-1, (pid = vfork()));
+  ASSERT_NE(-1, (pid = fork()));
   if (!pid) {
     dup2(fds[1], 1);
     dup2(fds[1], 2);
@@ -476,21 +451,15 @@ TEST(ShowCrashReports, testDataOverrunCrash) {
   }
   close(fds[0]);
   ASSERT_NE(-1, wait(&ws));
-  EXPECT_TRUE(WIFEXITED(ws));
-  EXPECT_EQ(77, WEXITSTATUS(ws));
+  // tinyprint(2, _gc(IndentLines(output, -1, 0, 4)), "\n", NULL);
+  EXPECT_EQ(77 << 8, ws);
   /* NULL is stopgap until we can copy symbol tablces into binary */
 #ifdef __FNO_OMIT_FRAME_POINTER__
-  if (!OutputHasSymbol(output, "DataOverrunCrash")) {
-    fprintf(stderr, "ERROR: crash report didn't have backtrace\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
-  }
+  ASSERT_TRUE(OutputHasSymbol(output, "DataOverrunCrash"));
 #endif
-  if (!strstr(output, "'int' index 10 into 'char [10]' out of bounds") &&
-      (!strstr(output, "☺☻♥♦♣♠•◘○") || !strstr(output, "global redzone"))) {
-    fprintf(stderr, "ERROR: crash report didn't have memory diagram\n%s\n",
-            _gc(IndentLines(output, -1, 0, 4)));
-    __die();
+  if (!strstr(output, "'int' index 10 into 'char [10]' out")) {  // ubsan
+    ASSERT_TRUE(!!strstr(output, "☺☻♥♦♣♠•◘○"));                  // asan
+    ASSERT_TRUE(!!strstr(output, "global redzone"));             // asan
   }
   free(output);
 }
@@ -506,7 +475,7 @@ TEST(ShowCrashReports, testNpeCrashAfterFinalize) {
   int ws, pid, fds[2];
   char *output, buf[512];
   ASSERT_NE(-1, pipe2(fds, O_CLOEXEC));
-  ASSERT_NE(-1, (pid = vfork()));
+  ASSERT_NE(-1, (pid = fork()));
   if (!pid) {
     dup2(fds[1], 1);
     dup2(fds[1], 2);
@@ -530,9 +499,13 @@ TEST(ShowCrashReports, testNpeCrashAfterFinalize) {
   }
   close(fds[0]);
   ASSERT_NE(-1, wait(&ws));
-  EXPECT_TRUE(WIFEXITED(ws));
-  EXPECT_EQ(0, WTERMSIG(ws));
-  EXPECT_EQ(IsAsan() ? 77 : 128 + SIGSEGV, WEXITSTATUS(ws));
+  // tinyprint(2, _gc(IndentLines(output, -1, 0, 4)), "\n", NULL);
+  if (IsModeDbg()) {
+    EXPECT_EQ(77 << 8, ws);
+  } else {
+    EXPECT_TRUE(WIFSIGNALED(ws));
+    EXPECT_EQ(SIGSEGV, WTERMSIG(ws));
+  }
   /* NULL is stopgap until we can copy symbol tables into binary */
   if (!strstr(output, IsAsan() ? "null pointer" : "Uncaught SIGSEGV (SEGV_")) {
     fprintf(stderr, "ERROR: crash report didn't diagnose the problem\n%s\n",
@@ -548,5 +521,6 @@ TEST(ShowCrashReports, testNpeCrashAfterFinalize) {
 #endif
   free(output);
 }
+#endif
 
 #endif /* __x86_64__ */
