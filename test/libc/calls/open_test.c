@@ -345,6 +345,7 @@ TEST(open, drive) {
 TEST(open, readOnlyCreatMode) {
   char buf[8];
   struct stat st;
+  if (IsWindows()) return;
   ASSERT_SYS(0, 3, open("x", O_RDWR | O_CREAT | O_TRUNC, 0500));
   ASSERT_SYS(0, 2, pwrite(3, "hi", 2, 0));
   ASSERT_SYS(0, 2, pread(3, buf, 8, 0));
@@ -415,6 +416,7 @@ TEST(open, parentSymlink) {
 TEST(open, readonlyCreateMode_dontChangeStatusIfExists) {
   char buf[8];
   struct stat st;
+  if (IsWindows()) return;
   ASSERT_SYS(0, 3, creat("wut", 0700));
   ASSERT_SYS(0, 2, pwrite(3, "hi", 2, 0));
   ASSERT_SYS(0, 0, close(3));

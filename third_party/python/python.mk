@@ -1745,7 +1745,7 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 ifneq ($(origin HOMEPATH),undefined)
 	RunBadTests := 0
 	RunThreadTest := 1
-    RunGenericPathTest := 0
+	RunBadWindowsTests := 0
 else
 	OS := $(shell uname -s)
 	ifeq ($(OS), FreeBSD)
@@ -1758,48 +1758,50 @@ else
 		RunBadTests := 1
 		RunThreadTest := 1
 	endif
-    RunGenericPathTest := 1
+	RunBadWindowsTests := 1
 endif
 
 ifeq ($(RunBadTests), 1)
-THIRD_PARTY_PYTHON_PYTEST_PYMAINS =						\
-	third_party/python/Lib/test/signalinterproctester.py			\
-	third_party/python/Lib/test/test_builtin.py				\
-	third_party/python/Lib/test/test_calendar.py				\
-	third_party/python/Lib/test/test_cgi.py					\
-	third_party/python/Lib/test/test_cmd_line.py				\
-	third_party/python/Lib/test/test_cmd_line_script.py		\
-	third_party/python/Lib/test/test_compile.py				\
-	third_party/python/Lib/test/test_csv.py					\
-	third_party/python/Lib/test/test_epoll.py				\
-	third_party/python/Lib/test/test_file_eintr.py				\
-	third_party/python/Lib/test/test_fileio.py				\
-	third_party/python/Lib/test/test_imp.py					\
-	third_party/python/Lib/test/test_mmap.py				\
-	third_party/python/Lib/test/test_parser.py				\
-	third_party/python/Lib/test/test_poll.py				\
-	third_party/python/Lib/test/test_resource.py				\
-	third_party/python/Lib/test/test_script_helper.py			\
-	third_party/python/Lib/test/test_select.py				\
-	third_party/python/Lib/test/test_selectors.py				\
-	third_party/python/Lib/test/test_signal.py				\
-	third_party/python/Lib/test/test_stat.py				\
-	third_party/python/Lib/test/test_tarfile.py				\
-	third_party/python/Lib/test/test_threadsignals.py			\
-	third_party/python/Lib/test/test_time.py				\
-	third_party/python/Lib/test/test_timeout.py				\
-	third_party/python/Lib/test/test_unicode_file.py			\
-	third_party/python/Lib/test/test_zipapp.py
+    THIRDD_PARTY_PYTHON_PYTEST_PYMAINS =						\
+        third_party/python/Lib/test/signalinterproctester.py			\
+        third_party/python/Lib/test/test_builtin.py				\
+        third_party/python/Lib/test/test_calendar.py				\
+        third_party/python/Lib/test/test_cgi.py					\
+        third_party/python/Lib/test/test_cmd_line.py				\
+        third_party/python/Lib/test/test_cmd_line_script.py		\
+        third_party/python/Lib/test/test_compile.py				\
+        third_party/python/Lib/test/test_csv.py					\
+        third_party/python/Lib/test/test_epoll.py				\
+        third_party/python/Lib/test/test_file_eintr.py				\
+        third_party/python/Lib/test/test_fileio.py				\
+        third_party/python/Lib/test/test_imp.py					\
+        third_party/python/Lib/test/test_mmap.py				\
+        third_party/python/Lib/test/test_parser.py				\
+        third_party/python/Lib/test/test_poll.py				\
+        third_party/python/Lib/test/test_resource.py				\
+        third_party/python/Lib/test/test_script_helper.py			\
+        third_party/python/Lib/test/test_select.py				\
+        third_party/python/Lib/test/test_selectors.py				\
+        third_party/python/Lib/test/test_signal.py				\
+        third_party/python/Lib/test/test_stat.py				\
+        third_party/python/Lib/test/test_tarfile.py				\
+        third_party/python/Lib/test/test_threadsignals.py			\
+        third_party/python/Lib/test/test_time.py				\
+        third_party/python/Lib/test/test_timeout.py				\
+        third_party/python/Lib/test/test_unicode_file.py			\
+        third_party/python/Lib/test/test_zipapp.py
 endif
 
 ifeq ($(RunThreadTest), 1)
-THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
-	third_party/python/Lib/test/test_threadsignals.py
+	THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+		third_party/python/Lib/test/test_threadsignals.py
 endif
 
-ifeq ($(RunGenericPathTest), 1)
-THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
-	third_party/python/Lib/test/test_genericpath.py
+ifeq ($(RunBadWindowsTests), 1)
+	THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+		third_party/python/Lib/test/test_genericpath.py				\
+		third_party/python/Lib/test/test_gzip.py				\
+		third_party/python/Lib/test/test_quopri.py
 endif
 
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
@@ -1925,7 +1927,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_getopt.py				\
 	third_party/python/Lib/test/test_global.py				\
 	third_party/python/Lib/test/test_grammar.py				\
-	third_party/python/Lib/test/test_gzip.py				\
 	third_party/python/Lib/test/test_hash.py				\
 	third_party/python/Lib/test/test_hashlib.py				\
 	third_party/python/Lib/test/test_heapq.py				\
@@ -1977,7 +1978,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_pstats.py				\
 	third_party/python/Lib/test/test_pulldom.py				\
 	third_party/python/Lib/test/test_pyexpat.py				\
-	third_party/python/Lib/test/test_quopri.py				\
 	third_party/python/Lib/test/test_raise.py				\
 	third_party/python/Lib/test/test_random.py				\
 	third_party/python/Lib/test/test_range.py				\

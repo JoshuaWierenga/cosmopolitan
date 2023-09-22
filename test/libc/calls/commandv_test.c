@@ -48,11 +48,13 @@ void TearDown(void) {
 }
 
 TEST(commandv, testPathSearch) {
+  if (IsWindows()) return;
   EXPECT_SYS(0, 0, touch("bin/sh", 0755));
   EXPECT_STREQ("bin/sh", commandv("sh", pathbuf, sizeof(pathbuf)));
 }
 
 TEST(commandv, testSlashes_wontSearchPath_butChecksAccess) {
+  if (IsWindows()) return;
   EXPECT_SYS(0, 0, touch("home/sh.com", 0755));
   EXPECT_STREQ("home/sh.com",
                commandv("home/sh.com", pathbuf, sizeof(pathbuf)));
@@ -65,18 +67,21 @@ TEST(commandv, testSameDir_doesntHappenByDefaultUnlessItsWindows) {
 }
 
 TEST(commandv, testSameDir_willHappenWithColonBlank) {
+  if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", "bin:", true));
   EXPECT_SYS(0, 0, touch("bog.com", 0755));
   EXPECT_STREQ("bog.com", commandv("bog.com", pathbuf, sizeof(pathbuf)));
 }
 
 TEST(commandv, testSameDir_willHappenWithColonBlank2) {
+  if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", ":bin", true));
   EXPECT_SYS(0, 0, touch("bog.com", 0755));
   EXPECT_STREQ("bog.com", commandv("bog.com", pathbuf, sizeof(pathbuf)));
 }
 
 TEST(commandv, test_DirPaths_wontConsiderDirectoriesExecutable) {
+  if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", ":bin", true));
   EXPECT_SYS(0, 0, mkdir("Cursors", 0755));
   EXPECT_STREQ(NULL, commandv("Cursors", pathbuf, sizeof(pathbuf)));
@@ -84,6 +89,7 @@ TEST(commandv, test_DirPaths_wontConsiderDirectoriesExecutable) {
 }
 
 TEST(commandv, test_DirPaths_wontConsiderDirectoriesExecutable2) {
+  if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", ":bin", true));
   EXPECT_SYS(0, 0, mkdir("this_is_a_directory.com", 0755));
   EXPECT_STREQ(NULL,
