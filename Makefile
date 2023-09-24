@@ -92,13 +92,14 @@ ifeq ($(origin HOMEPATH),undefined)
 	ifeq ($(OS), Linux)
         ifneq ($(LANDLOCKMAKE_VERSION),)
             ifeq ($(wildcard /usr/bin/ape),)
-$(warning please run ape/apeinstall.sh if you intend to use landlock make)
-$(shell sleep .5)
-endif
-ifeq ($(USE_SYSTEM_TOOLCHAIN),)
-.STRICT = 1
-endif
-endif
+                $(warning please run ape/apeinstall.sh if you intend to use landlock make)
+                $(shell sleep .5)
+            endif
+            ifeq ($(USE_SYSTEM_TOOLCHAIN),)
+                .STRICT = 1
+            endif
+        endif
+    endif
 endif
 
 .PLEDGE = stdio rpath wpath cpath fattr proc
