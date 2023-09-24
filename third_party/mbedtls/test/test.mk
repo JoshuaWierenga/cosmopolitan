@@ -14,13 +14,13 @@ THIRD_PARTY_MBEDTLS_TEST_OBJS =											\
 # TODO Check if a version of cosmo's IsWindows is available here
 # TODO Find out while these tests fail on windows and FreeBSD
 ifeq ($(origin HOMEPATH),undefined)
-    OS := $(shell uname -s)
-    ifneq ($(OS), FreeBSD)
-        ifneq($(OS), NetBSD)
-            THIRD_PARTY_MBEDTLS_TEST_COMS =											\
-            	o/$(MODE)/third_party/mbedtls/test/test_suite_x509parse.com
-        endif
-    endif
+	OS := $(shell uname -s)
+	ifneq ($(OS), FreeBSD)
+		ifneq($(OS), NetBSD)
+			THIRD_PARTY_MBEDTLS_TEST_COMS =											\
+				o/$(MODE)/third_party/mbedtls/test/test_suite_x509parse.com
+		endif
+	endif
 endif
 
 THIRD_PARTY_MBEDTLS_TEST_COMS +=											\
