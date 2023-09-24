@@ -1794,8 +1794,8 @@ endif
 
 ifeq ($(RunBadNetBSDTests), 1)
     THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
-	    third_party/python/Lib/test/test_functools.py				\
-	    third_party/python/Lib/test/test_gc.py					\
+        third_party/python/Lib/test/test_functools.py				\
+        third_party/python/Lib/test/test_gc.py					\
         third_party/python/Lib/test/test_threadsignals.py
 endif
 
