@@ -1,47 +1,45 @@
 ![Cosmopolitan Honeybadger](usr/share/img/honeybadger.png)
 
 [![build](https://github.com/jart/cosmopolitan/actions/workflows/build.yml/badge.svg)](https://github.com/jart/cosmopolitan/actions/workflows/build.yml)
-# Cosmopolitan (Build on Linux, NetBSD and Windows)
+# Cosmopolitan (Build on Multiple OSes)
 
-**This is an (unsupported) fork that makes it possible to build Cosmopolitan natively on a Linux, NetBSD and Windows system whereas the main branch only supports building on Linux.**  
-Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/build-on-windows) with the goal of having less changes and having it be easier to apply to future builds of Cosmopolitan.
+**This is an (unsupported) fork that makes it possible to build Cosmopolitan natively on Linux, FreeBSD, NetBSD and Windows systems whereas the main branch only supports building on Linux.**  
+Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/build-on-windows) with the goal of having less changes and having it easier to apply to future builds of Cosmopolitan, this has largely failed due to how outdated some of the bootstrap tools have to be to avoid errors though I try my best.
 
 ## Build instructions for Windows
-Note: At one point it was recommended to use Command Prompt (cmd.exe) and not Windows PowerShell. Is this still true?
 ```batch
 git clone -c core.autocrlf=false https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-3
 cd cosmopolitan
 mkdir o\third_party\gcc
 cd o\third_party\gcc
-curl -LO https://github.com/JoshuaWierenga/RandomScripts/releases/download/z0.0.0-1/gcc11.zip
+curl -LO https://github.com/JoshuaWierenga/RandomScripts/releases/download/z0.0.0-2/gcc11.zip
 tar -xvf gcc11.zip
 del gcc11.zip
-for /R bin %%x in (*.com) do copy "%%x" "bin\x86_64-pc-linux-gnu-%%~nx" >NUL
-REM Not sure if this is still required
+for /R bin %%x in (*.com) do copy "%%x" "bin\x86_64-linux-musl-%%~nx" >NUL
 set PATH=%PATH%;%CD%\bin
 cd ..\..\..\
 build\bootstrap\make.com -j8
-REM This is only required if some python tests fail due to flakiness at high job counts
+REM This shouldn't be required anymore but previously some python tests failed due to flakiness at high job counts
 build\bootstrap\make.com -j1 o//third_party/python
 ```
 For an automated build try [this script](https://github.com/JoshuaWierenga/RandomScripts/blob/main/buildcosmo.bat).
 
 ## Build instructions for Unix-likes
-Note: Currently only tested on Linux and NetBSD, others may work.
+Note: Currently only tested on Linux, FreeBSD and NetBSD, others may work.
 ```sh
 git clone https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-3
 cd cosmopolitan
 mkdir -p o/third_party/gcc
 cd o/third_party/gcc
-curl -LO https://github.com/JoshuaWierenga/RandomScripts/releases/download/z0.0.0-1/gcc11.zip
+curl -LO https://github.com/JoshuaWierenga/RandomScripts/releases/download/z0.0.0-2/gcc11.zip
 unzip gcc11.zip # Substitute for bsdtar/tar -xvf or other zip extraction commands as required on your system
 rm gcc11.zip
 find bin -type f -exec sh -c 'mv "$1" "${1%.*}"' sh {} \;
-find bin -type f -exec sh -c 'cp "$1" bin/x86_64-pc-linux-gnu-"${1#*/}"' sh {} \;
+find bin -type f -exec sh -c 'cp "$1" bin/x86_64-linux-musl-"${1#*/}"' sh {} \;
 PATH="$PATH:$(pwd)/bin"
 cd ../../../
 build/bootstrap/make.com -j8
-# This is only required if some python tests fail due to flakiness at high job counts
+# This shouldn't be required anymore but previously some python tests failed due to flakiness at high job counts
 build/bootstrap/make.com -j1 o//third_party/python
 ```
 For an automated build try [this script](https://github.com/JoshuaWierenga/RandomScripts/blob/main/buildcosmo.sh).
@@ -49,33 +47,38 @@ For an automated build try [this script](https://github.com/JoshuaWierenga/Rando
 ## Build notes, mostly for Windows
 - Building will take a while, as process creation and file operations are expensive on Windows.
   Expect to wait at least 30 minutes, even if you have a fast processor.
-- CTRL+C during the build process is unreliable, so it's best not to use it. Issues include:
-  - Incomplete files being left on disk. This can be spotted with `file not recognized`, `file is truncated`, `file is empty` errors,
-    in which case you can delete the bad file with `del` or in worse situations, delete its directory with `rd /s`.
-  - `make.com` might get stuck after all processes have finished. In this case, open Task Manager and kill the make process.
-- `failed to move output file` errors often happen when running make with a high job count. Either try again or restart with `-j1`.
-- It is recommended to disable windows defender as it has false positives for almost anything produced by cosmo's build system.
+- ~~CTRL+C during the build process is unreliable, so it's best not to use it. Issues include:~~ These are fixed I think.
+  - ~~Incomplete files being left on disk. This can be spotted with `file not recognized`, `file is truncated`, `file is empty` errors,
+    in which case you can delete the bad file with `del` or in worse situations, delete its directory with `rd /s`.~~
+  - ~~`make.com` might get stuck after all processes have finished. In this case, open Task Manager and kill the make process.~~
+- ~~`failed to move output file` errors often happen when running make with a high job count. Either try again or restart with `-j1`.~~  I think this is also fixed now.
+- It is recommended to disable Windows Defender as it has false positives for almost anything produced by cosmo's build system.
 
-## Other notes, mostly for windows
-- Remember that you should use backslashes when typing the path to a binary, and regular slashes when typing paths in arguments.
+## Other notes
+- On Windows, remember that you should use backslashes when typing the path to a binary, and regular slashes when typing paths in arguments.
   For example: `build\bootstrap\make.com o//tool/net/dig.com`
-- After running make or any Cosmopolitan program, your console window will probably work oddly:
-  - Arrow keys will output the escape sequence into the console.
-  - Opening the command history window with F7 won't work.
-  - Backspace will delete entire words, you can work around this by holding Ctrl.
-- The following modifications have been done to make the build work on Windows:
-  - `Makefile` - Landlock make requring apeinstall.sh warning has been disabled on Windows.
-  - `build/bootstrap` - Binaries have been updated to the latest as of August 22, 2023.
-    They can be download independently [here](https://justine.lol/cosmo-bootstrap.zip). How up to date are these? I built them with m=tiny and copied over.
-  - `test/libc/calls/open_test.c`, `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` - Disabled on windows as creating symlinks as a regular user is unreliable.
+- ~~On Windows, after running make or any Cosmopolitan program, your console window will probably work oddly:~~ I think this are fixed now.
+  - ~~Arrow keys will output the escape sequence into the console.~~
+  - ~~Opening the command history window with F7 won't work.~~
+  - ~~Backspace will delete entire words, you can work around this by holding Ctrl.~~
+- The following modifications have been done to make the build work:
+  - `Makefile` - Landlock make requiring apeinstall.sh warning has been disabled on OSes other than Linux.
+  - `build/bootstrap` - Binaries have been updated to the latest as of September 24, 2023 with the exception of make.com because of some issues with parallel build mode and ape.aarch64 because I have no clue if I am building it properly.
+    They can be downloaded independently [here](https://justine.lol/cosmo-bootstrap.zip). How up-to-date are these? I built them with m=tiny on Linux and copied them over.
+  - All of the tests in `test/libc/calls/commandv_test.c` have been disabled on Windows because of failures caused by I think the removal of the special casing for Windows.
+  - Some tests in `test/libc/calls/open_test.c`, `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` have been disabled on Windows as creating symlinks as a regular user is unreliable. TODO: What about `readOnlyCreatMode` and `readonlyCreateMode_dontChangeStatusIfExists`.
     - Optionally, `libc/calls/symlinkat-nt.c` can be replaced with [this copy](https://justine.lol/symlinkat-nt.c) for some debugging.
-  - `test/libc/mem/test.mk` - `assimilate.com` arguments have been changed to force assimilating two binaries to ELF.
-  - `test/tool/net/lunix_test.lua` - One assert has been disabled on windows due to `stat` not returning consistent outputs.
-  - `third_party/python/python.mk` - Disabled quite a few tests on windows as they error.
+  - One test in `test/libc/calls/read_test.c` has been disabled on NetBSD but I can't recall what the error was and haven't investigated why it happens yet.
+  - One test in each of `test/libc/mem/realpath_test.c` and `test/libc/proc/posix_spawn_test.c` have been disabled on Windows but I can't recall what the errors were and haven't investigated why they happen yet.
+  - One assert in `test/tool/net/lunix_test.lua` has been disabled on Windows due to `stat` not returning consistent outputs.
+  - The `third_party/mbedtls/test/test_suite_x509parse.c` has been disabled on all supported OSes, I am not entirely sure why it errors but it's likely to do with my builds of the bootstrap tools or apegcc but they are the newest set I can currently create that work on windows without too many issues.
+  - Quite a few Python tests have been disabled in `third_party/python/python.mk` across all supported OSes due to undiagnosed errors.
+  - A change was made to the build flags in `tool/build/dso/sandbox.so` in `tool/build/build.mk` to fix build issues on I think one of the BSDs when using apegcc.
 ##
   <br /><br />
 **Original readme follows**
 # Cosmopolitan
+
 [Cosmopolitan Libc](https://justine.lol/cosmopolitan/index.html) makes C
 a build-once run-anywhere language, like Java, except it doesn't need an
 interpreter or virtual machine. Instead, it reconfigures stock GCC and
@@ -685,3 +688,4 @@ the following groups and individuals:
 - [Wasmer](https://wasmer.io/)
 
 For publicly sponsoring our work at the highest tier.
+
