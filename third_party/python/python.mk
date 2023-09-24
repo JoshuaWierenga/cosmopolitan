@@ -1744,19 +1744,19 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 # They start breaking around -j13 on my 16 smt thread 5800x3d
 ifneq ($(origin HOMEPATH),undefined)
     RunBadTests := 0
-    RunThreadTest := 1
+    RunBadNetBSDTests := 1
     RunBadWindowsTests := 0
 else
     OS := $(shell uname -s)
     ifeq ($(OS), FreeBSD)
         RunBadTests := 0
-        RunThreadTest := 1
+        RunBadNetBSDTests := 1
     else ifeq ($(OS), NetBSD)
         RunBadTests := 0
-        RunThreadTest := 0
+        RunBadNetBSDTests := 0
     else
         RunBadTests := 1
-        RunThreadTest := 1
+        RunBadNetBSDTests := 1
     endif
     RunBadWindowsTests := 1
 endif
@@ -1792,8 +1792,10 @@ ifeq ($(RunBadTests), 1)
         third_party/python/Lib/test/test_zipapp.py
 endif
 
-ifeq ($(RunThreadTest), 1)
+ifeq ($(RunBadNetBSDTests), 1)
     THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+	    third_party/python/Lib/test/test_functools.py				\
+	    third_party/python/Lib/test/test_gc.py					\
         third_party/python/Lib/test/test_threadsignals.py
 endif
 
@@ -1914,12 +1916,10 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_frame.py				\
 	third_party/python/Lib/test/test_fstring.py				\
 	third_party/python/Lib/test/test_funcattrs.py				\
-	third_party/python/Lib/test/test_functools.py				\
 	third_party/python/Lib/test/test_future.py				\
 	third_party/python/Lib/test/test_future3.py				\
 	third_party/python/Lib/test/test_future4.py				\
 	third_party/python/Lib/test/test_future5.py				\
-	third_party/python/Lib/test/test_gc.py					\
 	third_party/python/Lib/test/test_generator_stop.py			\
 	third_party/python/Lib/test/test_generators.py				\
 	third_party/python/Lib/test/test_genexps.py				\
