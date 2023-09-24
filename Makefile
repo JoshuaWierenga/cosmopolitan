@@ -88,18 +88,18 @@ o/$(MODE):			\
 
 # TODO Check if a version of cosmo's IsWindows is available here
 ifeq ($(origin HOMEPATH),undefined)
-    OS := $(shell uname -s)
+	OS := $(shell uname -s)
 	ifeq ($(OS), Linux)
-        ifneq ($(LANDLOCKMAKE_VERSION),)
-            ifeq ($(wildcard /usr/bin/ape),)
-                $(warning please run ape/apeinstall.sh if you intend to use landlock make)
-                $(shell sleep .5)
+		ifneq ($(LANDLOCKMAKE_VERSION),)
+			ifeq ($(wildcard /usr/bin/ape),)
+				$(warning please run ape/apeinstall.sh if you intend to use landlock make)
+				$(shell sleep .5)
+			endif
+			ifeq ($(USE_SYSTEM_TOOLCHAIN),)
+				.STRICT = 1
             endif
-            ifeq ($(USE_SYSTEM_TOOLCHAIN),)
-                .STRICT = 1
-            endif
-        endif
-    endif
+		endif
+	endif
 endif
 
 .PLEDGE = stdio rpath wpath cpath fattr proc
