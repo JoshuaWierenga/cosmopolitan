@@ -16,7 +16,7 @@ THIRD_PARTY_MBEDTLS_TEST_OBJS =											\
 ifeq ($(origin HOMEPATH),undefined)
     OS := $(shell uname -s)
     ifneq ($(OS), FreeBSD)
-        ifneq($(OS), NetBSD)
+        ifneq ($(OS), NetBSD)
             THIRD_PARTY_MBEDTLS_TEST_COMS =											\
                 o/$(MODE)/third_party/mbedtls/test/test_suite_x509parse.com
         endif
