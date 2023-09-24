@@ -52,7 +52,7 @@ TEST(readlink, enotdir) {
 }
 
 TEST(readlinkat, test) {
-  char buf[128];
+  char buf[128]; 
   // Gives EPERM on windows
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
