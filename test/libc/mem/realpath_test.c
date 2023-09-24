@@ -47,7 +47,9 @@ TEST(realpath, test2) {
 TEST(realpath, test3) {
   char *name = gc(realpath("conftest.l/../conftest.a", NULL));
   if (IsWindows()) {
-    // TODO Find out why this gives ENOENT if building on windows
+    // This gives ENOENT on windows
+    // need 0 (or 0x0 or '\0') ≠
+    //  got 0 (or 0x0 or '\0') WHAT?
     return;
     // WIN32 acts as a flat namespace, rather than linear inode crawl.
     // GNU ./configure scripts consider this outcome to be acceptable.

@@ -53,7 +53,9 @@ TEST(readlink, enotdir) {
 
 TEST(readlinkat, test) {
   char buf[128];
-  // Gives EPERM on windows
+  // The symlink call gives EPERM on windows
+  // need -1 (or 0xffffffffffffffff) ≠
+  //  got -1 (or 0xffffffffffffffff) WHAT?
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   memset(buf, -1, sizeof(buf));
@@ -88,7 +90,9 @@ TEST(readlinkat, notalink) {
 TEST(readlinkat, frootloop) {
   int fd;
   char buf[128];
-  // Gives EPERM on windows
+  // The symlink call gives EPERM on windows
+  // need 0 (or 0x0 or '\0') =
+  //  got -1 (or 0xffffffffffffffff)
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "froot"));
@@ -104,7 +108,9 @@ TEST(readlinkat, frootloop) {
 
 TEST(readlinkat, statReadsNameLength_countsUtf8Bytes) {
   struct stat st;
-  // Gives EPERM on windows
+  // The symlink call gives EPERM on windows
+  // need 0 (or 0x0 or '\0') =
+  //  got -1 (or 0xffffffffffffffff)
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froÒt", "froÒt"));

@@ -141,6 +141,9 @@ TEST(posix_spawn, withoutComExtension_stillWorks) {
 }
 
 TEST(posix_spawn, execveAutoAppendsComSuffix) {
+  // The posix_spawn call gives EUNKNOWN on windows which I assume is meaningless, is that the case for other ASSERT/EXPECT failures?
+  // need 0 (or 0x0 or '\0') =
+  //  got 2 (or 0x02 or '\2' or ENOENT)
   return;
   int ws, pid;
   char *prog = "./life";

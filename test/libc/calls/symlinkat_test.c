@@ -38,7 +38,9 @@ void SetUpOnce(void) {
 }
 
 TEST(symlink, enoent) {
-  // Gives EPERM on windows
+  // The second symlink call gives EPERM on windows
+  // need 2 (or 0x02 or '\2' or ENOENT) =
+  //  got 12 (or 0x0c or '\14' or EPERM)
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(ENOENT, -1, symlink("o/foo", ""));
@@ -46,7 +48,9 @@ TEST(symlink, enoent) {
 }
 
 TEST(symlinkat, enotdir) {
-  // Gives EPERM on windows
+  // The symlink call gives EPERM on windows
+  // need 3 (or 0x03 or '\3' or ENOTDIR) =
+  //  got 12 (or 0x0c or '\14' or EPERM)
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, close(creat("yo", 0644)));
@@ -54,7 +58,21 @@ TEST(symlinkat, enotdir) {
 }
 
 TEST(symlinkat, test) {
-  // Gives EPERM and ENOENT on windows
+  // The symlink call gives EPERM on windows
+  // need 0 (or 0x0 or '\0') =
+  //  got -1 (or 0xffffffffffffffff)
+  // The second issymlink call gives EPERM on windows
+  // need 1 (or 0x01 or '\1' or ENOSYS)
+  //  got 0 (or 0x0 or '\0')
+  // The second lstat call gives ENOENT on windows
+  // need 0 (or 0x0 or '\0') =
+  //  got -1 (or 0xffffffffffffffff)
+  // The second S_ISLNK macro gives ENOENT on windows
+  // need 1 (or 0x01 or '\1' or ENOSYS)
+  //  got 0 (or 0x0 or '\0')
+  // The stat call gives ENOENT on windows
+  // need 0 (or 0x0 or '\0') =
+  //  got -1 (or 0xffffffffffffffff)
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   sprintf(p[0], "%s.%d", program_invocation_short_name, rand());

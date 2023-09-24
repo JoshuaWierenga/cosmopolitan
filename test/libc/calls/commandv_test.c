@@ -48,12 +48,18 @@ void TearDown(void) {
 }
 
 TEST(commandv, testPathSearch) {
+  // The commandv call gives EACCES on windows
+  // need "bin/sh" ≠
+  //  got NULL
   if (IsWindows()) return;
   EXPECT_SYS(0, 0, touch("bin/sh", 0755));
   EXPECT_STREQ("bin/sh", commandv("sh", pathbuf, sizeof(pathbuf)));
 }
 
 TEST(commandv, testSlashes_wontSearchPath_butChecksAccess) {
+  // The commandv call gives EACCES on windows
+  // need "home/sh.com" ≠
+  //  got NULL
   if (IsWindows()) return;
   EXPECT_SYS(0, 0, touch("home/sh.com", 0755));
   EXPECT_STREQ("home/sh.com",
@@ -67,6 +73,9 @@ TEST(commandv, testSameDir_doesntHappenByDefaultUnlessItsWindows) {
 }
 
 TEST(commandv, testSameDir_willHappenWithColonBlank) {
+  // The commandv call gives EACCES on windows
+  // need "bog.com" ≠
+  //  got NULL
   if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", "bin:", true));
   EXPECT_SYS(0, 0, touch("bog.com", 0755));
@@ -74,6 +83,9 @@ TEST(commandv, testSameDir_willHappenWithColonBlank) {
 }
 
 TEST(commandv, testSameDir_willHappenWithColonBlank2) {
+  // The commandv call gives EACCES on windows
+  // need "bog.com" ≠
+  //  got NULL
   if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", ":bin", true));
   EXPECT_SYS(0, 0, touch("bog.com", 0755));
@@ -81,6 +93,9 @@ TEST(commandv, testSameDir_willHappenWithColonBlank2) {
 }
 
 TEST(commandv, test_DirPaths_wontConsiderDirectoriesExecutable) {
+  // This gives EACCES on windows
+  // need 2 (or 0x02 or '\2' or ENOENT) =
+  //  got 5 (or 0x05 or '\5' or EACCES)
   if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", ":bin", true));
   EXPECT_SYS(0, 0, mkdir("Cursors", 0755));
@@ -89,6 +104,9 @@ TEST(commandv, test_DirPaths_wontConsiderDirectoriesExecutable) {
 }
 
 TEST(commandv, test_DirPaths_wontConsiderDirectoriesExecutable2) {
+  // This gives EACCES on windows
+  // need 2 (or 0x02 or '\2' or ENOENT) =
+  //  got 5 (or 0x05 or '\5' or EACCES)
   if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", ":bin", true));
   EXPECT_SYS(0, 0, mkdir("this_is_a_directory.com", 0755));

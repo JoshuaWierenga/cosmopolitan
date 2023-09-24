@@ -202,7 +202,9 @@ TEST(open, testRelativePath_opensRelativeToDirFd) {
 }
 
 TEST(open, eloop) {
-  // Gives EPERM on windows
+  // The symlink call gives EPERM on windows
+  // need 0 (or 0x0 or '\0') =
+  //  got -1 (or 0xffffffffffffffff)
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, symlink("froot", "link"));
@@ -345,13 +347,18 @@ TEST(open, drive) {
 TEST(open, readOnlyCreatMode) {
   char buf[8];
   struct stat st;
-  if (IsWindows()) return;
   ASSERT_SYS(0, 3, open("x", O_RDWR | O_CREAT | O_TRUNC, 0500));
   ASSERT_SYS(0, 2, pwrite(3, "hi", 2, 0));
   ASSERT_SYS(0, 2, pread(3, buf, 8, 0));
   ASSERT_SYS(0, 0, close(3));
   ASSERT_SYS(0, 0, stat("x", &st));
-  ASSERT_EQ(0100500, st.st_mode);
+  //TODO Figure out why this fails on windows
+  // need 33088 (or 0x8140) =
+  //  got 33024 (or 0x8100)
+  // https://github.com/jart/cosmopolitan/blob/965516e/libc/calls/fstat-nt.c#L92?
+  if (!IsWindows()) {
+    ASSERT_EQ(0100500, st.st_mode);
+  }
   if (getuid()) {
     ASSERT_SYS(EACCES, -1, open("x", O_RDWR));
     ASSERT_SYS(EACCES, -1, open("x", O_RDWR | O_CREAT));
@@ -372,7 +379,9 @@ TEST(open, readOnlyCreatMode) {
 
 TEST(open, parentSymlink) {
   struct stat st;
-  // Gives EPERM on windows
+  // The symlink call gives EPERM on windows
+  // need 0 (or 0x0 or '\0') =
+  //  got -1 (or 0xffffffffffffffff)
   // https://github.com/jart/cosmopolitan/blob/18bb588/libc/calls/symlinkat-nt.c#L89?
   if (IsWindows()) return;
   ASSERT_SYS(0, 0, mkdir("parent", 0755));
@@ -416,7 +425,6 @@ TEST(open, parentSymlink) {
 TEST(open, readonlyCreateMode_dontChangeStatusIfExists) {
   char buf[8];
   struct stat st;
-  if (IsWindows()) return;
   ASSERT_SYS(0, 3, creat("wut", 0700));
   ASSERT_SYS(0, 2, pwrite(3, "hi", 2, 0));
   ASSERT_SYS(0, 0, close(3));
@@ -424,7 +432,13 @@ TEST(open, readonlyCreateMode_dontChangeStatusIfExists) {
   ASSERT_SYS(0, 3, open("wut", O_CREAT | O_TRUNC | O_RDWR, 0500));
   ASSERT_SYS(0, 0, pread(3, buf, 8, 0));
   ASSERT_SYS(0, 0, fstat(3, &st));
-  ASSERT_EQ(0100700, st.st_mode);
+  //TODO Figure out why this fails on windows
+  // need 33216 (or 0x81c0) =
+  //  got 33152 (or 0x8180)
+  // https://github.com/jart/cosmopolitan/blob/965516e/libc/calls/fstat-nt.c#L92?
+  if (!IsWindows()) {
+    ASSERT_EQ(0100700, st.st_mode);
+  }
   ASSERT_SYS(0, 0, close(3));
 }
 
