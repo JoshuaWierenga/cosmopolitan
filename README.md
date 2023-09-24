@@ -8,7 +8,7 @@ Based on a [previous attempt](https://github.com/mattx433/cosmopolitan/tree/buil
 
 ## Build instructions for Windows
 ```batch
-git clone -c core.autocrlf=false https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-3
+git clone -c core.autocrlf=false https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-fix
 cd cosmopolitan
 mkdir o\third_party\gcc
 cd o\third_party\gcc
@@ -27,7 +27,7 @@ For an automated build try [this script](https://github.com/JoshuaWierenga/Rando
 ## Build instructions for Unix-likes
 Note: Currently only tested on Linux, FreeBSD and NetBSD, others may work.
 ```sh
-git clone https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-3
+git clone https://github.com/JoshuaWierenga/cosmopolitan.git -b build-on-windows-fix
 cd cosmopolitan
 mkdir -p o/third_party/gcc
 cd o/third_party/gcc
