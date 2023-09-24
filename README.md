@@ -73,7 +73,9 @@ For an automated build try [this script](https://github.com/JoshuaWierenga/Rando
   - One assert in `test/tool/net/lunix_test.lua` has been disabled on Windows due to `stat` not returning consistent outputs.
   - The `third_party/mbedtls/test/test_suite_x509parse.c` has been disabled on all supported OSes, I am not entirely sure why it errors but it's likely to do with my builds of the bootstrap tools or apegcc but they are the newest set I can currently create that work on windows without too many issues.
   - Quite a few Python tests have been disabled in `third_party/python/python.mk` across all supported OSes due to undiagnosed errors.
-  - A change was made to the build flags in `tool/build/dso/sandbox.so` in `tool/build/build.mk` to fix build issues on I think one of the BSDs when using apegcc.
+  - A change was made to the build flags to `tool/build/dso/sandbox.so` in `tool/build/build.mk` to fix build issues on I think one of the BSDs when using apegcc.
+- OpenBSD is currently not supported because of issues building anything, there has been some slight progress as previously it failed without a proper error while now it gives a bunch of errors about directives.
+- macOS is not supported because of difficulty in setting up an environment to test with. I did have a hackintosh running macOS 11 that might be possible to get going again so this could change.
 ##
   <br /><br />
 **Original readme follows**
@@ -688,4 +690,3 @@ the following groups and individuals:
 - [Wasmer](https://wasmer.io/)
 
 For publicly sponsoring our work at the highest tier.
-
