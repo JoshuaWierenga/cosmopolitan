@@ -88,8 +88,10 @@ o/$(MODE):			\
 
 # TODO Check if a version of cosmo's IsWindows is available here
 ifeq ($(origin HOMEPATH),undefined)
-ifneq ($(LANDLOCKMAKE_VERSION),)
-ifeq ($(wildcard /usr/bin/ape),)
+    OS := $(shell uname -s)
+	ifeq ($(OS), Linux)
+        ifneq ($(LANDLOCKMAKE_VERSION),)
+            ifeq ($(wildcard /usr/bin/ape),)
 $(warning please run ape/apeinstall.sh if you intend to use landlock make)
 $(shell sleep .5)
 endif
