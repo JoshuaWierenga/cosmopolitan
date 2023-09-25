@@ -69,8 +69,9 @@ For an automated build try [this script](https://github.com/JoshuaWierenga/Rando
   - Some tests in `test/libc/calls/open_test.c`, `test/libc/calls/readlinkat_test.c` and `test/libc/calls/symlinkat_test.c` have been disabled on Windows as creating symlinks as a regular user is unreliable. TODO: What about `readOnlyCreatMode` and `readonlyCreateMode_dontChangeStatusIfExists`.
     - Optionally, `libc/calls/symlinkat-nt.c` can be replaced with [this copy](https://justine.lol/symlinkat-nt.c) for some debugging.
   - One test in `test/libc/calls/read_test.c` has been disabled on NetBSD but I can't recall what the error was and haven't investigated why it happens yet.
+  - One test in `test/libc/calls/writev_text.c` has ben disabled on Windows because it was giving some crazy output, see [this output](https://gist.github.com/JoshuaWierenga/8bda7932645b58537fdab463ae7edec5).
   - One test in each of `test/libc/mem/realpath_test.c` and `test/libc/proc/posix_spawn_test.c` have been disabled on Windows but I can't recall what the errors were and haven't investigated why they happen yet.
-  - One assert in `test/tool/net/lunix_test.lua` has been disabled on Windows due to `stat` not returning consistent outputs.
+  - ~~One assert in `test/tool/net/lunix_test.lua` has been disabled on Windows due to `stat` not returning consistent outputs.~~ Upstream changes to fstat on windows have fixed this I think.
   - The `third_party/mbedtls/test/test_suite_x509parse.c` has been disabled on all supported OSes, I am not entirely sure why it errors but it's likely to do with my builds of the bootstrap tools or apegcc but they are the newest set I can currently create that work on windows without too many issues.
   - Quite a few Python tests have been disabled in `third_party/python/python.mk` across all supported OSes due to undiagnosed errors.
   - A change was made to the build flags to `tool/build/dso/sandbox.so` in `tool/build/build.mk` to fix build issues on I think one of the BSDs when using apegcc.
