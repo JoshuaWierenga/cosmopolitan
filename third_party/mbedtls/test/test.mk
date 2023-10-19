@@ -11,22 +11,10 @@ THIRD_PARTY_MBEDTLS_TEST_INCS = $(filter %.inc,$(THIRD_PARTY_MBEDTLS_TEST_FILES)
 THIRD_PARTY_MBEDTLS_TEST_OBJS =											\
 	$(THIRD_PARTY_MBEDTLS_TEST_SRCS:%.c=o/$(MODE)/%.o)
 
-# TODO Check if a version of cosmo's IsWindows is available here
-# TODO Find out while these tests fail on Windows, FreeBSD, NetBSD and Linux
-# Does it work anywhere with the current combination of bootstrap tools and apegcc?
-ifeq ($(origin HOMEPATH),undefined)
-    OS := $(shell uname -s)
-    ifneq ($(OS), FreeBSD)
-        ifneq ($(OS), NetBSD)
-            ifneq ($(OS), Linux)
-                THIRD_PARTY_MBEDTLS_TEST_COMS =											\
-                    o/$(MODE)/third_party/mbedtls/test/test_suite_x509parse.com
-            endif
-        endif
-    endif
-endif
+# TOOD(jart): Re-enable me once we can mock out time.
+# o/$(MODE)/third_party/mbedtls/test/test_suite_x509parse.com
 
-THIRD_PARTY_MBEDTLS_TEST_COMS +=											\
+THIRD_PARTY_MBEDTLS_TEST_COMS =											\
 	o/$(MODE)/third_party/mbedtls/test/test_suite_aes.cbc.com						\
 	o/$(MODE)/third_party/mbedtls/test/test_suite_aes.cfb.com						\
 	o/$(MODE)/third_party/mbedtls/test/test_suite_aes.ecb.com						\
