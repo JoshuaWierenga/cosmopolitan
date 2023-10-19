@@ -1801,6 +1801,8 @@ endif
 
 ifeq ($(RunBadWindowsTests), 1)
     THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+        third_party/python/Lib/test/test_cgitb.py				\
+        third_party/python/Lib/test/test_doctest.py				\
         third_party/python/Lib/test/test_genericpath.py				\
         third_party/python/Lib/test/test_gzip.py				\
         third_party/python/Lib/test/test_quopri.py
@@ -1832,7 +1834,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_bytes.py				\
 	third_party/python/Lib/test/test_bz2.py					\
 	third_party/python/Lib/test/test_call.py				\
-	third_party/python/Lib/test/test_cgitb.py				\
 	third_party/python/Lib/test/test_charmapcodec.py			\
 	third_party/python/Lib/test/test_class.py				\
 	third_party/python/Lib/test/test_cmath.py				\
@@ -1877,7 +1878,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_dictviews.py				\
 	third_party/python/Lib/test/test_difflib.py				\
 	third_party/python/Lib/test/test_dis.py					\
-	third_party/python/Lib/test/test_doctest.py				\
 	third_party/python/Lib/test/test_doctest2.py				\
 	third_party/python/Lib/test/test_dummy_threading.py			\
 	third_party/python/Lib/test/test_dynamic.py				\
