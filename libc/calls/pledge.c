@@ -234,12 +234,14 @@
  * @raise ENOSYS if `pledge(0, 0)` was used and security is not possible
  * @raise EINVAL if `execpromises` on Linux isn't a subset of `promises`
  * @raise EINVAL if `promises` allows exec and `execpromises` is null
- * @threadsafe
  * @vforksafe
  */
 int pledge(const char *promises, const char *execpromises) {
   int e, rc;
   unsigned long ipromises, iexecpromises;
+  if (promises && !execpromises) {
+    execpromises = promises;
+  }
   if (!promises) {
     // OpenBSD says NULL argument means it doesn't change, i.e.
     // pledge(0,0) on OpenBSD does nothing. The Cosmopolitan Libc

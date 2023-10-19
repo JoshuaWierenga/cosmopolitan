@@ -1,7 +1,7 @@
 /*-*- mode:unix-assembly; indent-tabs-mode:t; tab-width:8; coding:utf-8     -*-│
 │vi: set et ft=asm ts=8 tw=8 fenc=utf-8                                     :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -18,41 +18,36 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/macros.internal.h"
 
-//	Loads previously saved processor state.
+//	Invokes system call w/ arity of four.
 //
-//	@param	rdi points to the jmp_buf
-//	@param	rsi is returned by setlongerjmp() invocation
-//	@noreturn
-	.ftrace1
-longerjmp:
-	.ftrace2
-#ifdef __x86_64__
-	mov	$1,%eax
-	mov	%rsi,%rdx
-	mov	(%rdi),%rsp
-	mov	8(%rdi),%rbx
-	mov	16(%rdi),%rbp
-	mov	24(%rdi),%r12
-	mov	32(%rdi),%r13
-	mov	40(%rdi),%r14
-	mov	48(%rdi),%r15
-	jmp	*56(%rdi)
-#elif defined(__aarch64__)
-	ldp	x19,x20,[x0,#0]
-	ldp	x21,x22,[x0,#16]
-	ldp	x23,x24,[x0,#32]
-	ldp	x25,x26,[x0,#48]
-	ldp	x27,x28,[x0,#64]
-	ldp	x29,x30,[x0,#80]
-	ldr	x2,[x0,#104]
-	mov	sp,x2
-	ldp	d8 ,d9,[x0,#112]
-	ldp	d10,d11,[x0,#128]
-	ldp	d12,d13,[x0,#144]
-	ldp	d14,d15,[x0,#160]
-	mov	x0,x1
-	br	x30
+//	This function takes four params. The first four, are for
+//	args passed along to the system call. The 5th is for the
+//	the magic number, indicating which system call is called
+//
+//	The return value follows the Linux Kernel (System V) ABI
+//	where -errno is returned, rather than doing -1 w/ errno.
+//
+//	This helper should not be used to do cancelation points.
+__syscall4:
+#ifdef __aarch64__
+	mov	x8,x4				// syscall number (linux)
+	mov	x16,x4				// syscall number (xnu)
+	mov	x9,0				// clear carry flag
+	adds	x9,x9,0				// clear carry flag
+	svc	0
+	bcs	1f
+	ret
+1:	neg	x0,x0
+	ret
+#elif defined(__x86_64__)
+	mov	%rcx,%r10			// avoid intel cx clobber
+	mov	%r8d,%eax			// arg5 -> syscall number
+	clc					// linux saves carry flag
+	syscall					// bsds set carry on errs
+	jnc	1f
+	neg	%rax				// normalizes to system v
+1:	ret
 #else
 #error "unsupported architecture"
 #endif
-	.endfn	longerjmp,globl
+	.endfn	__syscall4,globl

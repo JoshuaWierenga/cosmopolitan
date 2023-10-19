@@ -17,32 +17,20 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
-#include "libc/calls/asan.internal.h"
-#include "libc/calls/blockcancel.internal.h"
-#include "libc/calls/blocksigs.internal.h"
-#include "libc/calls/calls.h"
-#include "libc/calls/clock_gettime.internal.h"
 #include "libc/calls/cp.internal.h"
-#include "libc/calls/state.internal.h"
-#include "libc/calls/struct/timespec.h"
 #include "libc/calls/struct/timespec.internal.h"
-#include "libc/calls/struct/timeval.h"
-#include "libc/calls/struct/timeval.internal.h"
 #include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/intrin/describeflags.internal.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/intrin/weaken.h"
-#include "libc/macros.internal.h"
-#include "libc/nt/ntdll.h"
+#include "libc/nexgen32e/yield.h"
+#include "libc/runtime/clktck.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/clock.h"
 #include "libc/sysv/consts/timer.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/thread.h"
-#include "libc/thread/tls.h"
-
-static int64_t g_nanosleep_latency;
 
 static errno_t sys_clock_nanosleep(int clock, int flags,
                                    const struct timespec *req,
@@ -66,34 +54,21 @@ static errno_t sys_clock_nanosleep(int clock, int flags,
     errno = e;
   }
   END_CANCELLATION_POINT;
+#if 0
+  STRACE("sys_clock_nanosleep(%s, %s, %s, [%s]) → %d% m",
+         DescribeClockName(clock), DescribeSleepFlags(flags),
+         DescribeTimespec(0, req), DescribeTimespec(rc, rem), rc);
+#endif
   return rc;
 }
 
-// determine sched_yield() vs. clock_nanosleep() threshold
-// 1ns sys_clock_nanosleep() on Windows takes milliseconds :'(
-// 1ns sys_clock_nanosleep() on Linux/FreeBSD takes tens of microseconds
-// 1ns sys_clock_nanosleep() on OpenBSD/NetBSD takes tens of milliseconds D:
-static struct timespec GetNanosleepLatency(void) {
-  errno_t rc;
-  int64_t nanos;
-  clock_gettime_f *cgt;
-  struct timespec x, y, w = {0, 1};
-  if (!(nanos = g_nanosleep_latency)) {
-    BLOCK_SIGNALS;
-    for (cgt = __clock_gettime_get(0);;) {
-      npassert(!cgt(CLOCK_REALTIME_PRECISE, &x));
-      rc = sys_clock_nanosleep(CLOCK_REALTIME, 0, &w, 0);
-      npassert(!rc || rc == EINTR);
-      if (!rc) {
-        npassert(!cgt(CLOCK_REALTIME_PRECISE, &y));
-        nanos = timespec_tonanos(timespec_sub(y, x));
-        g_nanosleep_latency = nanos;
-        break;
-      }
-    }
-    ALLOW_SIGNALS;
-  }
-  return timespec_fromnanos(nanos);
+// determine how many nanoseconds it takes before clock_nanosleep()
+// starts sleeping with 90 percent accuracy; in other words when we
+// ask it to sleep 1 second, it (a) must NEVER sleep for less time,
+// and (b) does not sleep for longer than 1.1 seconds of time. what
+// ever is below that, thanks but no thanks, we'll just spin yield,
+static struct timespec GetNanosleepThreshold(void) {
+  return timespec_fromnanos(1000000000 / CLK_TCK);
 }
 
 static errno_t CheckCancel(void) {
@@ -107,7 +82,6 @@ static errno_t CheckCancel(void) {
 static errno_t SpinNanosleep(int clock, int flags, const struct timespec *req,
                              struct timespec *rem) {
   errno_t rc;
-  clock_gettime_f *cgt;
   struct timespec now, start, elapsed;
   if ((rc = CheckCancel())) {
     if (rc == EINTR && !flags && rem) {
@@ -115,11 +89,10 @@ static errno_t SpinNanosleep(int clock, int flags, const struct timespec *req,
     }
     return rc;
   }
-  cgt = __clock_gettime_get(0);
-  npassert(!cgt(CLOCK_REALTIME, &start));
+  unassert(!clock_gettime(CLOCK_REALTIME, &start));
   for (;;) {
-    pthread_yield();
-    npassert(!cgt(CLOCK_REALTIME, &now));
+    spin_yield();
+    unassert(!clock_gettime(CLOCK_REALTIME, &now));
     if (flags & TIMER_ABSTIME) {
       if (timespec_cmp(now, *req) >= 0) {
         return 0;
@@ -147,19 +120,13 @@ static errno_t SpinNanosleep(int clock, int flags, const struct timespec *req,
   }
 }
 
+// clock_gettime() takes a few nanoseconds but sys_clock_nanosleep()
+// is incapable of sleeping for less than a millisecond on platforms
+// such as windows and it's not much prettior on unix systems either
 static bool ShouldUseSpinNanosleep(int clock, int flags,
                                    const struct timespec *req) {
   errno_t e;
   struct timespec now;
-  if (IsWindows()) {
-    // Our spin technique here is intended to take advantage of the fact
-    // that sched_yield() takes about a hundred nanoseconds. But Windows
-    // SleepEx(0, 0) a.k.a. NtYieldExecution() takes a whole millisecond
-    // and it matters not whether our intent is to yielding or sleeping,
-    // since we use the SleepEx() function to implement both. Therefore,
-    // there's no reason to use SpinNanosleep() on Windows.
-    return false;
-  }
   if (clock != CLOCK_REALTIME &&          //
       clock != CLOCK_REALTIME_PRECISE &&  //
       clock != CLOCK_MONOTONIC &&         //
@@ -168,22 +135,16 @@ static bool ShouldUseSpinNanosleep(int clock, int flags,
     return false;
   }
   if (!flags) {
-    return timespec_cmp(*req, GetNanosleepLatency()) < 0;
-  }
-  // We need a clock_gettime() system call to perform this check if the
-  // sleep request is an absolute timestamp. So we avoid doing that on
-  // systems where sleep latency isn't too outrageous.
-  if (timespec_cmp(GetNanosleepLatency(), timespec_fromnanos(50 * 1000)) < 0) {
-    return false;
+    return timespec_cmp(*req, GetNanosleepThreshold()) < 0;
   }
   e = errno;
-  if (__clock_gettime_get(0)(clock, &now)) {
+  if (clock_gettime(clock, &now)) {
     // punt to the nanosleep system call
     errno = e;
     return false;
   }
   return timespec_cmp(*req, now) < 0 ||
-         timespec_cmp(timespec_sub(*req, now), GetNanosleepLatency()) < 0;
+         timespec_cmp(timespec_sub(*req, now), GetNanosleepThreshold()) < 0;
 }
 
 /**
@@ -258,12 +219,8 @@ errno_t clock_nanosleep(int clock, int flags, const struct timespec *req,
   } else {
     rc = sys_clock_nanosleep(clock, flags, req, rem);
   }
-#if SYSDEBUG
-  if (__tls_enabled && !(__get_tls()->tib_flags & TIB_FLAG_TIME_CRITICAL)) {
-    STRACE("clock_nanosleep(%s, %s, %s, [%s]) → %s", DescribeClockName(clock),
-           DescribeSleepFlags(flags), DescribeTimespec(0, req),
-           DescribeTimespec(rc, rem), DescribeErrno(rc));
-  }
-#endif
+  TIMETRACE("clock_nanosleep(%s, %s, %s, [%s]) → %s", DescribeClockName(clock),
+            DescribeSleepFlags(flags), DescribeTimespec(0, req),
+            DescribeTimespec(rc, rem), DescribeErrno(rc));
   return rc;
 }

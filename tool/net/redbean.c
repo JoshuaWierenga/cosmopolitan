@@ -38,6 +38,7 @@
 #include "libc/errno.h"
 #include "libc/fmt/conv.h"
 #include "libc/fmt/itoa.h"
+#include "libc/fmt/wintime.internal.h"
 #include "libc/intrin/atomic.h"
 #include "libc/intrin/bits.h"
 #include "libc/intrin/bsr.h"
@@ -2613,14 +2614,14 @@ static int LuaCallWithYield(lua_State *L) {
   // the second set of headers is not going to be sent
   struct sigaction sa, saold;
   lua_State *co = lua_newthread(L);
-  if (__replmode) {
+  if (__ttyconf.replmode) {
     sa.sa_flags = SA_RESETHAND;
     sa.sa_handler = OnLuaServerPageCtrlc;
     sigemptyset(&sa.sa_mask);
     sigaction(SIGINT, &sa, &saold);
   }
   status = LuaCallWithTrace(L, 0, 0, co);
-  if (__replmode) {
+  if (__ttyconf.replmode) {
     sigaction(SIGINT, &saold, 0);
   }
   if (status == LUA_YIELD) {
@@ -4956,12 +4957,15 @@ static const char *GetContentTypeExt(const char *path, size_t n) {
   if ((r = FindContentType(path, n))) return r;
 
   // extract the last .; use the entire path if none is present
-  if ((e = strrchr(path, '.'))) path = e + 1;
+  if ((e = memrchr(path, '.', n))) {
+    n -= e - path + 1;
+    path = e + 1;
+  }
   top = lua_gettop(L);
   lua_pushlightuserdata(L, (void *)&ctIdx);  // push address as unique key
   CHECK_EQ(lua_gettable(L, LUA_REGISTRYINDEX), LUA_TTABLE);
 
-  lua_pushstring(L, path);
+  lua_pushlstring(L, path, n);
   if (lua_gettable(L, -2) == LUA_TSTRING)
     r = FreeLater(strdup(lua_tostring(L, -1)));
   lua_settop(L, top);
@@ -6998,7 +7002,7 @@ static int HandlePoll(int ms) {
         }
       }
 #ifndef STATIC
-    } else if (__replmode) {
+    } else if (__ttyconf.replmode) {
       // handle refresh repl line
       rc = HandleReadline();
       if (rc < 0) return rc;
@@ -7460,9 +7464,12 @@ void RedBean(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
+  lua_progname = "redbean";
+
 #if !IsTiny()
   ShowCrashReports();
 #endif
+
   LoadZipArgs(&argc, &argv);
   RedBean(argc, argv);
 

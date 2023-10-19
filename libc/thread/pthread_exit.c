@@ -94,7 +94,6 @@ void _pthread_unkey(struct CosmoTib *tib) {
  * destructors is also undefined.
  *
  * @param rc is reported later to pthread_join()
- * @threadsafe
  * @noreturn
  */
 wontreturn void pthread_exit(void *rc) {
@@ -156,7 +155,7 @@ wontreturn void pthread_exit(void *rc) {
   // note that the main thread is joinable by child threads
   if (pt->pt_flags & PT_STATIC) {
     atomic_store_explicit(&tib->tib_tid, 0, memory_order_release);
-    nsync_futex_wake_(&tib->tib_tid, INT_MAX, !IsWindows());
+    nsync_futex_wake_(&tib->tib_tid, INT_MAX, !IsWindows() && !IsXnu());
     _Exit1(0);
   }
 

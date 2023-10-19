@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2021 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,36 +16,65 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/struct/timespec.h"
-#include "libc/calls/struct/timespec.internal.h"
-#include "libc/calls/struct/timeval.h"
-#include "libc/calls/struct/timeval.internal.h"
-#include "libc/calls/syscall-sysv.internal.h"
-#include "libc/errno.h"
-#include "libc/runtime/syslib.internal.h"
-#include "libc/sock/internal.h"
+#include "libc/runtime/clktck.h"
+#include "libc/calls/calls.h"
+#include "libc/dce.h"
+#include "libc/fmt/wintime.internal.h"
+#include "libc/intrin/getauxval.internal.h"
+#include "libc/runtime/runtime.h"
+#include "libc/sysv/consts/auxv.h"
 
-// nanosleep() on xnu: a bloodbath of a polyfill
-// consider using clock_nanosleep(TIMER_ABSTIME)
-int sys_nanosleep_xnu(const struct timespec *req, struct timespec *rem) {
-#ifdef __x86_64__
-  int rc;
-  struct timeval wt, t1, t2, td;
-  if (rem) sys_gettimeofday_xnu(&t1, 0, 0);
-  wt = timespec_totimeval(*req);  // rounds up
-  rc = sys_select(0, 0, 0, 0, &wt);
-  if (rem && rc == -1 && errno == EINTR) {
-    sys_gettimeofday_xnu(&t2, 0, 0);
-    td = timeval_sub(t2, t1);
-    if (timeval_cmp(td, wt) >= 0) {
-      rem->tv_sec = 0;
-      rem->tv_nsec = 0;
+struct clockinfo_netbsd {
+  int32_t hz;       // number of clock ticks per second
+  int32_t tick;     // µs per tick
+  int32_t tickadj;  // skew rate for adjtime()
+  int32_t stathz;   // statistics clock frequency
+  int32_t profhz;   // profiling clock frequency
+};
+
+static int clk_tck;
+
+static dontinline int __clk_tck_init(void) {
+  int x;
+  int cmd[2];
+  size_t len;
+  struct clockinfo_netbsd clock;
+  if (IsWindows()) {
+    x = HECTONANOSECONDS;
+  } else if (IsXnu() || IsOpenbsd()) {
+    x = 100;
+  } else if (IsFreebsd()) {
+    x = 128;
+  } else if (IsNetbsd()) {
+    cmd[0] = 1;   // CTL_KERN
+    cmd[1] = 12;  // KERN_CLOCKRATE
+    len = sizeof(clock);
+    if (sys_sysctl(cmd, 2, &clock, &len, NULL, 0) != -1) {
+      x = clock.hz;
     } else {
-      *rem = timeval_totimespec(timeval_sub(wt, td));
+      x = -1;
     }
+  } else {
+    x = __getauxval(AT_CLKTCK).value;
   }
-  return rc;
-#else
-  return _sysret(__syslib->__nanosleep(req, rem));
-#endif
+  if (x < 1) x = 100;
+  clk_tck = x;
+  return x;
+}
+
+/**
+ * Returns system clock ticks per second.
+ *
+ * The returned value is memoized. This function is intended to be
+ * used via the `CLK_TCK` macro wrapper.
+ *
+ * The returned value is always greater than zero. It's usually 100
+ * hertz which means each clock tick is 10 milliseconds long.
+ */
+int __clk_tck(void) {
+  if (clk_tck) {
+    return clk_tck;
+  } else {
+    return __clk_tck_init();
+  }
 }

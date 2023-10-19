@@ -48,26 +48,34 @@ void TearDown(void) {
 }
 
 TEST(commandv, testPathSearch) {
+  // TODO(joshua): Check if this is still broken
   // The commandv call gives EACCES on windows
   // need "bin/sh" ≠
   //  got NULL
   if (IsWindows()) return;
-  EXPECT_SYS(0, 0, touch("bin/sh", 0755));
+  EXPECT_SYS(0, 3, creat("bin/sh", 0755));
+  EXPECT_SYS(0, 2, write(3, "MZ", 2));
+  EXPECT_SYS(0, 0, close(3));
   EXPECT_STREQ("bin/sh", commandv("sh", pathbuf, sizeof(pathbuf)));
 }
 
 TEST(commandv, testSlashes_wontSearchPath_butChecksAccess) {
+  // TODO(joshua): Check if this is still broken
   // The commandv call gives EACCES on windows
   // need "home/sh.com" ≠
   //  got NULL
   if (IsWindows()) return;
-  EXPECT_SYS(0, 0, touch("home/sh.com", 0755));
+  EXPECT_SYS(0, 3, creat("home/sh.com", 0755));
+  EXPECT_SYS(0, 2, write(3, "MZ", 2));
+  EXPECT_SYS(0, 0, close(3));
   EXPECT_STREQ("home/sh.com",
                commandv("home/sh.com", pathbuf, sizeof(pathbuf)));
 }
 
 TEST(commandv, testSameDir_doesntHappenByDefaultUnlessItsWindows) {
-  EXPECT_SYS(0, 0, touch("bog.com", 0755));
+  EXPECT_SYS(0, 3, creat("bog.com", 0755));
+  EXPECT_SYS(0, 2, write(3, "MZ", 2));
+  EXPECT_SYS(0, 0, close(3));
   EXPECT_STREQ(NULL, commandv("bog.com", pathbuf, sizeof(pathbuf)));
   EXPECT_EQ(ENOENT, errno);
 }
@@ -78,7 +86,9 @@ TEST(commandv, testSameDir_willHappenWithColonBlank) {
   //  got NULL
   if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", "bin:", true));
-  EXPECT_SYS(0, 0, touch("bog.com", 0755));
+  EXPECT_SYS(0, 3, creat("bog.com", 0755));
+  EXPECT_SYS(0, 2, write(3, "MZ", 2));
+  EXPECT_SYS(0, 0, close(3));
   EXPECT_STREQ("bog.com", commandv("bog.com", pathbuf, sizeof(pathbuf)));
 }
 
@@ -88,7 +98,9 @@ TEST(commandv, testSameDir_willHappenWithColonBlank2) {
   //  got NULL
   if (IsWindows()) return;
   ASSERT_NE(-1, setenv("PATH", ":bin", true));
-  EXPECT_SYS(0, 0, touch("bog.com", 0755));
+  EXPECT_SYS(0, 3, creat("bog.com", 0755));
+  EXPECT_SYS(0, 2, write(3, "MZ", 2));
+  EXPECT_SYS(0, 0, close(3));
   EXPECT_STREQ("bog.com", commandv("bog.com", pathbuf, sizeof(pathbuf)));
 }
 

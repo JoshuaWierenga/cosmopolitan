@@ -3,14 +3,15 @@
 #include "libc/intrin/likely.h"
 #include "libc/runtime/runtime.h"
 
-#define _KERNTRACE  0 /* not configurable w/ flag yet */
+#define _NTTRACE    1 /* not configurable w/ flag yet */
 #define _POLLTRACE  0 /* not configurable w/ flag yet */
 #define _DATATRACE  1 /* not configurable w/ flag yet */
-#define _STDIOTRACE 0 /* not configurable w/ flag yet */
 #define _LOCKTRACE  0 /* not configurable w/ flag yet */
-#define _NTTRACE    0 /* not configurable w/ flag yet */
+#define _STDIOTRACE 0 /* not configurable w/ flag yet */
+#define _KERNTRACE  0 /* not configurable w/ flag yet */
+#define _TIMETRACE  0 /* not configurable w/ flag yet */
 
-#define STRACE_PROLOGUE "%rSYS %6P %'18T "
+#define STRACE_PROLOGUE "%rSYS %6P %6H %'18T "
 
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 COSMOPOLITAN_C_START_
@@ -61,6 +62,12 @@ COSMOPOLITAN_C_START_
 #define LOCKTRACE(FMT, ...) STRACE(FMT, ##__VA_ARGS__)
 #else
 #define LOCKTRACE(FMT, ...) (void)0
+#endif
+
+#if defined(SYSDEBUG) && _TIMETRACE
+#define TIMETRACE(FMT, ...) STRACE(FMT, ##__VA_ARGS__)
+#else
+#define TIMETRACE(FMT, ...) (void)0
 #endif
 
 void __stracef(const char *, ...);

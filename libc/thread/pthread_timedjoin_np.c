@@ -65,7 +65,7 @@ static errno_t _pthread_wait(atomic_int *ctid, struct timespec *abstime) {
   if (!(rc = pthread_testcancel_np())) {
     BEGIN_CANCELLATION_POINT;
     while ((x = atomic_load_explicit(ctid, memory_order_acquire))) {
-      e = nsync_futex_wait_(ctid, x, !IsWindows(), abstime);
+      e = nsync_futex_wait_(ctid, x, !IsWindows() && !IsXnu(), abstime);
       if (e == -ECANCELED) {
         rc = ECANCELED;
         break;
@@ -99,7 +99,6 @@ static errno_t _pthread_wait(atomic_int *ctid, struct timespec *abstime) {
  * @raise EBUSY if `abstime` deadline elapsed
  * @cancellationpoint
  * @returnserrno
- * @threadsafe
  */
 errno_t pthread_timedjoin_np(pthread_t thread, void **value_ptr,
                              struct timespec *abstime) {

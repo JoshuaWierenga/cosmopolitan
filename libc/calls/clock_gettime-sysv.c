@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2021 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,65 +16,10 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/runtime/clktck.h"
-#include "libc/calls/calls.h"
-#include "libc/dce.h"
-#include "libc/fmt/conv.h"
-#include "libc/intrin/getauxval.internal.h"
-#include "libc/runtime/runtime.h"
-#include "libc/sysv/consts/auxv.h"
+#include "libc/calls/struct/timespec.internal.h"
+#include "libc/calls/syscall_support-sysv.internal.h"
+#include "libc/sysv/consts/nr.h"
 
-struct clockinfo_netbsd {
-  int32_t hz;       // number of clock ticks per second
-  int32_t tick;     // µs per tick
-  int32_t tickadj;  // skew rate for adjtime()
-  int32_t stathz;   // statistics clock frequency
-  int32_t profhz;   // profiling clock frequency
-};
-
-static int clk_tck;
-
-static dontinline int __clk_tck_init(void) {
-  int x;
-  int cmd[2];
-  size_t len;
-  struct clockinfo_netbsd clock;
-  if (IsWindows()) {
-    x = HECTONANOSECONDS;
-  } else if (IsXnu() || IsOpenbsd()) {
-    x = 100;
-  } else if (IsFreebsd()) {
-    x = 128;
-  } else if (IsNetbsd()) {
-    cmd[0] = 1;   // CTL_KERN
-    cmd[1] = 12;  // KERN_CLOCKRATE
-    len = sizeof(clock);
-    if (sys_sysctl(cmd, 2, &clock, &len, NULL, 0) != -1) {
-      x = clock.hz;
-    } else {
-      x = -1;
-    }
-  } else {
-    x = __getauxval(AT_CLKTCK).value;
-  }
-  if (x < 1) x = 100;
-  clk_tck = x;
-  return x;
-}
-
-/**
- * Returns system clock ticks per second.
- *
- * The returned value is memoized. This function is intended to be
- * used via the `CLK_TCK` macro wrapper.
- *
- * The returned value is always greater than zero. It's usually 100
- * hertz which means each clock tick is 10 milliseconds long.
- */
-int __clk_tck(void) {
-  if (clk_tck) {
-    return clk_tck;
-  } else {
-    return __clk_tck_init();
-  }
+int sys_clock_gettime(int clock, struct timespec *ts) {
+  return __syscall2i(clock, (long)ts, __NR_clock_gettime);
 }

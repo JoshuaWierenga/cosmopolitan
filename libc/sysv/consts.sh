@@ -584,7 +584,7 @@ syscon	clock	CLOCK_MONOTONIC_PRECISE			1			1			1			6			11			3			3			1			#
 syscon	clock	CLOCK_MONOTONIC_FAST			1			1			1			6			12			3			3			1			#
 syscon	clock	CLOCK_MONOTONIC_COARSE			6			6			1			6			12			3			3			1			# Linux 2.6.32+; bsd consensus; not available on RHEL5
 syscon	clock	CLOCK_MONOTONIC_RAW			4			4			127			4			127			127			127			127			# actually monotonic; not subject to NTP adjustments; Linux 2.6.28+; XNU/NT/FreeBSD/OpenBSD faked; not available on RHEL5
-syscon	clock	CLOCK_PROCESS_CPUTIME_ID		2			2			127			12			15			2			0x40000000		127			#
+syscon	clock	CLOCK_PROCESS_CPUTIME_ID		2			2			127			12			15			2			0x40000000		127			# NetBSD lets you bitwise a PID into clockid_t
 syscon	clock	CLOCK_THREAD_CPUTIME_ID			3			3			127			16			14			4			0x20000000		127			#
 syscon	clock	CLOCK_PROF				127			127			127			127			2			127			2			127			#
 syscon	clock	CLOCK_BOOTTIME				7			7			127			127			127			6			127			127			#
@@ -1045,7 +1045,7 @@ syscon	mount	MNT_SNAPSHOT				0			0			0x40000000		0x40000000		0x01000000		0			0		
 #	limits
 #
 #	group	name					GNU/Systemd		GNU/Systemd (Aarch64)	XNU's Not UNIX!		MacOS (Arm64)		FreeBSD			OpenBSD			NetBSD			The New Technology	Commentary
-syscon	limits	PIPE_BUF				4096			4096			512			512			512			512			512			4096			# bsd consensus
+syscon	limits	PIPE_BUF				4096			4096			512			512			512			512			512			512			# bsd consensus
 syscon	limits	NGROUPS_MAX				65536			65536			16			16			1023			16			16			0			#
 syscon	limits	LINK_MAX				127			127			32767			32767			32767			32767			32767			64			# freebsd/windows are educated guesses
 syscon	limits	MAX_CANON				255			255			1024			1024			255			255			255			255			# windows is guessed
@@ -1275,23 +1275,23 @@ syscon	termios	  FF1					0b1000000000000000	0b1000000000000000	0b000100000000000
 #	Teletypewriter Special Control Character Assignments
 #
 #	group	name					GNU/Systemd		GNU/Systemd (Aarch64)	XNU's Not UNIX!		MacOS (Arm64)		FreeBSD			OpenBSD			NetBSD			The New Technology	Commentary
-syscon	termios	VMIN					6+1			6+1			16			16			16			16			16			6			# termios.c_cc[VMIN]=𝑥 in non-canonical mode can be set to 0 for non-blocking reads, 1 for single character raw mode reads, or higher to buffer
-syscon	termios	VTIME					5+1			5+1			17			17			17			17			17			5			# termios.c_cc[VTIME]=𝑥 sets non-canonical read timeout to 𝑥×𝟷𝟶𝟶ms which is needed when entering escape sequences manually with the escape key
-syscon	termios	VINTR					0+1			0+1			8			8			8			8			8			0			# termios.c_cc[VINTR]=𝑥
-syscon	termios	VQUIT					1+1			1+1			9			9			9			9			9			1			# termios.c_cc[VQUIT]=𝑥
-syscon	termios	VERASE					2+1			2+1			3			3			3			3			3			2			# termios.c_cc[VERASE]=𝑥
-syscon	termios	VKILL					3+1			3+1			5			5			5			5			5			3			# termios.c_cc[VKILL]=𝑥
-syscon	termios	VEOF					4+1			4+1			0			0			0			0			0			4			# termios.c_cc[VEOF]=𝑥
-syscon	termios	VSWTC					7+1			7+1			0			0			0			0			0			7			# termios.c_cc[VSWTC]=𝑥
-syscon	termios	VSTART					8+1			8+1			12			12			12			12			12			8			# termios.c_cc[VSTART]=𝑥
-syscon	termios	VSTOP					9+1			9+1			13			13			13			13			13			9			# termios.c_cc[VSTOP]=𝑥
-syscon	termios	VSUSP					10+1			10+1			10			10			10			10			10			10			# termios.c_cc[VSUSP]=𝑥 defines suspend, i.e. Ctrl-Z (a.k.a. →, ^Z, SUB, 26, 032, 0x1A, ord('Z')^0b01000000); unix consensus
-syscon	termios	VEOL					11+1			11+1			1			1			1			1			1			11			# termios.c_cc[VEOL]=𝑥
-syscon	termios	VREPRINT				12+1			12+1			6			6			6			6			6			12			# termios.c_cc[VREPRINT]=𝑥
-syscon	termios	VDISCARD				13+1			13+1			15			15			15			15			15			13			# termios.c_cc[VDISCARD]=𝑥
-syscon	termios	VWERASE					14+1			14+1			4			4			4			4			4			14			# termios.c_cc[VWERASE]=𝑥
-syscon	termios	VLNEXT					15+1			15+1			14			14			14			14			14			15			# termios.c_cc[VLNEXT]=𝑥
-syscon	termios	VEOL2					16+1			16+1			2			2			2			2			2			16			# termios.c_cc[VEOL2]=𝑥
+syscon	termios	VMIN					6+1			6+1			16			16			16			16			16			6+1			# termios.c_cc[VMIN]=𝑥 in non-canonical mode can be set to 0 for non-blocking reads, 1 for single character raw mode reads, or higher to buffer
+syscon	termios	VTIME					5+1			5+1			17			17			17			17			17			5+1			# termios.c_cc[VTIME]=𝑥 sets non-canonical read timeout to 𝑥×𝟷𝟶𝟶ms which is needed when entering escape sequences manually with the escape key
+syscon	termios	VINTR					0+1			0+1			8			8			8			8			8			0+1			# termios.c_cc[VINTR]=𝑥
+syscon	termios	VQUIT					1+1			1+1			9			9			9			9			9			1+1			# termios.c_cc[VQUIT]=𝑥
+syscon	termios	VERASE					2+1			2+1			3			3			3			3			3			2+1			# termios.c_cc[VERASE]=𝑥
+syscon	termios	VKILL					3+1			3+1			5			5			5			5			5			3+1			# termios.c_cc[VKILL]=𝑥
+syscon	termios	VEOF					4+1			4+1			0			0			0			0			0			4+1			# termios.c_cc[VEOF]=𝑥
+syscon	termios	VSWTC					7+1			7+1			0			0			0			0			0			7+1			# termios.c_cc[VSWTC]=𝑥
+syscon	termios	VSTART					8+1			8+1			12			12			12			12			12			8+1			# termios.c_cc[VSTART]=𝑥
+syscon	termios	VSTOP					9+1			9+1			13			13			13			13			13			9+1			# termios.c_cc[VSTOP]=𝑥
+syscon	termios	VSUSP					10+1			10+1			10			10			10			10			10			10+1			# termios.c_cc[VSUSP]=𝑥 defines suspend, i.e. Ctrl-Z (a.k.a. →, ^Z, SUB, 26, 032, 0x1A, ord('Z')^0b01000000); unix consensus
+syscon	termios	VEOL					11+1			11+1			1			1			1			1			1			11+1			# termios.c_cc[VEOL]=𝑥
+syscon	termios	VREPRINT				12+1			12+1			6			6			6			6			6			12+1			# termios.c_cc[VREPRINT]=𝑥
+syscon	termios	VDISCARD				13+1			13+1			15			15			15			15			15			13+1			# termios.c_cc[VDISCARD]=𝑥
+syscon	termios	VWERASE					14+1			14+1			4			4			4			4			4			14+1			# termios.c_cc[VWERASE]=𝑥
+syscon	termios	VLNEXT					15+1			15+1			14			14			14			14			14			15+1			# termios.c_cc[VLNEXT]=𝑥
+syscon	termios	VEOL2					16+1			16+1			2			2			2			2			2			16+1			# termios.c_cc[VEOL2]=𝑥
 syscon	termios	_POSIX_VDISABLE				0			0			255			255			255			255			255			0			# termios.c_cc tombstone value
 
 #	tcflush() magic numbers
