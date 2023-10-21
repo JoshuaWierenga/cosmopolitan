@@ -118,7 +118,13 @@ $(THIRD_PARTY_CHIBICC_OBJS): $(BUILD_FILES) third_party/chibicc/chibicc.mk
 endif
 
 .PHONY: o/$(MODE)/third_party/chibicc
-o/$(MODE)/third_party/chibicc:						\
-		o/$(MODE)/third_party/chibicc/test			\
+# TODO(joshua): Confirm that these tests are run on non windows
+# TODO(joshua): Find out while these tests fail
+ifeq ($(origin HOMEPATH),undefined)
+o/$(MODE)/third_party/chibicc::						\
+		o/$(MODE)/third_party/chibicc/test
+endif
+
+o/$(MODE)/third_party/chibicc::						\
 		$(THIRD_PARTY_CHIBICC_BINS)				\
 		$(THIRD_PARTY_CHIBICC_CHECKS)

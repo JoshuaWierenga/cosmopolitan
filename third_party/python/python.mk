@@ -1740,7 +1740,7 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 # TESTS
 
 # TODO Check if a version of cosmo's IsWindows is available here
-# TODO Find out while these tests fail on windows and netbsd
+# TODO Find out while these tests fail on windows and the bsds
 # Note that some tests become flaky with high job counts
 # They start breaking around -j13 on my 16 smt thread 5800x3d
 ifneq ($(origin HOMEPATH),undefined)
