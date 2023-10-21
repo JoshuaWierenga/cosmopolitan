@@ -16,6 +16,23 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/log/internal.h"
+#include "libc/intrin/describeflags.internal.h"
+#include "libc/macros.internal.h"
+#include "libc/nt/struct/inputrecord.h"
 
-bool _wantcrashreports;
+static const struct DescribeFlags kControlKeyState[] = {
+    {kNtRightAltPressed, "RightAltPressed"},    //
+    {kNtLeftAltPressed, "LeftAltPressed"},      //
+    {kNtRightCtrlPressed, "RightCtrlPressed"},  //
+    {kNtLeftCtrlPressed, "LeftCtrlPressed"},    //
+    {kNtShiftPressed, "ShiftPressed"},          //
+    {kNtNumlockOn, "NumlockOn"},                //
+    {kNtScrolllockOn, "ScrolllockOn"},          //
+    {kNtCapslockOn, "CapslockOn"},              //
+    {kNtEnhancedKey, "EnhancedKey"},            //
+};
+
+const char *(DescribeControlKeyState)(char buf[64], uint32_t x) {
+  return DescribeFlags(buf, 64, kControlKeyState, ARRAYLEN(kControlKeyState),
+                       "kNt", x);
+}
