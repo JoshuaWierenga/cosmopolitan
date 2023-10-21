@@ -78,6 +78,7 @@ TEST(read_pipe, canBeInterruptedByAlarm) {
 
 TEST(read_directory, eisdir) {
   // TODO(jart): what
+  // TODO(joshua): Check if the Netbsd check is still needed
   if (IsWindows() || IsFreebsd() || IsNetbsd()) return;
   ASSERT_SYS(0, 0, mkdir("boop", 0755));
   ASSERT_SYS(0, 3, open("boop", O_RDONLY | O_DIRECTORY));
@@ -140,7 +141,7 @@ TEST(read, whatEmacsDoes) {
 
 BENCH(read, bench) {
   char buf[16];
-  BEGIN_CANCELLATION_POINT;
+  BEGIN_CANCELATION_POINT;
   ASSERT_SYS(0, 3, open("/dev/zero", O_RDONLY));
   EZBENCH2("read", donothing, read(3, buf, 5));
   EZBENCH2("pread", donothing, pread(3, buf, 5, 0));
@@ -153,5 +154,5 @@ BENCH(read, bench) {
   EZBENCH2("sys_read", donothing, sys_read(3, buf, 5));
   EZBENCH2("sys_readv", donothing, sys_readv(3, &(struct iovec){buf, 5}, 1));
   ASSERT_SYS(0, 0, close(3));
-  END_CANCELLATION_POINT;
+  END_CANCELATION_POINT;
 }
