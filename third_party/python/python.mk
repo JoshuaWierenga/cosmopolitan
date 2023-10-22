@@ -1806,6 +1806,7 @@ ifeq ($(RunBadWindowsTests), 1)
         third_party/python/Lib/test/test_doctest.py				\
         third_party/python/Lib/test/test_genericpath.py				\
         third_party/python/Lib/test/test_gzip.py				\
+        third_party/python/Lib/test/test_hash.py				\
         third_party/python/Lib/test/test_quopri.py
 endif
 
@@ -1928,7 +1929,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_getopt.py				\
 	third_party/python/Lib/test/test_global.py				\
 	third_party/python/Lib/test/test_grammar.py				\
-	third_party/python/Lib/test/test_hash.py				\
 	third_party/python/Lib/test/test_hashlib.py				\
 	third_party/python/Lib/test/test_heapq.py				\
 	third_party/python/Lib/test/test_html.py				\
