@@ -18,9 +18,12 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
 #include "libc/calls/calls.h"
+#include "libc/calls/syscall-sysv.internal.h"
+#include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/intrin/atomic.h"
 #include "libc/limits.h"
+#include "libc/runtime/syslib.internal.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/semaphore.h"
 #include "third_party/nsync/futex.internal.h"
@@ -33,6 +36,13 @@
  */
 int sem_post(sem_t *sem) {
   int rc, old, wakeups;
+
+#if 0
+  if (IsXnuSilicon() && sem->sem_magic == SEM_MAGIC_KERNEL) {
+    return _sysret(__syslib->__sem_post(sem->sem_kernel));
+  }
+#endif
+
   old = atomic_fetch_add_explicit(&sem->sem_value, 1, memory_order_acq_rel);
   unassert(old > INT_MIN);
   if (old >= 0) {

@@ -59,6 +59,17 @@ struct Syslib {
   long (*__sigaction)(int, const void *, void *);
   long (*__pselect)(int, void *, void *, void *, const void *, const void *);
   long (*__mprotect)(void *, size_t, int);
+  /* v5 (2023-10-09) */
+  long (*__sigaltstack)(const void *, void *);
+  long (*__getentropy)(void *, size_t);
+  long (*__sem_open)(const char *, int, uint16_t, unsigned);
+  long (*__sem_unlink)(const char *);
+  long (*__sem_close)(int *);
+  long (*__sem_post)(int *);
+  long (*__sem_wait)(int *);
+  long (*__sem_trywait)(int *);
+  long (*__getrlimit)(int, void *);
+  long (*__setrlimit)(int, const void *);
 };
 
 extern struct Syslib *__syslib;

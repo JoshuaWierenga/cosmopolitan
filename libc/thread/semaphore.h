@@ -1,12 +1,14 @@
 #ifndef COSMOPOLITAN_LIBC_CALLS_SEMAPHORE_H_
 #define COSMOPOLITAN_LIBC_CALLS_SEMAPHORE_H_
 #include "libc/calls/struct/timespec.h"
+#include "libc/stdbool.h"
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 COSMOPOLITAN_C_START_
 
 #define SEM_FAILED        ((sem_t *)0)
 #define SEM_MAGIC_NAMED   0xDEADBEEFu
 #define SEM_MAGIC_UNNAMED 0xFEEDABEEu
+#define SEM_MAGIC_KERNEL  0xCAFEBABEu
 
 typedef struct {
   union {
@@ -20,6 +22,7 @@ typedef struct {
       int sem_pid;         /* unnamed only */
       bool sem_lazydelete; /* named only */
       bool sem_pshared;
+      int *sem_kernel;
     };
     void *sem_space[32];
   };

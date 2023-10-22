@@ -342,23 +342,26 @@ static textwindows int ProcessMouseEvent(const struct NtInputRecord *r,
   bs &= kNtFromLeft1stButtonPressed | kNtRightmostButtonPressed;
   if (ev & kNtMouseWheeled) {
     // scroll wheel (unnatural mode)
-    if (!(r->Event.MouseEvent.dwControlKeyState &
-          (kNtShiftPressed | kNtLeftCtrlPressed | kNtRightCtrlPressed |
-           kNtLeftAltPressed | kNtRightAltPressed))) {
-      bool isup = ((int)r->Event.MouseEvent.dwButtonState >> 16) > 0;
-      if (__ttyconf.magic & kTtyXtMouse) {
+    bool isup = ((int)r->Event.MouseEvent.dwButtonState >> 16) > 0;
+    if (__ttyconf.magic & kTtyXtMouse) {
+      if (r->Event.MouseEvent.dwControlKeyState &
+          (kNtLeftCtrlPressed | kNtRightCtrlPressed)) {
         e = isup ? 80 : 81;
-        goto OutputXtermMouseEvent;
       } else {
-        // we disable mouse highlighting when the tty is put in raw mode
-        // to mouse wheel events with widely understood vt100 arrow keys
-        *p++ = 033;
-        *p++ = !__keystroke.ohno_decckm ? '[' : 'O';
-        if (isup) {
-          *p++ = 'A';
-        } else {
-          *p++ = 'B';
-        }
+        e = isup ? 64 : 65;
+      }
+      goto OutputXtermMouseEvent;
+    } else if (!(r->Event.MouseEvent.dwControlKeyState &
+                 (kNtShiftPressed | kNtLeftCtrlPressed | kNtRightCtrlPressed |
+                  kNtLeftAltPressed | kNtRightAltPressed))) {
+      // we disable mouse highlighting when the tty is put in raw mode
+      // to mouse wheel events with widely understood vt100 arrow keys
+      *p++ = 033;
+      *p++ = !__keystroke.ohno_decckm ? '[' : 'O';
+      if (isup) {
+        *p++ = 'A';
+      } else {
+        *p++ = 'B';
       }
     }
   } else if ((bs || currentbs) && (__ttyconf.magic & kTtyXtMouse)) {
@@ -727,7 +730,6 @@ static textwindows int WaitForConsole(struct Fd *f, sigset_t waitmask) {
   pt->pt_flags |= PT_RESTARTABLE;
   pt->pt_semaphore = sem = CreateSemaphore(0, 0, 1, 0);
   pthread_cleanup_push((void *)CloseHandle, (void *)sem);
-  atomic_store_explicit(&pt->pt_futex, 0, memory_order_release);
   atomic_store_explicit(&pt->pt_blocker, PT_BLOCKER_SEM, memory_order_release);
   m = __sig_beginwait(waitmask);
   if ((rc = _check_cancel()) != -1 && (rc = _check_signal(true)) != -1) {
