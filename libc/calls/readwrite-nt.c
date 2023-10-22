@@ -83,7 +83,9 @@ sys_readwrite_nt(int fd, void *data, size_t size, ssize_t offset,
   // similar to the lseek() system call, they too raise ESPIPE when
   // operating on a non-seekable file.
   bool pwriting = offset != -1;
-  bool seekable = f->kind == kFdFile && GetFileType(handle) == kNtFileTypeDisk;
+  bool seekable =
+      (f->kind == kFdFile && GetFileType(handle) == kNtFileTypeDisk) ||
+      f->kind == kFdDevNull;
   if (pwriting && !seekable) {
     return espipe();
   }
@@ -193,8 +195,9 @@ sys_readwrite_nt(int fd, void *data, size_t size, ssize_t offset,
   // check and see if it was pthread_cancel() which committed the deed
   // in which case _check_cancel() can acknowledge the cancelation now
   // it's also fine to do nothing here; punt to next cancelation point
-  if (GetLastError() == kNtErrorOperationAborted && _check_cancel() == -1) {
-    return ecanceled();
+  if (GetLastError() == kNtErrorOperationAborted) {
+    if (_check_cancel() == -1) return ecanceled();
+    if (!eintered && _check_signal(false)) return eintr();
   }
 
   // if we chose to process a pending signal earlier then we preserve

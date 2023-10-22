@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,10 +16,15 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/ntmagicpaths.internal.h"
+#include "libc/str/str.h"
 
-const struct NtMagicPaths kNtMagicPaths = {
-#define TAB(NAME, STRING) STRING,
-#include "libc/calls/ntmagicpaths.inc"
-#undef TAB
-};
+uint64_t __fnv(const void *data, size_t size) {
+  const unsigned char *p = data;
+  const unsigned char *pe = p + size;
+  uint64_t hash = 0xcbf29ce484222325;
+  while (p < pe) {
+    hash *= 0x100000001b3;
+    hash ^= *p++;
+  }
+  return hash;
+}

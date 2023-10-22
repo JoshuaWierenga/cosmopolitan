@@ -178,14 +178,18 @@ __static_yoink("blink_xnu_aarch64");    // is apple silicon
 #define MONITOR_MICROS   150000
 #define READ(F, P, N)    readv(F, &(struct iovec){P, N}, 1)
 #define WRITE(F, P, N)   writev(F, &(struct iovec){P, N}, 1)
-#define LockInc(P)       (*(_Atomic(typeof(*(P))) *)(P))++
-#define LockDec(P)       (*(_Atomic(typeof(*(P))) *)(P))--
 #define AppendCrlf(P)    mempcpy(P, "\r\n", 2)
 #define HasHeader(H)     (!!cpm.msg.headers[H].a)
 #define HeaderData(H)    (inbuf.p + cpm.msg.headers[H].a)
 #define HeaderLength(H)  (cpm.msg.headers[H].b - cpm.msg.headers[H].a)
 #define HeaderEqualCase(H, S) \
   SlicesEqualCase(S, strlen(S), HeaderData(H), HeaderLength(H))
+#define LockInc(P)                                            \
+  atomic_fetch_add_explicit((_Atomic(typeof(*(P))) *)(P), +1, \
+                            memory_order_relaxed)
+#define LockDec(P)                                            \
+  atomic_fetch_add_explicit((_Atomic(typeof(*(P))) *)(P), -1, \
+                            memory_order_relaxed)
 
 #define TRACE_BEGIN         \
   do {                      \
@@ -2870,7 +2874,7 @@ static char *GetBasicAuthorization(size_t *z) {
 
 static const char *GetSystemUrlLauncherCommand(void) {
   if (IsWindows()) {
-    return "explorer";
+    return "explorer.exe";
   } else if (IsXnu()) {
     return "open";
   } else {
@@ -4823,6 +4827,7 @@ static int LuaBlackhole(lua_State *L) {
 wontreturn static void Replenisher(void) {
   struct timespec ts;
   VERBOSEF("(token) replenish worker started");
+  strace_enabled(-1);
   signal(SIGINT, OnTerm);
   signal(SIGHUP, OnTerm);
   signal(SIGTERM, OnTerm);
@@ -4946,6 +4951,7 @@ static int LuaProgramTokenBucket(lua_State *L) {
   int pid = fork();
   npassert(pid != -1);
   if (!pid) Replenisher();
+  ++shared->workers;
   return 0;
 }
 
@@ -6894,7 +6900,7 @@ static int HandleConnection(size_t i) {
     } else if (errno == ECONNABORTED) {
       LockInc(&shared->c.accepterrors);
       LockInc(&shared->c.acceptresets);
-      WARNF("(srvr) %S accept error: %s", DescribeServer(),
+      WARNF("(srvr) %s accept error: %s", DescribeServer(),
             "acceptreset: connection reset before accept");
     } else if (errno == ENETUNREACH || errno == EHOSTUNREACH ||
                errno == EOPNOTSUPP || errno == ENOPROTOOPT || errno == EPROTO) {
@@ -6903,7 +6909,7 @@ static int HandleConnection(size_t i) {
       WARNF("(srvr) accept error: %s ephemeral accept error: %m",
             DescribeServer());
     } else {
-      DIEF("(srvr) %s accept error: %m", DescribeServer());
+      WARNF("(srvr) %s accept error: %m", DescribeServer());
     }
     errno = 0;
   }
@@ -7149,7 +7155,7 @@ static void ReplEventLoop(void) {
   lua_repl_completions_callback = HandleCompletions;
   lua_initrepl(L);
   EnableRawMode();
-  EventLoop(100);
+  EventLoop(-1);
   DisableRawMode();
   lua_freerepl();
   lua_settop(L, 0);  // clear stack

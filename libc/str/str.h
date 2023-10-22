@@ -138,11 +138,6 @@ ssize_t strfmon(char *, size_t, const char *, ...);
 long a64l(const char *);
 char *l64a(long);
 
-char *strntolower(char *, size_t) libcesque;
-char *strtolower(char *) libcesque paramsnonnull();
-char *strntoupper(char *, size_t) libcesque;
-char *strtoupper(char *) libcesque paramsnonnull();
-
 typedef unsigned mbstate_t;
 
 wchar_t *wcsncpy(wchar_t *, const wchar_t *, size_t);
@@ -186,6 +181,7 @@ dontthrow nocallback;
 uint64_t tpenc(uint32_t) pureconst;
 char *chomp(char *) libcesque;
 wchar_t *wchomp(wchar_t *) libcesque;
+uint64_t __fnv(const void *, size_t) strlenesque;
 bool startswith(const char *, const char *) strlenesque;
 bool startswithi(const char *, const char *) strlenesque;
 bool endswith(const char *, const char *) strlenesque;

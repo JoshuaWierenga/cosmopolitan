@@ -88,11 +88,13 @@ textwindows bool __sig_ignored(int sig) {
 textwindows void __sig_delete(int sig) {
   struct Dll *e;
   __sig.pending &= ~(1ull << (sig - 1));
+  BLOCK_SIGNALS;
   _pthread_lock();
   for (e = dll_last(_pthread_list); e; e = dll_prev(_pthread_list, e)) {
     POSIXTHREAD_CONTAINER(e)->tib->tib_sigpending &= ~(1ull << (sig - 1));
   }
   _pthread_unlock();
+  ALLOW_SIGNALS;
 }
 
 static textwindows bool __sig_should_use_altstack(unsigned flags,
@@ -128,18 +130,13 @@ static textwindows bool __sig_start(struct PosixThread *pt, int sig,
     return false;
   }
   if (pt->tib->tib_sigmask & (1ull << (sig - 1))) {
-    STRACE("tid %d masked %G delivering to tib_sigpending", _pthread_tid(pt),
-           sig);
+    STRACE("enqueing %G on %d", sig, _pthread_tid(pt));
     pt->tib->tib_sigpending |= 1ull << (sig - 1);
     return false;
   }
   if (*rva == (intptr_t)SIG_DFL) {
     STRACE("terminating on %G due to no handler", sig);
     __sig_terminate(sig);
-  }
-  if (*flags & SA_RESETHAND) {
-    STRACE("resetting %G handler", sig);
-    __sighandrvas[sig] = (int32_t)(intptr_t)SIG_DFL;
   }
   return true;
 }
@@ -153,6 +150,10 @@ textwindows int __sig_raise(int sig, int sic) {
   struct PosixThread *pt = _pthread_self();
   ucontext_t ctx = {.uc_sigmask = pt->tib->tib_sigmask};
   if (!__sig_start(pt, sig, &rva, &flags)) return 0;
+  if (flags & SA_RESETHAND) {
+    STRACE("resetting %G handler", sig);
+    __sighandrvas[sig] = (int32_t)(intptr_t)SIG_DFL;
+  }
   siginfo_t si = {.si_signo = sig, .si_code = sic};
   struct NtContext nc;
   nc.ContextFlags = kNtContextFull;
@@ -220,7 +221,7 @@ textwindows void __sig_cancel(struct PosixThread *pt, int sig, unsigned flags) {
 }
 
 static textwindows wontreturn void __sig_tramp(struct SignalFrame *sf) {
-  ++__sig.count;
+  atomic_fetch_add_explicit(&__sig.count, 1, memory_order_relaxed);
   int sig = sf->si.si_signo;
   sigset_t blocksigs = __sighandmask[sig];
   if (!(sf->flags & SA_NODEFER)) blocksigs |= 1ull << (sig - 1);
@@ -232,29 +233,53 @@ static textwindows wontreturn void __sig_tramp(struct SignalFrame *sf) {
   __sig_restore(&sf->ctx);
 }
 
-static textwindows int __sig_killer(struct PosixThread *pt, int sig, int sic) {
-  uintptr_t th;
+static int __sig_killer(struct PosixThread *pt, int sig, int sic) {
+
+  // prepare for signal
   unsigned rva, flags;
-  if (!__sig_start(pt, sig, &rva, &flags)) return 0;
-  th = _pthread_syshand(pt);
-  uint32_t old_suspend_count;
-  old_suspend_count = SuspendThread(th);
-  if (old_suspend_count == -1u) {
-    STRACE("SuspendThread failed w/ %d", GetLastError());
-    return ESRCH;
-  }
-  if (old_suspend_count) {
-    STRACE("kill contention of %u on tid %d", old_suspend_count,
-           _pthread_tid(pt));
-    pt->tib->tib_sigpending |= 1ull << (sig - 1);
+  if (!__sig_start(pt, sig, &rva, &flags)) {
     return 0;
+  }
+
+  // take control of thread
+  // suspending the thread happens asynchronously
+  // however getting the context blocks until it's frozen
+  static pthread_spinlock_t killer_lock;
+  pthread_spin_lock(&killer_lock);
+  uintptr_t th = _pthread_syshand(pt);
+  if (SuspendThread(th) == -1u) {
+    STRACE("SuspendThread failed w/ %d", GetLastError());
+    pthread_spin_unlock(&killer_lock);
+    return ESRCH;
   }
   struct NtContext nc;
   nc.ContextFlags = kNtContextFull;
   if (!GetThreadContext(th, &nc)) {
     STRACE("GetThreadContext failed w/ %d", GetLastError());
+    ResumeThread(th);
+    pthread_spin_unlock(&killer_lock);
     return ESRCH;
   }
+  pthread_spin_unlock(&killer_lock);
+
+  // we can't preempt threads that are running in win32 code
+  if ((pt->tib->tib_sigmask & (1ull << (sig - 1))) ||
+      !((uintptr_t)__executable_start <= nc.Rip &&
+        nc.Rip < (uintptr_t)__privileged_start)) {
+    STRACE("enqueing %G on %d", sig, _pthread_tid(pt));
+    pt->tib->tib_sigpending |= 1ull << (sig - 1);
+    ResumeThread(th);
+    __sig_cancel(pt, sig, flags);
+    return 0;
+  }
+
+  // we're committed to delivering this signal now
+  if (flags & SA_RESETHAND) {
+    STRACE("resetting %G handler", sig);
+    __sighandrvas[sig] = (int32_t)(intptr_t)SIG_DFL;
+  }
+
+  // inject trampoline function call into thread
   uintptr_t sp;
   if (__sig_should_use_altstack(flags, pt->tib)) {
     sp = (uintptr_t)pt->tib->tib_sigstack_addr + pt->tib->tib_sigstack_size;
@@ -286,7 +311,9 @@ static textwindows int __sig_killer(struct PosixThread *pt, int sig, int sic) {
 textwindows int __sig_kill(struct PosixThread *pt, int sig, int sic) {
   int rc;
   BLOCK_SIGNALS;
+  _pthread_ref(pt);
   rc = __sig_killer(pt, sig, sic);
+  _pthread_unref(pt);
   ALLOW_SIGNALS;
   return rc;
 }
@@ -306,22 +333,24 @@ textwindows void __sig_generate(int sig, int sic) {
   _pthread_lock();
   for (e = dll_first(_pthread_list); e; e = dll_next(_pthread_list, e)) {
     pt = POSIXTHREAD_CONTAINER(e);
-    if (atomic_load_explicit(&pt->pt_status, memory_order_acquire) <
+    if (pt != _pthread_self() &&
+        atomic_load_explicit(&pt->pt_status, memory_order_acquire) <
             kPosixThreadTerminated &&
         !(pt->tib->tib_sigmask & (1ull << (sig - 1)))) {
-      mark = pt;
+      _pthread_ref((mark = pt));
       break;
     }
   }
   _pthread_unlock();
-  ALLOW_SIGNALS;
   if (mark) {
     STRACE("generating %G by killing %d", sig, _pthread_tid(mark));
-    __sig_kill(mark, sig, sic);
+    __sig_killer(mark, sig, sic);
   } else {
     STRACE("all threads block %G so adding to pending signals of process", sig);
     __sig.pending |= 1ull << (sig - 1);
   }
+  _pthread_unref(mark);
+  ALLOW_SIGNALS;
 }
 
 static int __sig_crash_sig(struct NtExceptionPointers *ep, int *code) {
@@ -387,7 +416,7 @@ static void __sig_unmaskable(struct NtExceptionPointers *ep, int code, int sig,
                              struct CosmoTib *tib) {
 
   // increment the signal count for getrusage()
-  ++__sig.count;
+  atomic_fetch_add_explicit(&__sig.count, 1, memory_order_relaxed);
 
   // log vital crash information reliably for --strace before doing much
   // we don't print this without the flag since raw numbers scare people

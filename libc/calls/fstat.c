@@ -52,7 +52,7 @@ int fstat(int fd, struct stat *st) {
   } else if (IsMetal()) {
     rc = sys_fstat_metal(fd, st);
   } else if (IsWindows()) {
-    rc = sys_fstat_nt(__getfdhandleactual(fd), st);
+    rc = sys_fstat_nt(fd, st);
   } else {
     rc = enosys();
   }
