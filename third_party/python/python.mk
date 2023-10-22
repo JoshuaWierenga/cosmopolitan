@@ -1747,17 +1747,21 @@ ifneq ($(origin HOMEPATH),undefined)
     RunBadTests := 0
     RunBadNetBSDTests := 1
     RunBadWindowsTests := 0
+    RunThreadSignalTest := 0
 else
     OS := $(shell uname -s)
     ifeq ($(OS), FreeBSD)
         RunBadTests := 0
         RunBadNetBSDTests := 1
+        RunThreadSignalTest := 1
     else ifeq ($(OS), NetBSD)
         RunBadTests := 0
         RunBadNetBSDTests := 0
+        RunThreadSignalTest := 0
     else
         RunBadTests := 1
         RunBadNetBSDTests := 1
+        RunThreadSignalTest := 0
     endif
     RunBadWindowsTests := 1
 endif
@@ -1796,8 +1800,7 @@ endif
 ifeq ($(RunBadNetBSDTests), 1)
     THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
         third_party/python/Lib/test/test_functools.py				\
-        third_party/python/Lib/test/test_gc.py					\
-        third_party/python/Lib/test/test_threadsignals.py
+        third_party/python/Lib/test/test_gc.py
 endif
 
 ifeq ($(RunBadWindowsTests), 1)
@@ -1807,7 +1810,13 @@ ifeq ($(RunBadWindowsTests), 1)
         third_party/python/Lib/test/test_genericpath.py				\
         third_party/python/Lib/test/test_gzip.py				\
         third_party/python/Lib/test/test_hash.py				\
-        third_party/python/Lib/test/test_quopri.py
+        third_party/python/Lib/test/test_quopri.py				\
+        third_party/python/Lib/test/test_traceback.py
+endif
+
+ifeq ($(RunThreadSignalTest), 1)
+    THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
+        third_party/python/Lib/test/test_threadsignals.py
 endif
 
 THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
@@ -2018,7 +2027,6 @@ THIRD_PARTY_PYTHON_PYTEST_PYMAINS +=						\
 	third_party/python/Lib/test/test_syslog.py				\
 	third_party/python/Lib/test/test_textwrap.py				\
 	third_party/python/Lib/test/test_timeit.py				\
-	third_party/python/Lib/test/test_traceback.py				\
 	third_party/python/Lib/test/test_tracemalloc.py				\
 	third_party/python/Lib/test/test_tuple.py				\
 	third_party/python/Lib/test/test_typechecks.py				\
