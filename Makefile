@@ -73,8 +73,13 @@ MODE := $(m)
 endif
 endif
 
+ifeq ($(origin HOMEPATH),undefined)
 UNAME_M = $(shell uname -m)
 UNAME_S = $(shell uname -s)
+else
+UNAME_M = x86_64
+UNAME_S = Windows
+endif
 
 # apple still distributes a 17 year old version of gnu make
 ifeq ($(MAKE_VERSION), 3.81)
