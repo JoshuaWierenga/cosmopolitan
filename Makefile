@@ -90,7 +90,7 @@ endif
 ifeq ($(TOOLCHAIN),)                                                # if TOOLCHAIN isn't defined
 ifeq ("$(wildcard o/third_party/gcc/bin/x86_64-linux-cosmo-*)","")  # if our gcc isn't unbundled
 ifneq ($(UNAME_M)-$(UNAME_S), x86_64-Linux)                         # if this is not amd64 linux
-$(error you need to download https://justine.lol/cosmocc-0.0.12.zip and unzip it inside the cosmo directory)
+$(error you need to download https://justine.lol/cosmocc-0.0.14.zip and unzip it inside the cosmo directory)
 endif
 endif
 endif
@@ -229,6 +229,7 @@ include third_party/maxmind/maxmind.mk
 include net/finger/finger.mk
 include third_party/double-conversion/test/test.mk
 include third_party/lua/lua.mk
+include third_party/tree/tree.mk
 include third_party/zstd/zstd.mk
 include third_party/tr/tr.mk
 include third_party/sed/sed.mk
