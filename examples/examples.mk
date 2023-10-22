@@ -97,6 +97,8 @@ EXAMPLES_DIRECTDEPS =								\
 EXAMPLES_DEPS :=								\
 	$(call uniq,$(foreach x,$(EXAMPLES_DIRECTDEPS),$($(x))))
 
+$(EXAMPLES_OBJS): override CFLAGS += -isystem libc/isystem
+
 o/$(MODE)/examples/examples.pkg:						\
 		$(EXAMPLES_OBJS)						\
 		$(foreach x,$(EXAMPLES_DIRECTDEPS),$($(x)_A).pkg)
@@ -111,14 +113,6 @@ o/$(MODE)/examples/%.com.dbg:							\
 		o/$(MODE)/examples/%.o						\
 		o/$(MODE)/examples/examples.pkg					\
 		$(EXAMPLES_BOOTLOADER)
-	@$(APELINK)
-
-o/$(MODE)/examples/nomodifyself.com.dbg:					\
-		$(EXAMPLES_DEPS)						\
-		o/$(MODE)/examples/nomodifyself.o				\
-		o/$(MODE)/examples/examples.pkg					\
-		$(CRT)								\
-		$(APE_NO_MODIFY_SELF)
 	@$(APELINK)
 
 o/$(MODE)/examples/hellolua.com.dbg:						\

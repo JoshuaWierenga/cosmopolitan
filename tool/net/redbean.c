@@ -506,7 +506,6 @@ static struct Strings hidepaths;
 static const char *launchbrowser;
 static const char ctIdx = 'c';  // a pseudo variable to get address of
 
-static pthread_t replth;
 static pthread_t monitorth;
 static struct Buffer inbuf_actual;
 static struct Buffer inbuf;
@@ -5127,11 +5126,13 @@ static const luaL_Reg kLuaFuncs[] = {
     {"Crc32", LuaCrc32},                                        //
     {"Crc32c", LuaCrc32c},                                      //
     {"Decimate", LuaDecimate},                                  //
+    {"DecodeBase32", LuaDecodeBase32},                          //
     {"DecodeBase64", LuaDecodeBase64},                          //
     {"DecodeHex", LuaDecodeHex},                                //
     {"DecodeJson", LuaDecodeJson},                              //
     {"DecodeLatin1", LuaDecodeLatin1},                          //
     {"Deflate", LuaDeflate},                                    //
+    {"EncodeBase32", LuaEncodeBase32},                          //
     {"EncodeBase64", LuaEncodeBase64},                          //
     {"EncodeHex", LuaEncodeHex},                                //
     {"EncodeJson", LuaEncodeJson},                              //
@@ -7406,7 +7407,7 @@ void RedBean(int argc, char *argv[]) {
     Daemonize();
   }
   if (pidpath) {
-    fd = open(pidpath, O_CREAT | O_WRONLY, 0644);
+    fd = open(pidpath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
     WRITE(fd, ibuf, FormatInt32(ibuf, getpid()) - ibuf);
     close(fd);
   }
@@ -7447,12 +7448,6 @@ void RedBean(int argc, char *argv[]) {
         monitorth = 0;
       }
     }
-#ifndef STATIC
-    if (replth) {
-      pthread_join(replth, 0);
-      replth = 0;
-    }
-#endif
     HandleShutdown();
     CallSimpleHookIfDefined("OnServerStop");
   }
@@ -7478,10 +7473,6 @@ int main(int argc, char *argv[]) {
   // 2. unwound worker exit
   if (IsModeDbg()) {
     if (isexitingworker) {
-      if (replth) {
-        pthread_join(replth, 0);
-        replth = 0;
-      }
       linenoiseDisableRawMode();
       linenoiseHistoryFree();
     }

@@ -1,7 +1,7 @@
-/*-*-mode:c++;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8-*-│
-│vi: set net ft=c++ ts=2 sts=2 sw=2 fenc=utf-8                              :vi│
+/*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
+│vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,23 +16,26 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/stdio/stdio.h"
-#include "third_party/libcxx/map"
-#include "third_party/libcxx/string"
+#include "libc/errno.h"
+#include "libc/mem/mem.h"
+#include "libc/proc/posix_spawn.h"
+#include "libc/proc/posix_spawn.internal.h"
 
-int main(int argc, char *argv[]) {
-  printf("std::map + std::string example\n");
-  std::map<std::string, int> m{
-      {"CPU", 10},
-      {"GPU", 15},
-      {"RAM", 20},
-  };
-  printf("m[\"CPU\"] is %d\n", m["CPU"]);
-  printf("m[\"RAM\"] is %d\n", m["RAM"]);
-  printf("m[\"GPU\"] is %d\n", m["GPU"]);
-  printf("setting cpu to 25\n");
-  m["CPU"] = 25;  // update an existing value
-  printf("m[\"CPU\"] is %d\n", m["CPU"]);
-  printf("m[\"RAM\"] is %d\n", m["RAM"]);
-  printf("m[\"GPU\"] is %d\n", m["GPU"]);
+/**
+ * Add chdir() action to spawn.
+ *
+ * @param file_actions was initialized by posix_spawn_file_actions_init()
+ * @param path will be safely copied
+ * @return 0 on success, or errno on error
+ * @raise ENOMEM if insufficient memory was available
+ */
+int posix_spawn_file_actions_addchdir_np(
+    posix_spawn_file_actions_t *file_actions, const char *path) {
+  char *path2;
+  if (!(path2 = strdup(path))) return ENOMEM;
+  return __posix_spawn_add_file_action(file_actions,
+                                       (struct _posix_faction){
+                                           .action = _POSIX_SPAWN_CHDIR,
+                                           .path = path2,
+                                       });
 }

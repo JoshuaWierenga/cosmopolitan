@@ -39,8 +39,8 @@ int ulock_wait(uint32_t operation, void *addr, uint64_t value,
   LOCKTRACE("ulock_wait(%#x, %p, %lx, %u) → ...", operation, addr, value,
             timeout_micros);
   rc = sys_ulock_wait(operation, addr, value, timeout_micros);
-  STRACE("ulock_wait(%#x, %p, %lx, %u) → %d% m", operation, addr, value,
-         timeout_micros, rc);
+  LOCKTRACE("ulock_wait(%#x, %p, %lx, %u) → %d% m", operation, addr, value,
+            timeout_micros, rc);
   return rc;
 }
 
@@ -48,7 +48,7 @@ int ulock_wait(uint32_t operation, void *addr, uint64_t value,
 int ulock_wake(uint32_t operation, void *addr, uint64_t wake_value) {
   int rc;
   rc = __syscall3i(operation, (long)addr, wake_value, 0x2000000 | 516);
-  STRACE("ulock_wake(%#x, %p, %lx) → %s", operation, addr, wake_value,
-         DescribeErrno(rc));
+  LOCKTRACE("ulock_wake(%#x, %p, %lx) → %s", operation, addr, wake_value,
+            DescribeErrno(rc));
   return rc;
 }
