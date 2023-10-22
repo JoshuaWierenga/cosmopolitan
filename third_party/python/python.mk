@@ -1741,31 +1741,29 @@ THIRD_PARTY_PYTHON_PYTEST_A_DIRECTDEPS =					\
 ################################################################################
 # TESTS
 
-# TODO Check if a version of cosmo's IsWindows is available here
 # TODO Find out while these tests fail on windows and the bsds
 # Note that some tests become flaky with high job counts
 # They start breaking around -j13 on my 16 smt thread 5800x3d
-ifneq ($(origin HOMEPATH),undefined)
+ifeq ($(UNAME_S), Windows)
     RunBadTests := 0
     RunBadNetBSDTests := 1
     RunBadWindowsTests := 0
     RunThreadSignalTest := 0
-else
-    OS := $(shell uname -s)
-    ifeq ($(OS), FreeBSD)
-        RunBadTests := 0
-        RunBadNetBSDTests := 1
-        RunThreadSignalTest := 1
-    else ifeq ($(OS), NetBSD)
-        RunBadTests := 0
-        RunBadNetBSDTests := 0
-        RunThreadSignalTest := 0
-    else
-        RunBadTests := 1
-        RunBadNetBSDTests := 1
-        RunThreadSignalTest := 0
-    endif
+else ifeq ($(UNAME_S), FreeBSD)
+    RunBadTests := 0
+    RunBadNetBSDTests := 1
     RunBadWindowsTests := 1
+    RunThreadSignalTest := 1
+else ifeq ($(UNAME_S), NetBSD)
+    RunBadTests := 0
+    RunBadNetBSDTests := 0
+    RunBadWindowsTests := 1
+    RunThreadSignalTest := 0
+else
+    RunBadTests := 1
+    RunBadNetBSDTests := 1
+    RunBadWindowsTests := 1
+    RunThreadSignalTest := 0
 endif
 
 ifeq ($(RunBadTests), 1)
