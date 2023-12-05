@@ -128,8 +128,12 @@ static struct {
 } foreign;
 
 long __sysv2nt14();
+long __nt2sysv();
 
 static _Thread_local char dlerror_buf[128];
+#ifdef __x86_64__
+static struct CosmoTib *cosmoTib;
+#endif
 
 static const char *get_tmp_dir(void) {
   const char *tmpdir;
@@ -159,6 +163,7 @@ static int is_file_newer_than(const char *path, const char *other) {
 // on system five we sadly need this brutal trampoline
 // todo(jart): add tls trampoline to sigaction() handlers
 // todo(jart): morph binary to get tls from host c library
+// TODO(joshua): figure out stack variable issues, breaks passing structs by value and lots of parameters
 static long foreign_tramp(long a, long b, long c, long d, long e, long f) {
   long res;
   long (*func)(long, long, long, long, long, long);
@@ -179,6 +184,27 @@ static long foreign_tramp(long a, long b, long c, long d, long e, long f) {
   __set_tls(tib);
 #endif
   ALLOW_SIGNALS;
+  return res;
+}
+
+// TODO(joshua): restore signals?
+static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f) {
+  long res;
+  long (*func)(long, long, long, long, long, long);
+#ifdef __x86_64__
+  asm("\t movq %%r11,%0" : "=r"(func));
+#elif defined(__aarch64__)
+  asm("\t mov %0,x11" : "=r"(func));
+#else
+#error "unsupported architecture"
+#endif
+#ifdef __x86_64__
+  __set_tls(cosmoTib);
+#endif
+  res = func(a, b, c, d, e, f);
+#ifdef __x86_64__
+  __set_tls(foreign.tib);
+#endif
   return res;
 }
 
@@ -516,15 +542,15 @@ static uint8_t *movimm(uint8_t p[static 16], int reg, uint64_t val) {
   return p;
 }
 
-static void *foreign_thunk_sysv(void *func) {
+static void *foreign_thunk_sysv(void *tramp, void *func) {
   uint8_t *code, *p;
 #ifdef __x86_64__
   // movabs $func,%r11
-  // movabs $foreign_tramp,%r10
+  // movabs $tramp,%r10
   // jmp *%r10
   if (!(p = code = foreign_alloc(23))) return 0;  // 10 + 10 + 3 = 23
   p = movimm(p, 11, (uintptr_t)func);
-  p = movimm(p, 10, (uintptr_t)foreign_tramp);
+  p = movimm(p, 10, (uintptr_t)tramp);
   *p++ = 0x41;
   *p++ = 0xff;
   *p++ = 0xe2;
@@ -532,7 +558,7 @@ static void *foreign_thunk_sysv(void *func) {
   __jit_begin();
   if ((p = code = foreign_alloc(36))) {
     p = movimm(p, 11, (uintptr_t)func);
-    p = movimm(p, 10, (uintptr_t)foreign_tramp);
+    p = movimm(p, 10, (uintptr_t)tramp);
     *(uint32_t *)p = 0xd61f0140;  // br x10
     __clear_cache(code, p + 4);
   }
@@ -543,7 +569,7 @@ static void *foreign_thunk_sysv(void *func) {
   return code;
 }
 
-static void *foreign_thunk_nt(void *func) {
+static void *foreign_thunk_nt(void *tramp, void *func) {
   uint8_t *code;
   if (!(code = foreign_alloc(27))) return 0;
   // push %rbp
@@ -559,7 +585,7 @@ static void *foreign_thunk_nt(void *func) {
   // movabs $tramp,%r10
   code[14] = 0x49;
   code[15] = 0xba;
-  WRITE64LE(code + 16, (uintptr_t)__sysv2nt14);
+  WRITE64LE(code + 16, (uintptr_t)tramp);
   // jmp *%r10
   code[24] = 0x41;
   code[25] = 0xff;
@@ -683,10 +709,10 @@ static bool foreign_setup(void) {
   foreign.tib = __get_tls();
   __set_tls(cosmo_tib);
 #endif
-  foreign.dlopen = foreign_thunk_sysv(foreign.dlopen);
-  foreign.dlsym = foreign_thunk_sysv(foreign.dlsym);
-  foreign.dlclose = foreign_thunk_sysv(foreign.dlclose);
-  foreign.dlerror = foreign_thunk_sysv(foreign.dlerror);
+  foreign.dlopen = foreign_thunk_sysv(foreign_tramp, foreign.dlopen);
+  foreign.dlsym = foreign_thunk_sysv(foreign_tramp, foreign.dlsym);
+  foreign.dlclose = foreign_thunk_sysv(foreign_tramp, foreign.dlclose);
+  foreign.dlerror = foreign_thunk_sysv(foreign_tramp, foreign.dlerror);
   foreign.is_supported = true;
   return true;
 }
@@ -746,7 +772,7 @@ static void *dlsym_nt(void *handle, const char *name) {
   void *x64_abi_func;
   void *sysv_abi_func = 0;
   if ((x64_abi_func = GetProcAddress((uintptr_t)handle, name))) {
-    sysv_abi_func = foreign_thunk_nt(x64_abi_func);
+    sysv_abi_func = foreign_thunk_nt(__sysv2nt14, x64_abi_func);
   } else {
     dlerror_set("symbol not found: ");
     strlcat(dlerror_buf, name, sizeof(dlerror_buf));
@@ -857,14 +883,14 @@ void *cosmo_dlsym(void *handle, const char *name) {
     func = dlsym_nt(handle, name);
   } else if (IsXnuSilicon()) {
     if ((func = __syslib->__dlsym(handle, name))) {
-      func = foreign_thunk_sysv(func);
+      func = foreign_thunk_sysv(foreign_tramp, func);
     }
   } else if (IsXnu()) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
     func = 0;
   } else if (foreign_init()) {
     if ((func = foreign.dlsym(handle, name))) {
-      func = foreign_thunk_sysv(func);
+      func = foreign_thunk_sysv(foreign_tramp, func);
     }
   } else {
     func = 0;
@@ -898,7 +924,7 @@ int cosmo_dlclose(void *handle) {
 }
 
 /**
- * Returns string describing last dlopen/dlsym/dlclose error.
+ * Returns string describing last dlopen/dlsym/dlclose/dlfix/dlprep error.
  */
 char *cosmo_dlerror(void) {
   char *res;
@@ -914,4 +940,44 @@ char *cosmo_dlerror(void) {
   }
   STRACE("dlerror() → %#s", res);
   return res;
+}
+
+/**
+ * Make symbols obtained by a library specific method instead of dlsym
+ * mostly safe to call.
+ *
+ * @param address of obtained symbol
+ * @return address of safe symbol, or NULL w/ dlerror()
+ */
+void *cosmo_dlfix(void *symbol) {
+  void *func = 0;
+  if (IsWindows()) {
+    func = foreign_thunk_nt(__sysv2nt14, symbol);
+  } else if (IsXnu() && !IsXnuSilicon()) {
+    dlerror_set("dlopen() isn't supported on x86-64 MacOS");
+  } else {
+    func = foreign_thunk_sysv(foreign_tramp, symbol);
+  }
+  STRACE("dlfix(%p) → %p", symbol, func);
+  return func;
+}
+
+/**
+ * Make cosmo functions mostly safe to call via callback from shared
+ * libraries.
+ *
+ * @param address of cosmo function
+ * @return address of safe symbol, or NULL w/ dlerror()
+ */
+void *cosmo_dlprep(void *symbol) {
+  void *func = 0;
+  if (IsWindows()) {
+    func = foreign_thunk_nt(__nt2sysv, symbol);
+  } else if (IsXnu() && !IsXnuSilicon()) {
+    dlerror_set("dlopen() isn't supported on x86-64 MacOS");
+  } else {
+    func = foreign_thunk_sysv(reverse_foreign_tramp, symbol);
+  }
+  STRACE("dlprep(%p) → %p", symbol, func);
+  return func;
 }

@@ -23,6 +23,8 @@ void *cosmo_dlopen(const char *, int);
 void *cosmo_dlsym(void *, const char *);
 int cosmo_dlclose(void *);
 int cosmo_dl_iterate_phdr(int (*)(void *, size_t, void *), void *);
+void *cosmo_dlfix(void *);
+void *cosmo_dlprep(void *);
 #endif
 
 COSMOPOLITAN_C_END_
