@@ -159,15 +159,22 @@ static int is_file_newer_than(const char *path, const char *other) {
 // on system five we sadly need this brutal trampoline
 // todo(jart): add tls trampoline to sigaction() handlers
 // todo(jart): morph binary to get tls from host c library
-static long foreign_tramp(long a, long b, long c, long d, long e,
-                          long func(long, long, long, long, long)) {
+static long foreign_tramp(long a, long b, long c, long d, long e, long f) {
   long res;
+  long (*func)(long, long, long, long, long, long);
+#ifdef __x86_64__
+  asm("\t movq %%r11,%0" : "=r"(func));
+#elif defined(__aarch64__)
+  asm("\t mov %0,x11" : "=r"(func));
+#else
+#error "unsupported architecture"
+#endif
   BLOCK_SIGNALS;
 #ifdef __x86_64__
   struct CosmoTib *tib = __get_tls();
   __set_tls(foreign.tib);
 #endif
-  res = func(a, b, c, d, e);
+  res = func(a, b, c, d, e, f);
 #ifdef __x86_64__
   __set_tls(tib);
 #endif
@@ -512,11 +519,11 @@ static uint8_t *movimm(uint8_t p[static 16], int reg, uint64_t val) {
 static void *foreign_thunk_sysv(void *func) {
   uint8_t *code, *p;
 #ifdef __x86_64__
-  // movabs $func,%r9
+  // movabs $func,%r11
   // movabs $foreign_tramp,%r10
   // jmp *%r10
   if (!(p = code = foreign_alloc(23))) return 0;  // 10 + 10 + 3 = 23
-  p = movimm(p, 9, (uintptr_t)func);
+  p = movimm(p, 11, (uintptr_t)func);
   p = movimm(p, 10, (uintptr_t)foreign_tramp);
   *p++ = 0x41;
   *p++ = 0xff;
@@ -524,7 +531,7 @@ static void *foreign_thunk_sysv(void *func) {
 #elif defined(__aarch64__)
   __jit_begin();
   if ((p = code = foreign_alloc(36))) {
-    p = movimm(p, 5, (uintptr_t)func);
+    p = movimm(p, 11, (uintptr_t)func);
     p = movimm(p, 10, (uintptr_t)foreign_tramp);
     *(uint32_t *)p = 0xd61f0140;  // br x10
     __clear_cache(code, p + 4);
