@@ -1,5 +1,5 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
-│vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
+│ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
 │ Copyright 2022 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
@@ -71,7 +71,7 @@ static void _pthread_cancel_sig(int sig, siginfo_t *si, void *arg) {
   if (pt->pt_flags & PT_NOCANCEL) return;
   if (!atomic_load_explicit(&pt->pt_canceled, memory_order_acquire)) return;
 
-  // in asynchronous mode we'll just the exit asynchronously
+  // in asynchronous mode the asynchronous signal calls exit
   if (pt->pt_flags & PT_ASYNC) {
     sigaddset(&ctx->uc_sigmask, SIGTHR);
     pthread_sigmask(SIG_SETMASK, &ctx->uc_sigmask, 0);

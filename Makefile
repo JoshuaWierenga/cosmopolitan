@@ -1,5 +1,5 @@
 #-*-mode:makefile-gmake;indent-tabs-mode:t;tab-width:8;coding:utf-8-*-┐
-#───vi: set et ft=make ts=8 tw=8 fenc=utf-8 :vi───────────────────────┘
+#── vi: set et ft=make ts=8 sw=8 fenc=utf-8 :vi ──────────────────────┘
 #
 # SYNOPSIS
 #
@@ -208,26 +208,29 @@ include libc/log/BUILD.mk			# │
 include third_party/getopt/BUILD.mk		# │
 include third_party/bzip2/BUILD.mk		# │
 include dsp/core/BUILD.mk			# │
-include third_party/musl/BUILD.mk		# │
-include libc/x/BUILD.mk				# │
-include third_party/stb/BUILD.mk		# │
-include dsp/scale/BUILD.mk			# │
-include dsp/mpeg/BUILD.mk			# │
-include dsp/BUILD.mk				# │
 include third_party/zlib/gz/BUILD.mk		# │
 include third_party/intel/BUILD.mk		# │
 include third_party/aarch64/BUILD.mk		# │
 include libc/BUILD.mk				#─┘
 include libc/sock/BUILD.mk			#─┐
-include dsp/tty/BUILD.mk			# ├──ONLINE RUNTIME
-include libc/dns/BUILD.mk			# │  You can communicate with the network
-include net/http/BUILD.mk			# │
+include libc/dns/BUILD.mk			# ├──ONLINE RUNTIME
+include net/http/BUILD.mk			# │  You can communicate with the network
+include third_party/musl/BUILD.mk		# │
+include libc/x/BUILD.mk				# │
+include dsp/scale/BUILD.mk			# │
+include dsp/mpeg/BUILD.mk			# │
+include dsp/tty/BUILD.mk			# │
+include dsp/BUILD.mk				# │
+include third_party/stb/BUILD.mk		# │
 include third_party/mbedtls/BUILD.mk		# │
+include third_party/ncurses/BUILD.mk		# │
+include third_party/readline/BUILD.mk		# │
 include third_party/libcxx/BUILD.mk		# │
-include third_party/ggml/BUILD.mk		# │
-include third_party/radpajama/BUILD.mk		# │
+include third_party/pcre/BUILD.mk		# │
+include third_party/less/BUILD.mk		# │
 include net/https/BUILD.mk			# │
-include third_party/regex/BUILD.mk		#─┘
+include third_party/regex/BUILD.mk		# │
+include third_party/bash/BUILD.mk		#─┘
 include third_party/tidy/BUILD.mk
 include third_party/BUILD.mk
 include third_party/nsync/testing/BUILD.mk

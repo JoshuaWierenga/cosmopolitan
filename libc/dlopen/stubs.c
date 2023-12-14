@@ -1,5 +1,5 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
-│vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
+│ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
 │ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
@@ -18,12 +18,21 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/dlopen/dlfcn.h"
 
-char *dlerror(void) {
-  return "dlopen() isn't supported by cosmo";
-}
-
+/**
+ * Opens dynamic shared object using host platform libc.
+ *
+ * Cosmo's `dlopen()` function is a stub that always returns NULL. An
+ * alternative `cosmo_dlopen()` implementation is provided, which can
+ * help some users with tasks like talking to GPU and GUI libraries.
+ *
+ * @return null always
+ */
 void *dlopen(const char *, int) {
   return 0;
+}
+
+char *dlerror(void) {
+  return "dlopen() isn't supported by cosmo; try using cosmo_dlopen()";
 }
 
 void *dlsym(void *, const char *) {

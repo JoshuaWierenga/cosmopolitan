@@ -1,5 +1,5 @@
 /*-*- mode:c;indent-tabs-mode:t;c-basic-offset:8;tab-width:8;coding:utf-8   -*-│
-│vi: set et ft=c ts=8 tw=8 fenc=utf-8                                       :vi│
+│ vi: set noet ft=c ts=8 sw=8 fenc=utf-8                                   :vi │
 ╚──────────────────────────────────────────────────────────────────────────────╝
 │                                                                              │
 │  Musl Libc                                                                   │
@@ -115,7 +115,7 @@ atou(char **s)
 	return x;
 }
 
-static int
+int
 __getpwent_a(FILE *f, struct passwd *pw, char **line, size_t *size,
 	     struct passwd **res)
 {
@@ -161,7 +161,7 @@ __getpwent_a(FILE *f, struct passwd *pw, char **line, size_t *size,
 	return rv;
 }
 
-static int
+int
 __getpw_a(const char *name, uid_t uid, struct passwd *pw, char **buf,
 	  size_t *size, struct passwd **res)
 {

@@ -1,5 +1,5 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
-│vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
+│ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
 │ Copyright 2020 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
@@ -16,6 +16,7 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/assert.h"
 #include "libc/calls/calls.h"
 #include "libc/calls/internal.h"
 #include "libc/calls/state.internal.h"
@@ -49,13 +50,8 @@ static int close_impl(int fd) {
   }
 
   if (__isfdkind(fd, kFdZip)) {
-    if (!__vforked && _weaken(__zipos_close)) {
-      return _weaken(__zipos_close)(fd);
-    }
-    if (!IsWindows() && !IsMetal()) {
-      sys_close(fd);
-    }
-    return 0;
+    unassert(_weaken(__zipos_close));
+    return _weaken(__zipos_close)(fd);
   }
 
   if (!IsWindows() && !IsMetal()) {

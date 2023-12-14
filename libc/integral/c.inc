@@ -130,6 +130,9 @@ typedef __UINT64_TYPE__ uint64_t;
 typedef __INTMAX_TYPE__ intmax_t;
 typedef __UINTMAX_TYPE__ uintmax_t;
 
+#define __DEFINED_max_align_t
+typedef long double max_align_t;
+
 #ifdef _COSMO_SOURCE
 #if ((__GNUC__ + 0) * 100 + (__GNUC_MINOR__ + 0) >= 406 || \
      defined(__llvm__)) &&                                 \
@@ -470,12 +473,7 @@ typedef struct {
 #define autotype(x) typeof(x)
 #endif
 
-#if defined(__STRICT_ANSI__) || \
-    (!defined(__GNUC__) && !defined(__builtin_offsetof))
-#define offsetof(type, member) ((unsigned long)&((type *)0)->member)
-#else
 #define offsetof(type, member) __builtin_offsetof(type, member)
-#endif
 
 #ifdef _COSMO_SOURCE
 

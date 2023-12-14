@@ -1,5 +1,5 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
-│vi: set net ft=c ts=2 sts=2 sw=2 fenc=utf-8                                :vi│
+│ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
 │ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
@@ -47,26 +47,26 @@ __attribute__((__constructor__)) static void Child(int argc, char *argv[]) {
   if (argc >= 2 && !strcmp(argv[1], "Child")) {
     ASSERT_EQ(3, argc);
     EXPECT_STREQ(argv[2], GetProgramExecutableName());
-    exit(0);
+    exit(g_testlib_failed);
   }
 }
 
 TEST(GetProgramExecutableName, ofThisFile) {
   EXPECT_EQ('/', *self);
   EXPECT_TRUE(
-    endswith(self, "test/libc/calls/getprogramexecutablename_test.com"));
+      endswith(self, "test/libc/calls/getprogramexecutablename_test.com"));
 }
 
 TEST(GetProgramExecutableName, nullEnv) {
   SPAWN(fork);
-  execve(self, (char *[]){self, "Child", self, 0}, (char *[]){ 0 });
+  execve(self, (char *[]){self, "Child", self, 0}, (char *[]){0});
   abort();
   EXITS(0);
 }
 
 TEST(GetProramExecutableName, weirdArgv0NullEnv) {
   SPAWN(fork);
-  execve(self, (char *[]){"hello", "Child", self, 0}, (char *[]){ 0 });
+  execve(self, (char *[]){"hello", "Child", self, 0}, (char *[]){0});
   abort();
   EXITS(0);
 }
@@ -76,7 +76,7 @@ TEST(GetProgramExecutableName, weirdArgv0CosmoVar) {
   char buf[32 + PATH_MAX];
   stpcpy(stpcpy(buf, "COSMOPOLITAN_PROGRAM_EXECUTABLE="), self);
   SPAWN(fork);
-  execve(self, (char *[]){"hello", "Child", self, 0}, (char *[]){ buf, 0});
+  execve(self, (char *[]){"hello", "Child", self, 0}, (char *[]){buf, 0});
   abort();
   EXITS(0);
 }
@@ -85,7 +85,7 @@ TEST(GetProgramExecutableName, weirdArgv0WrongCosmoVar) {
   if (skipcosmotests) return;
   char *bad = "COSMOPOLITAN_PROGRAM_EXECUTABLE=hi";
   SPAWN(fork);
-  execve(self, (char *[]){"hello", "Child", self, 0}, (char *[]){ bad, 0});
+  execve(self, (char *[]){"hello", "Child", self, 0}, (char *[]){bad, 0});
   abort();
   EXITS(0);
 }
@@ -104,7 +104,7 @@ TEST(GetProgramExecutableName, movedSelf) {
   ASSERT_NE(NULL, getcwd(buf, BUFSIZ - 5));
   stpcpy(buf + strlen(buf), "/test");
   SPAWN(fork);
-  execve(buf, (char *[]){"hello", "Child", buf, 0}, (char *[]){ 0 });
+  execve(buf, (char *[]){"hello", "Child", buf, 0}, (char *[]){0});
   abort();
   EXITS(0);
 }
