@@ -164,13 +164,12 @@ static int is_file_newer_than(const char *path, const char *other) {
 // todo(jart): add tls trampoline to sigaction() handlers
 // todo(jart): morph binary to get tls from host c library
 // TODO(joshua): figure out stack variable issues, breaks passing structs by value and lots of parameters
-static long foreign_tramp(long a, long b, long c, long d, long e,
-                          long func(long, long, long, long, long, double,
-                                    double, double, double, double, double),
+static long foreign_tramp(long a, long b, long c, long d, long e, long f,
                           double A, double B, double C, double D, double E,
                           double F) {
   long res;
-  long (*func)(long, long, long, long, long, long);
+  long (*func)(long, long, long, long, long, long, 
+               double, double, double, double, double, double);
 #ifdef __x86_64__
   asm("\t movq %%r11,%0" : "=r"(func));
 #elif defined(__aarch64__)
@@ -183,7 +182,7 @@ static long foreign_tramp(long a, long b, long c, long d, long e,
   struct CosmoTib *tib = __get_tls();
   __set_tls(foreign.tib);
 #endif
-  res = func(a, b, c, d, e, A, B, C, D, E, F);
+  res = func(a, b, c, d, e, f, A, B, C, D, E, F);
 #ifdef __x86_64__
   __set_tls(tib);
 #endif
@@ -192,9 +191,12 @@ static long foreign_tramp(long a, long b, long c, long d, long e,
 }
 
 // TODO(joshua): restore signals?
-static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f) {
+static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f,
+                                  double A, double B, double C, double D, double E,
+                                  double F) {
   long res;
-  long (*func)(long, long, long, long, long, long);
+  long (*func)(long, long, long, long, long, long, 
+               double, double, double, double, double, double);
 #ifdef __x86_64__
   asm("\t movq %%r11,%0" : "=r"(func));
 #elif defined(__aarch64__)
@@ -205,7 +207,7 @@ static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f
 #ifdef __x86_64__
   __set_tls(cosmoTib);
 #endif
-  res = func(a, b, c, d, e, f);
+  res = func(a, b, c, d, e, f, A, B, C, D, E, F);
 #ifdef __x86_64__
   __set_tls(foreign.tib);
 #endif
