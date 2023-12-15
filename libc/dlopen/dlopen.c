@@ -133,6 +133,7 @@ long __nt2sysv();
 static _Thread_local char dlerror_buf[128];
 #ifdef __x86_64__
 static struct CosmoTib *cosmoTib;
+static sigset_t cosmoSigMask;
 #endif
 
 static const char *get_tmp_dir(void) {
@@ -163,34 +164,40 @@ static int is_file_newer_than(const char *path, const char *other) {
 // on system five we sadly need this brutal trampoline
 // todo(jart): add tls trampoline to sigaction() handlers
 // todo(jart): morph binary to get tls from host c library
-// TODO(joshua): figure out stack variable issues, breaks passing structs by value and lots of parameters
-static long foreign_tramp(long a, long b, long c, long d, long e, long f,
-                          double A, double B, double C, double D, double E,
-                          double F) {
-  long res;
-  long (*func)(long, long, long, long, long, long, 
-               double, double, double, double, double, double);
 #ifdef __x86_64__
-  asm("\t movq %%r11,%0" : "=r"(func));
-#elif defined(__aarch64__)
-  asm("\t mov %0,x11" : "=r"(func));
-#else
-#error "unsupported architecture"
-#endif
-  BLOCK_SIGNALS;
-#ifdef __x86_64__
-  struct CosmoTib *tib = __get_tls();
+extern void foreign_tramp(void);
+
+void foreign_tramp_setup(void) {
+  cosmoSigMask = __sig_block();
+  cosmoTib = __get_tls();
   __set_tls(foreign.tib);
-#endif
-  res = func(a, b, c, d, e, f, A, B, C, D, E, F);
-#ifdef __x86_64__
-  __set_tls(tib);
-#endif
+}
+
+void foreign_tramp_restore(void) {
+  __set_tls(cosmoTib);
+  __sig_unblock(cosmoSigMask);
+}
+#elif defined(__aarch64__)
+// TODO(joshua): rewrite in assembly to solve stack issues
+static long foreign_tramp(long a, long b, long c, long d, long e, long f,
+                          long g, long h, long i,
+                          double A, double B, double C, double D, double E,
+                          double F, double G, double H) {
+  long res;
+  long (*func)(long, long, long, long, long, long, long, long, long,
+               double, double, double, double, double, double, double, double);
+  asm("\t mov %0,x11" : "=r"(func));
+  BLOCK_SIGNALS;
+  res = func(a, b, c, d, e, f, g, h, i, A, B, C, D, E, F, G, H);
   ALLOW_SIGNALS;
   return res;
 }
+#else
+#error "unsupported architecture"
+#endif
 
 // TODO(joshua): restore signals?
+// TODO(joshua): rewrite in assembly twice to solve stack issues
 static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f,
                                   double A, double B, double C, double D, double E,
                                   double F) {
@@ -431,6 +438,7 @@ static dontinline void elf_exec(const char *file, char **envp) {
   STRACE("running dlopen importer %p...", interp.entry);
 
   // XXX: ideally we should set most registers to zero
+  // TODO(joshua) fix ftrace crash at this point, I tried ftrace_enabled but no change
 #ifdef __x86_64__
   struct ps_strings {
     char **argv;
