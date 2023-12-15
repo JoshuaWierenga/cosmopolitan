@@ -23,13 +23,13 @@ foreign_tramp:
   # TODO(joshua): Check if ymm and zmm are used
   sub    $144, %rsp
   movdqa %xmm0, (%rsp)     # floating point argument 1
-  movdqa %xmm1, -16(%rsp)  # floating point argument 2
-  movdqa %xmm2, -32(%rsp)  # floating point argument 3
-  movdqa %xmm3, -48(%rsp)  # floating point argument 4
-  movdqa %xmm4, -64(%rsp)  # floating point argument 5
-  movdqa %xmm5, -80(%rsp)  # floating point argument 6
-  movdqa %xmm6, -96(%rsp)  # floating point argument 7
-  movdqa %xmm7, -112(%rsp) # floating point argument 8
+  movdqa %xmm1, 16(%rsp)  # floating point argument 2
+  movdqa %xmm2, 32(%rsp)  # floating point argument 3
+  movdqa %xmm3, 48(%rsp)  # floating point argument 4
+  movdqa %xmm4, 64(%rsp)  # floating point argument 5
+  movdqa %xmm5, 80(%rsp)  # floating point argument 6
+  movdqa %xmm6, 96(%rsp)  # floating point argument 7
+  movdqa %xmm7, 112(%rsp) # floating point argument 8
   # TODO: Move malloc/free into setup and restore functions?
   # TODO: Avoid continual malloc/free by mallocing once and reusing?
   # 3 pointer array: %rbx, %rbp(with original %rsp in it), return pointer to caller from stack
@@ -41,13 +41,13 @@ foreign_tramp:
   movq   %rax, %rbx
   movq   $foreign_tramp_setup, %r10
   call   *%r10
-  movdqa -112(%rsp), %xmm7
-  movdqa -96(%rsp), %xmm6
-  movdqa -80(%rsp), %xmm5
-  movdqa -64(%rsp), %xmm4
-  movdqa -48(%rsp), %xmm3
-  movdqa -32(%rsp), %xmm2
-  movdqa -16(%rsp), %xmm1
+  movdqa 112(%rsp), %xmm7
+  movdqa 96(%rsp), %xmm6
+  movdqa 80(%rsp), %xmm5
+  movdqa 64(%rsp), %xmm4
+  movdqa 48(%rsp), %xmm3
+  movdqa 32(%rsp), %xmm2
+  movdqa 16(%rsp), %xmm1
   movdqa (%rsp), %xmm0
   add    $144, %rsp
   popq   %r9
@@ -76,18 +76,18 @@ foreign_tramp:
   sub    $64, %rsp
   # TODO(joshua): Check if ymm and zmm are used
   movdqa %xmm0, (%rsp)     # floating point return 1
-  movdqa %xmm1, -16(%rsp)  # floating point return 2
-  fstpt  -32(%rsp)  # long double return 1
-  fstpt  -48(%rsp)  # long double return 2
+  movdqa %xmm1, 16(%rsp)  # floating point return 2
+  fstpt  32(%rsp)  # long double return 1
+  fstpt  48(%rsp)  # long double return 2
   movq   $foreign_tramp_restore, %r10
   call   *%r10
   movq   $free, %r10
   mov    %rbx, %rdi
   movq   (%rdi), %rbx
   call   *%r10
-  fldt   -48(%rsp)
-  fldt   -32(%rsp)
-  movdqa -16(%rsp), %xmm1
+  fldt   48(%rsp)
+  fldt   32(%rsp)
+  movdqa 16(%rsp), %xmm1
   movdqa (%rsp), %xmm0
   add    $64, %rsp
   popq   %rdx

@@ -438,7 +438,7 @@ static dontinline void elf_exec(const char *file, char **envp) {
   STRACE("running dlopen importer %p...", interp.entry);
 
   // XXX: ideally we should set most registers to zero
-  // TODO(joshua) fix ftrace crash at this point, I tried ftrace_enabled but no change
+  // TODO(joshua): fix ftrace crash at this point, I tried ftrace_enabled but no change
 #ifdef __x86_64__
   struct ps_strings {
     char **argv;
