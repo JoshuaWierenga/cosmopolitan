@@ -127,7 +127,6 @@ static struct {
   jmp_buf jb;
 } foreign;
 
-long __sysv2nt14();
 long __nt2sysv();
 
 static _Thread_local char dlerror_buf[128];
@@ -165,7 +164,8 @@ static int is_file_newer_than(const char *path, const char *other) {
 // todo(jart): add tls trampoline to sigaction() handlers
 // todo(jart): morph binary to get tls from host c library
 #ifdef __x86_64__
-extern void foreign_tramp(void);
+extern void foreign_tramp_nt(void);
+extern void foreign_tramp_sysv(void);
 
 void foreign_tramp_setup(void) {
   cosmoSigMask = __sig_block();
@@ -178,11 +178,14 @@ void foreign_tramp_restore(void) {
   __sig_unblock(cosmoSigMask);
 }
 #elif defined(__aarch64__)
+// Just needs to exist, foreign_thunk already emits x86 assembly which won't run
+void foreign_tramp_nt(void) {}
+
 // TODO(joshua): rewrite in assembly to solve stack issues
-static long foreign_tramp(long a, long b, long c, long d, long e, long f,
-                          long g, long h, long i,
-                          double A, double B, double C, double D, double E,
-                          double F, double G, double H) {
+static long foreign_tramp_sysv(long a, long b, long c, long d, long e, long f,
+                               long g, long h, long i,
+                               double A, double B, double C, double D, double E,
+                               double F, double G, double H) {
   long res;
   long (*func)(long, long, long, long, long, long, long, long, long,
                double, double, double, double, double, double, double, double);
@@ -556,7 +559,7 @@ static uint8_t *movimm(uint8_t p[static 16], int reg, uint64_t val) {
   return p;
 }
 
-static void *foreign_thunk_sysv(void *tramp, void *func) {
+static void *foreign_thunk(void *tramp, void *func) {
   uint8_t *code, *p;
 #ifdef __x86_64__
   // movabs $func,%r11
@@ -580,30 +583,6 @@ static void *foreign_thunk_sysv(void *tramp, void *func) {
 #else
 #error "unsupported architecture"
 #endif
-  return code;
-}
-
-static void *foreign_thunk_nt(void *tramp, void *func) {
-  uint8_t *code;
-  if (!(code = foreign_alloc(27))) return 0;
-  // push %rbp
-  code[0] = 0x55;
-  // mov %rsp,%rbp
-  code[1] = 0x48;
-  code[2] = 0x89;
-  code[3] = 0xe5;
-  // movabs $func,%rax
-  code[4] = 0x48;
-  code[5] = 0xb8;
-  WRITE64LE(code + 6, (uintptr_t)func);
-  // movabs $tramp,%r10
-  code[14] = 0x49;
-  code[15] = 0xba;
-  WRITE64LE(code + 16, (uintptr_t)tramp);
-  // jmp *%r10
-  code[24] = 0x41;
-  code[25] = 0xff;
-  code[26] = 0xe2;
   return code;
 }
 
@@ -723,10 +702,10 @@ static bool foreign_setup(void) {
   foreign.tib = __get_tls();
   __set_tls(cosmo_tib);
 #endif
-  foreign.dlopen = foreign_thunk_sysv(foreign_tramp, foreign.dlopen);
-  foreign.dlsym = foreign_thunk_sysv(foreign_tramp, foreign.dlsym);
-  foreign.dlclose = foreign_thunk_sysv(foreign_tramp, foreign.dlclose);
-  foreign.dlerror = foreign_thunk_sysv(foreign_tramp, foreign.dlerror);
+  foreign.dlopen = foreign_thunk(foreign_tramp_sysv, foreign.dlopen);
+  foreign.dlsym = foreign_thunk(foreign_tramp_sysv, foreign.dlsym);
+  foreign.dlclose = foreign_thunk(foreign_tramp_sysv, foreign.dlclose);
+  foreign.dlerror = foreign_thunk(foreign_tramp_sysv, foreign.dlerror);
   foreign.is_supported = true;
   return true;
 }
@@ -786,7 +765,7 @@ static void *dlsym_nt(void *handle, const char *name) {
   void *x64_abi_func;
   void *sysv_abi_func = 0;
   if ((x64_abi_func = GetProcAddress((uintptr_t)handle, name))) {
-    sysv_abi_func = foreign_thunk_nt(__sysv2nt14, x64_abi_func);
+    sysv_abi_func = foreign_thunk(foreign_tramp_nt, x64_abi_func);
   } else {
     dlerror_set("symbol not found: ");
     strlcat(dlerror_buf, name, sizeof(dlerror_buf));
@@ -892,14 +871,14 @@ void *cosmo_dlsym(void *handle, const char *name) {
     func = dlsym_nt(handle, name);
   } else if (IsXnuSilicon()) {
     if ((func = __syslib->__dlsym(handle, name))) {
-      func = foreign_thunk_sysv(foreign_tramp, func);
+      func = foreign_thunk(foreign_tramp_sysv, func);
     }
   } else if (IsXnu()) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
     func = 0;
   } else if (foreign_init()) {
     if ((func = foreign.dlsym(handle, name))) {
-      func = foreign_thunk_sysv(foreign_tramp, func);
+      func = foreign_thunk(foreign_tramp_sysv, func);
     }
   } else {
     func = 0;
@@ -961,11 +940,11 @@ char *cosmo_dlerror(void) {
 void *cosmo_dlfix(void *symbol) {
   void *func = 0;
   if (IsWindows()) {
-    func = foreign_thunk_nt(__sysv2nt14, symbol);
+    func = foreign_thunk(foreign_tramp_nt, symbol);
   } else if (IsXnu() && !IsXnuSilicon()) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
   } else {
-    func = foreign_thunk_sysv(foreign_tramp, symbol);
+    func = foreign_thunk(foreign_tramp_sysv, symbol);
   }
   STRACE("dlfix(%p) → %p", symbol, func);
   return func;
@@ -981,11 +960,11 @@ void *cosmo_dlfix(void *symbol) {
 void *cosmo_dlprep(void *symbol) {
   void *func = 0;
   if (IsWindows()) {
-    func = foreign_thunk_nt(__nt2sysv, symbol);
+    func = foreign_thunk(__nt2sysv, symbol);
   } else if (IsXnu() && !IsXnuSilicon()) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
   } else {
-    func = foreign_thunk_sysv(reverse_foreign_tramp, symbol);
+    func = foreign_thunk(reverse_foreign_tramp, symbol);
   }
   STRACE("dlprep(%p) → %p", symbol, func);
   return func;

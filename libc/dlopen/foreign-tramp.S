@@ -1,18 +1,88 @@
 #include "libc/macros.internal.h"
 .privileged
 
+
+#ifdef __x86_64__
+// Wrapper for dlsym loaded function to ensure all passed
+// parameters actually make it.
+//
+// @params all x86_64 sysv integer parameter registers and
+// 4 float/vector registers + any on stack
+// This wrapper is unlikely to work for structs passed by value
+// @param r11 is pointer to dlsym loaded function
+// @return dlsym loaded function's return value in rax or xmm0
+foreign_tramp_nt:
+  popq   %r10 # return pointer
+  pushq  %r9  # integer/pointer argument 6
+  pushq  %r8  # integer/pointer argument 5
+  pushq  %r10
+  pushq  %rbp
+  mov    %rsp, %rbp
+  pushq  %r11 # windows function pointer
+  pushq  %rdi # integer/pointer argument 1
+  pushq  %rsi # integer/pointer argument 2
+  pushq  %rdx # integer/pointer argument 3
+  pushq  %rcx # integer/pointer argument 4
+  sub    $72, %rsp
+  # TODO: Support vectorcall
+  movdqa %xmm0, (%rsp)   # floating point argument 1
+  movdqa %xmm1, 16(%rsp) # floating point argument 2
+  movdqa %xmm2, 32(%rsp) # floating point argument 3
+  movdqa %xmm3, 48(%rsp) # floating point argument 4
+  # 3 pointer array: %rbx, %rbp, return pointer to caller from stack
+  movq   $malloc, %r10
+  movq   $24, %rdi
+  call   *%r10
+  movq   %rbx, (%rax)
+  movq   %rbp, 8(%rax)
+  movq   %rax, %rbx
+  movdqa 48(%rsp), %xmm3
+  movdqa 32(%rsp), %xmm2
+  movdqa 16(%rsp), %xmm1
+  movdqa (%rsp), %xmm0
+  add    $72, %rsp
+  popq   %r9
+  popq   %r8
+  popq   %rdx
+  popq   %rcx
+  popq   %r11
+  popq   %rbp
+  popq   16(%rbx)
+
+  sub    $32, %rsp
+  call   *%r11
+  add    $32, %rsp
+  popq   %r8
+  popq   %r9
+
+  pushq  16(%rbx)
+  pushq  %rbp
+  movq   8(%rbx), %rbp
+  pushq  %rax # integer/pointer return
+  sub    $24, %rsp
+  movdqa %xmm0, (%rsp) # floating point return
+  movq   $free, %r10
+  mov    %rbx, %rdi
+  movq   (%rdi), %rbx
+  call   *%r10
+  movdqa (%rsp), %xmm0
+  add    $24, %rsp
+  popq   %rax
+  popq   %rbp
+  ret
+
+	.endfn	foreign_tramp_nt,globl,hidden
+
 // Wrapper for dlsym loaded function to block signals, switch tls
 // and ensure all passed parameters actually make it.
 //
 // @params all x86_64 sysv parameter registers + any on stack
 // @param r11  is pointer to dlsym loaded function
 // @return dlsym loaded function's return value
-
-#ifdef __x86_64__
-foreign_tramp:
-  pushq  %r11
+foreign_tramp_sysv:
   pushq  %rbp
   mov    %rsp, %rbp
+  pushq  %r11
   pushq  %rax # vararg vector register count
   pushq  %rdi # integer/pointer argument 1
   pushq  %rsi # integer/pointer argument 2
@@ -21,8 +91,8 @@ foreign_tramp:
   pushq  %r8  # integer/pointer argument 5
   pushq  %r9  # integer/pointer argument 6
   # TODO(joshua): Check if ymm and zmm are used
-  sub    $144, %rsp
-  movdqa %xmm0, (%rsp)     # floating point argument 1
+  sub    $128, %rsp
+  movdqa %xmm0, (%rsp)    # floating point argument 1
   movdqa %xmm1, 16(%rsp)  # floating point argument 2
   movdqa %xmm2, 32(%rsp)  # floating point argument 3
   movdqa %xmm3, 48(%rsp)  # floating point argument 4
@@ -49,7 +119,7 @@ foreign_tramp:
   movdqa 32(%rsp), %xmm2
   movdqa 16(%rsp), %xmm1
   movdqa (%rsp), %xmm0
-  add    $144, %rsp
+  add    $128, %rsp
   popq   %r9
   popq   %r8
   popq   %rcx
@@ -57,8 +127,8 @@ foreign_tramp:
   popq   %rsi
   popq   %rdi
   popq   %rax
-  popq   %rbp
   popq   %r11
+  popq   %rbp
   popq   16(%rbx)
 
   # At this point everything is the same as it was right before this function
@@ -71,14 +141,14 @@ foreign_tramp:
   movq   8(%rbx), %rbp
   # TODO(joshua): Confirm that c/c++ can actually use the second return registers in each case
   # I just followed Figure 3.4 from the sysv x86_64 abi
-  pushq  %rax  # integer/pointer return 1
-  pushq  %rdx  # integer/pointer return 2
+  pushq  %rax # integer/pointer return 1
+  pushq  %rdx # integer/pointer return 2
   sub    $64, %rsp
   # TODO(joshua): Check if ymm and zmm are used
-  movdqa %xmm0, (%rsp)     # floating point return 1
-  movdqa %xmm1, 16(%rsp)  # floating point return 2
-  fstpt  32(%rsp)  # long double return 1
-  fstpt  48(%rsp)  # long double return 2
+  movdqa %xmm0, (%rsp)   # floating point return 1
+  movdqa %xmm1, 16(%rsp) # floating point return 2
+  fstpt  32(%rsp) # long double return 1
+  fstpt  48(%rsp) # long double return 2
   movq   $foreign_tramp_restore, %r10
   call   *%r10
   movq   $free, %r10
@@ -95,5 +165,5 @@ foreign_tramp:
   popq   %rbp
   ret
 
-	.endfn	foreign_tramp,globl,hidden
+	.endfn	foreign_tramp_sysv,globl,hidden
 #endif /* __x86_64__ */
