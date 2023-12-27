@@ -79,6 +79,8 @@ int main(int argc, char *argv[]) {
       List("/proc");
       putchar('\n');
       List("/proc/self");
+      putchar('\n');
+      List("/proc/self/exe");
     } else {
       List(".");
     }

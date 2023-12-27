@@ -19,6 +19,7 @@
 #include "libc/calls/metalfile.internal.h"
 #include "libc/calls/struct/stat.h"
 #include "libc/calls/struct/stat.internal.h"
+#include "libc/intrin/weaken.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/s.h"
@@ -27,6 +28,16 @@
 int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
   if (dirfd != AT_FDCWD) return enosys();
   if (!path) return efault();
+  if (strcmp(path, APE_COM_NAME) == 0) {
+    if (!_weaken(__ape_com_size)) return eopnotsupp();
+    bzero(st, sizeof(*st));
+    st->st_nlink = 1;
+    st->st_size = __ape_com_size;
+    st->st_mode = S_IFREG | 0600;
+    st->st_blksize = 1;
+    return 0;
+  }
+  if (!_weaken(__metal_dirs)) return eopnotsupp();
   for (size_t i = 0; __metal_dirs[i].path; ++i) {
     if (strcmp(path, __metal_dirs[i].path) != 0) continue;
     bzero(st, sizeof(*st));
