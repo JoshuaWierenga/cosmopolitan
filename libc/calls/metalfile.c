@@ -60,7 +60,7 @@ textstartup void InitializeMetalFile(void) {
   size_t size;
   struct DirectMap dm;
   if (IsMetal()) {
-      if ( _weaken(__ape_com_sectors)) {
+    if ( _weaken(__ape_com_sectors)) {
       /*
        * Copy out a pristine image of the program — before the program might
        * decide to modify its own .data section.
@@ -116,8 +116,8 @@ textstartup void InitializeMetalFile(void) {
 
     // / -> /proc, /zip
     __metal_dirs[0] = (struct MetalDirInfo){strs, 0, {
-        {1, 2, sizeof(*__metal_dirs), DT_LNK},
-        {2, 3, sizeof(*__metal_dirs), DT_DIR}, {0, -1}
+        {2, 3, sizeof(*__metal_dirs), DT_DIR},
+        {1, 2, sizeof(*__metal_dirs), DT_LNK}, {0, -1}
     }};
     memcpy(__metal_dirs[0].ents[0].d_name, strs + 7, sizeof("proc"));
     memcpy(__metal_dirs[0].ents[1].d_name, strs + 2, sizeof("zip"));
