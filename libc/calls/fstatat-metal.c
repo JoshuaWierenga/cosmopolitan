@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2021 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,45 +16,23 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/internal.h"
-#include "libc/calls/metalfile.internal.h"
 #include "libc/calls/struct/stat.h"
+#include "libc/calls/struct/stat.internal.h"
 #include "libc/str/str.h"
+#include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 
-int sys_fstat_metal(int fd, struct stat *st) {
-  struct MetalFile *file;
-  if (fd < 0 || fd >= g_fds.n) return einval();
-  switch (g_fds.p[fd].kind) {
-    case kFdSerial:
-      bzero(st, sizeof(*st));
-      st->st_dev = g_fds.p[fd].handle;
-      st->st_rdev = g_fds.p[fd].handle;
-      st->st_nlink = 1;
-      st->st_mode = S_IFCHR | 0600;
-      st->st_blksize = 1;
-      return 0;
-    case kFdFile:
-      file = (struct MetalFile *)g_fds.p[fd].handle;
-      switch (file->type) {
-        case kMetalApe:
-          bzero(st, sizeof(*st));
-          st->st_nlink = 1;
-          st->st_size = file->size;
-          st->st_mode = S_IFREG | 0600;
-          st->st_blksize = 1;
-          return 0;
-        case kMetalRoot:
-          bzero(st, sizeof(*st));
-          st->st_nlink = 2;
-          st->st_mode = S_IFDIR | 0600;
-          st->st_blksize = 1;
-          return 0;
-        default:
-          return ebadf();
-      }
-    default:
-      return ebadf();
+int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
+  if (dirfd != AT_FDCWD) return enosys();
+  if (!path) return efault();
+  if (strcmp(path, "/") == 0) {
+    bzero(st, sizeof(*st));
+    st->st_nlink = 2;
+    st->st_mode = S_IFDIR | 0600;
+    st->st_blksize = 1;
+    return 0;
+  } else {
+    return enoent();
   }
 }

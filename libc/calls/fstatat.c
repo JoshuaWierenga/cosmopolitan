@@ -94,6 +94,8 @@ int fstatat(int dirfd, const char *path, struct stat *st, int flags) {
     rc = sys_fstatat(dirfd, path, st, flags);
   } else if (IsWindows()) {
     rc = sys_fstatat_nt(dirfd, path, st, flags);
+  } else if (IsMetal()) {
+    rc = sys_fstatat_metal(dirfd, path, st, flags);
   } else {
     rc = enosys();
   }

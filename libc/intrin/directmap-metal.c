@@ -62,6 +62,7 @@ struct DirectMap sys_mmap_metal(void *vaddr, size_t size, int prot, int flags,
     sfd = &g_fds.p[fd];
     if (sfd->kind != kFdFile) return bad_mmap();
     file = (struct MetalFile *)sfd->handle;
+    if (file->type != kMetalApe) return bad_mmap();
     /* TODO: allow mapping partial page at end of file, if file size not
      * multiple of page size */
     if (off > file->size || size > file->size - off) return bad_mmap();

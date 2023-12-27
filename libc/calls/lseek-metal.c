@@ -28,6 +28,7 @@ int64_t sys_lseek_metal(struct Fd *fd, int64_t offset, int whence) {
   switch (fd->kind) {
     case kFdFile:
       file = (struct MetalFile *)fd->handle;
+      if (file->type != kMetalApe) return ebadf();
       switch (whence) {
         case SEEK_SET:
           new_pos = offset;

@@ -73,7 +73,11 @@ void List(const char *path) {
 int main(int argc, char *argv[]) {
   int i;
   if (argc == 1) {
-    List(".");
+    if (IsMetal()) {
+      List("/");
+    } else {
+      List(".");
+    }
   } else {
     for (i = 1; i < argc; ++i) {
       List(argv[i]);

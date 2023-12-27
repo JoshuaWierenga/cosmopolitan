@@ -3,7 +3,11 @@
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 COSMOPOLITAN_C_START_
 
+#define kMetalApe   0
+#define kMetalRoot  1
+
 struct MetalFile {
+  char type;
   char *base;
   size_t size;
   size_t pos;

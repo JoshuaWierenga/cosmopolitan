@@ -19,6 +19,7 @@
 #include "libc/assert.h"
 #include "libc/calls/calls.h"
 #include "libc/calls/internal.h"
+#include "libc/calls/metalfile.internal.h"
 #include "libc/calls/sig.internal.h"
 #include "libc/calls/struct/dirent.h"
 #include "libc/calls/struct/stat.h"
@@ -508,13 +509,71 @@ static struct dirent *readdir_unix(DIR *dir) {
   return ent;
 }
 
+static struct dirent *bad_readdir(void) {
+  ebadf();
+  return 0;
+}
+
+static struct dirent *readdir_metal(DIR *dir) {
+  struct Fd *sfd;
+  struct MetalFile *file;
+  struct dirent *ent = 0;
+  sfd = &g_fds.p[dir->fd];
+  if (sfd->kind != kFdFile) return bad_readdir();
+  file = (struct MetalFile *)sfd->handle;
+  if (file->type != kMetalRoot) return bad_readdir();
+  if (!dir->tell) {
+    ent = &dir->ent;
+    ent->d_off = dir->tell;
+    ent->d_ino = 0;
+    ent->d_type = DT_DIR;
+    ent->d_name[0] = '.';
+    ent->d_name[1] = 0;
+  } else if (dir->tell == 1) {
+    ent = &dir->ent;
+    ent->d_off = dir->tell;
+    ent->d_ino = 0;
+    ent->d_type = DT_DIR;
+    ent->d_name[0] = '.';
+    ent->d_name[1] = '.';
+    ent->d_name[2] = 0;
+  } else if (dir->tell == 2) {
+    ent = &dir->ent;
+    ent->d_off = dir->tell;
+    ent->d_ino = 1;
+    ent->d_type = DT_LNK;
+    ent->d_name[0] = 'z';
+    ent->d_name[1] = 'i';
+    ent->d_name[2] = 'p';
+    ent->d_name[3] = 0;
+  } else if (dir->tell == 3) {
+    ent = &dir->ent;
+    ent->d_off = dir->tell;
+    ent->d_ino = 2;
+    ent->d_type = DT_DIR;
+    ent->d_name[0] = 'p';
+    ent->d_name[1] = 'r';
+    ent->d_name[2] = 'o';
+    ent->d_name[3] = 'c';
+    ent->d_name[4] = 0;
+  } else {
+    ent = 0;
+  }
+  dir->tell++;
+  return ent;
+}
+
 static struct dirent *readdir_impl(DIR *dir) {
   if (dir->iszip) {
     return readdir_zipos(dir);
   } else if (IsWindows()) {
     return readdir_nt(dir);
-  } else {
+  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     return readdir_unix(dir);
+  } else if (IsMetal()) {
+    return readdir_metal(dir);
+  } else {
+    return bad_readdir();
   }
 }
 

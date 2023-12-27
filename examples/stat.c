@@ -90,7 +90,11 @@ int main(int argc, char *argv[]) {
   size_t i;
   struct stat st;
   if (argc <= 1) {
-    PrintFileMetadata(".", &st);
+    if (IsMetal()) {
+      PrintFileMetadata("/", &st);
+    } else {
+      PrintFileMetadata(".", &st);
+    }
     return 0;
   }
   for (i = 1; i < argc; ++i) {
