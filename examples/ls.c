@@ -75,6 +75,10 @@ int main(int argc, char *argv[]) {
   if (argc == 1) {
     if (IsMetal()) {
       List("/");
+      putchar('\n');
+      List("/proc");
+      putchar('\n');
+      List("/proc/self");
     } else {
       List(".");
     }

@@ -38,6 +38,7 @@
 #include "libc/runtime/runtime.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/at.h"
+#include "libc/sysv/consts/dt.h"
 #include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/prot.h"
 #include "libc/sysv/errfuns.h"
@@ -53,28 +54,90 @@ __static_yoink("_init_metalfile");
 void *__ape_com_base;
 size_t __ape_com_size = 0;
 
+struct MetalDirInfo *__metal_dirs;
+
 textstartup void InitializeMetalFile(void) {
-  if (IsMetal() && _weaken(__ape_com_sectors)) {
-    /*
-     * Copy out a pristine image of the program — before the program might
-     * decide to modify its own .data section.
-     *
-     * This code is included if a symbol "file:/proc/self/exe" is defined
-     * (see libc/calls/metalfile.internal.h & libc/calls/metalfile_init.S).
-     * The zipos code will automatically arrange to do this.  Alternatively,
-     * user code can __static_yoink this symbol.
-     */
-    size_t size = ROUNDUP((size_t)__ape_com_sectors * 512, 4096);
-    void *copied_base;
-    struct DirectMap dm;
+  size_t size;
+  struct DirectMap dm;
+  if (IsMetal()) {
+      if ( _weaken(__ape_com_sectors)) {
+      /*
+       * Copy out a pristine image of the program — before the program might
+       * decide to modify its own .data section.
+       *
+       * This code is included if a symbol "file:/proc/self/exe" is defined
+       * (see libc/calls/metalfile.internal.h & libc/calls/metalfile_init.S).
+       * The zipos code will automatically arrange to do this.  Alternatively,
+       * user code can __static_yoink this symbol.
+       */
+      size = ROUNDUP((size_t)__ape_com_sectors * 512, 4096);
+      void *copied_base;
+      dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
+                          MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
+      copied_base = dm.addr;
+      npassert(copied_base != (void *)-1);
+      memcpy(copied_base, (void *)(BANE + IMAGE_BASE_PHYSICAL), size);
+      __ape_com_base = copied_base;
+      __ape_com_size = size;
+      KINFOF("%s @ %p,+%#zx", APE_COM_NAME, copied_base, size);
+    }
+
+    size = 4 * sizeof(*__metal_dirs) + sizeof("/") + sizeof("zip") +
+      sizeof("/proc") + sizeof("/proc/self");
     dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
                         MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
-    copied_base = dm.addr;
-    npassert(copied_base != (void *)-1);
-    memcpy(copied_base, (void *)(BANE + IMAGE_BASE_PHYSICAL), size);
-    __ape_com_base = copied_base;
-    __ape_com_size = size;
-    KINFOF("%s @ %p,+%#zx", APE_COM_NAME, copied_base, size);
+    __metal_dirs = dm.addr;
+    npassert(__metal_dirs != (void *)-1);
+
+    char *strs = dm.addr + 4 * sizeof(*__metal_dirs);
+    strs[0] = '/';
+    strs[1] = 0;
+    strs[2] = 'z';
+    strs[3] = 'i';
+    strs[4] = 'p';
+    strs[5] = 0;
+    strs[6] = '/';
+    strs[7] = 'p';
+    strs[8] = 'r';
+    strs[9] = 'o';
+    strs[10] = 'c';
+    strs[11] = 0;
+    strs[12] = '/';
+    strs[13] = 'p';
+    strs[14] = 'r';
+    strs[15] = 'o';
+    strs[16] = 'c';
+    strs[17] = '/';
+    strs[18] = 's';
+    strs[19] = 'e';
+    strs[20] = 'l';
+    strs[21] = 'f';
+    strs[22] = 0;
+
+    // / -> /proc, /zip
+    __metal_dirs[0] = (struct MetalDirInfo){strs, 0, {
+        {1, 2, sizeof(*__metal_dirs), DT_LNK},
+        {2, 3, sizeof(*__metal_dirs), DT_DIR}, {0, -1}
+    }};
+    memcpy(__metal_dirs[0].ents[0].d_name, strs + 7, sizeof("proc"));
+    memcpy(__metal_dirs[0].ents[1].d_name, strs + 2, sizeof("zip"));
+
+    // /proc -> /proc/self
+    __metal_dirs[1] = (struct MetalDirInfo){strs + 6, 2, {
+        {3, 2, sizeof(*__metal_dirs), DT_DIR}, {0, -1}
+    }};
+    memcpy(__metal_dirs[1].ents[0].d_name, strs + 18, sizeof("self"));
+
+    // /proc/self -> /self/proc/exec
+    __metal_dirs[2] = (struct MetalDirInfo){strs + 12, 3, {
+        {4, 2, sizeof(*__metal_dirs), DT_REG}, {0, -1}
+    }};
+    __metal_dirs[2].ents[0].d_name[0] = 'e';
+    __metal_dirs[2].ents[0].d_name[1] = 'x';
+    __metal_dirs[2].ents[0].d_name[2] = 'e';
+    __metal_dirs[2].ents[0].d_name[3] = 0;
+
+    __metal_dirs[3] = (struct MetalDirInfo){0};
   }
 }
 

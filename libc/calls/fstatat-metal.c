@@ -16,6 +16,7 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/calls/metalfile.internal.h"
 #include "libc/calls/struct/stat.h"
 #include "libc/calls/struct/stat.internal.h"
 #include "libc/str/str.h"
@@ -26,13 +27,14 @@
 int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
   if (dirfd != AT_FDCWD) return enosys();
   if (!path) return efault();
-  if (strcmp(path, "/") == 0) {
+  for (size_t i = 0; __metal_dirs[i].path; ++i) {
+    if (strcmp(path, __metal_dirs[i].path) != 0) continue;
     bzero(st, sizeof(*st));
+    st->st_ino = __metal_dirs[i].ino;
     st->st_nlink = 2;
     st->st_mode = S_IFDIR | 0600;
     st->st_blksize = 1;
     return 0;
-  } else {
-    return enoent();
   }
+  return enoent();
 }

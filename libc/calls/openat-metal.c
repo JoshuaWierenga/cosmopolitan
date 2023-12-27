@@ -51,7 +51,7 @@ static struct MetalFile *allocate_metal_file(void) {
 
 int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
   int fd;
-  struct MetalFile *state;
+  struct MetalFile *state = 0;
   if (dirfd != AT_FDCWD) return enoent();
   if (strcmp(file, APE_COM_NAME) == 0) {
     if (flags != O_RDONLY) return eacces();
@@ -60,12 +60,16 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
     state->type = kMetalApe;
     state->base = (char *)__ape_com_base;
     state->size = __ape_com_size;
-  } else if (strcmp(file, "/") == 0) {
-    if (flags & ~(O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY)) return eacces();
-    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) return enosys();
-    state->type = kMetalRoot;
   } else {
-    return enoent();
+    if (!_weaken(__metal_dirs)) return eopnotsupp();
+    for (size_t i = 0; __metal_dirs[i].path; ++i) {
+      if (strcmp(file, __metal_dirs[i].path) != 0) continue;
+      if (flags & ~(O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY)) return eacces();
+      if ((state = allocate_metal_file()) <= (struct MetalFile *)0) return enosys();
+      state->type = kMetalDir;
+      state->pos = i;
+    }
+    if (!state) return enoent();
   }
   if ((fd = __reservefd(-1)) == -1) enosys();
   g_fds.p[fd].kind = kFdFile;

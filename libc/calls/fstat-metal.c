@@ -45,8 +45,9 @@ int sys_fstat_metal(int fd, struct stat *st) {
           st->st_mode = S_IFREG | 0600;
           st->st_blksize = 1;
           return 0;
-        case kMetalRoot:
+        case kMetalDir:
           bzero(st, sizeof(*st));
+          st->st_ino = __metal_dirs[file->pos].ino;
           st->st_nlink = 2;
           st->st_mode = S_IFDIR | 0600;
           st->st_blksize = 1;

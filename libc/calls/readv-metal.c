@@ -48,7 +48,7 @@ ssize_t sys_readv_metal(int fd, const struct iovec *iov, int iovlen) {
       return sys_readv_serial(fd, iov, iovlen);
     case kFdFile:
       file = (struct MetalFile *)g_fds.p[fd].handle;
-      if (file->type == kMetalRoot) return eisdir();
+      if (file->type == kMetalDir) return eisdir();
       if (file->type != kMetalApe) return espipe();
       for (toto = i = 0; i < iovlen && file->pos < file->size; ++i) {
         got = MIN(iov[i].iov_len, file->size - file->pos);

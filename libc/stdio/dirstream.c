@@ -517,49 +517,35 @@ static struct dirent *bad_readdir(void) {
 static struct dirent *readdir_metal(DIR *dir) {
   struct Fd *sfd;
   struct MetalFile *file;
+  struct MetalDirInfo *dirInfo;
   struct dirent *ent = 0;
   sfd = &g_fds.p[dir->fd];
   if (sfd->kind != kFdFile) return bad_readdir();
   file = (struct MetalFile *)sfd->handle;
-  if (file->type != kMetalRoot) return bad_readdir();
+  if (file->type != kMetalDir) return bad_readdir();
+  dirInfo = __metal_dirs + file->pos;
   if (!dir->tell) {
     ent = &dir->ent;
+    ent->d_ino = dirInfo->ino;
     ent->d_off = dir->tell;
-    ent->d_ino = 0;
+    ent->d_reclen = sizeof(*ent);
     ent->d_type = DT_DIR;
     ent->d_name[0] = '.';
     ent->d_name[1] = 0;
   } else if (dir->tell == 1) {
     ent = &dir->ent;
+    ent->d_ino = dirInfo->ino;
     ent->d_off = dir->tell;
-    ent->d_ino = 0;
+    ent->d_reclen = sizeof(*ent);
     ent->d_type = DT_DIR;
     ent->d_name[0] = '.';
     ent->d_name[1] = '.';
     ent->d_name[2] = 0;
-  } else if (dir->tell == 2) {
-    ent = &dir->ent;
-    ent->d_off = dir->tell;
-    ent->d_ino = 1;
-    ent->d_type = DT_LNK;
-    ent->d_name[0] = 'z';
-    ent->d_name[1] = 'i';
-    ent->d_name[2] = 'p';
-    ent->d_name[3] = 0;
-  } else if (dir->tell == 3) {
-    ent = &dir->ent;
-    ent->d_off = dir->tell;
-    ent->d_ino = 2;
-    ent->d_type = DT_DIR;
-    ent->d_name[0] = 'p';
-    ent->d_name[1] = 'r';
-    ent->d_name[2] = 'o';
-    ent->d_name[3] = 'c';
-    ent->d_name[4] = 0;
   } else {
-    ent = 0;
+    ent = dirInfo->ents + dir->tell - 2;
+    if (ent->d_off == -1) ent = 0;
   }
-  dir->tell++;
+  ++dir->tell;
   return ent;
 }
 
