@@ -174,7 +174,7 @@ textstartup void InitializeMetalFile(void) {
 }
 
 bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
-  size_t idx = 0;
+  ptrdiff_t idx = 0;
   size_t size;
   struct DirectMap dm;
   if (__metal_tmpfiles) {
@@ -200,22 +200,22 @@ bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
   npassert(dm.addr != (void *)-1);
   memcpy(dm.addr, file, size);
   state->type = kMetalTmp;
-  state->base = __metal_tmpfiles[idx] = dm.addr;
-  state->size = size;
-  state->pos = idx;
+  __metal_tmpfiles[idx] = dm.addr;
+  state->idx = idx;
   __metal_tmpfiles_max = MAX(__metal_tmpfiles_max, idx + 1);
   return true;
 }
 
 bool32 CloseMetalTmpFile(struct MetalFile *state) {
-  if ((state->pos + 1) * sizeof(*__metal_tmpfiles) == __metal_tmpfiles_size ||
-      __metal_tmpfiles[state->pos] == NULL) {
+  if (state->idx >= __metal_tmpfiles_max ||
+      __metal_tmpfiles[state->idx] == NULL) {
     return false;
   }
 
-  sys_munmap_metal(state->base, state->size);
-  state->base = __metal_tmpfiles[state->pos] = 0;
-  if (state->pos + 1 == __metal_tmpfiles_max) {
+  sys_munmap_metal(__metal_tmpfiles[state->idx],
+                   strlen(__metal_tmpfiles[state->idx]) + 1);
+  __metal_tmpfiles[state->idx] = 0;
+  if (state->idx + 1 == __metal_tmpfiles_max) {
     while(__metal_tmpfiles_max > 0 && !__metal_tmpfiles[__metal_tmpfiles_max - 1]) {
       --__metal_tmpfiles_max;
     }

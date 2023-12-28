@@ -22,6 +22,7 @@ struct MetalFile {
   char *base;
   size_t size;
   size_t pos;
+  ptrdiff_t idx;
 };
 
 extern void *__ape_com_base;
