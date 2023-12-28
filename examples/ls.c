@@ -81,6 +81,14 @@ int main(int argc, char *argv[]) {
       List("/proc/self");
       putchar('\n');
       List("/proc/self/exe");
+      int fd = tmpfd();
+      putchar('\n');
+      List("/tmp");
+      close(fd);
+      putchar('\n');
+      List("/zip");
+      putchar('\n');
+      List("/zip/.cosmo");
     } else {
       List(".");
     }

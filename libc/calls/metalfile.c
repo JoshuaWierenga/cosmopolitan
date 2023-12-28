@@ -49,12 +49,24 @@
 #define MAP_FIXED_linux     0x00000010
 #define MAP_SHARED_linux    0x00000001
 
+#define DIR_COUNT 5
+#define EOD {0, -1}
+#define ROOT_INO          0
+#define PROC_INO          1
+#define TMP_INO           2
+#define ZIP_INO           3
+#define PROC_SELF_INO     4
+#define PROC_SELF_EXE_INO 5
+
 __static_yoink("_init_metalfile");
 
 void *__ape_com_base;
 size_t __ape_com_size = 0;
 
 struct MetalDirInfo *__metal_dirs;
+
+char **__metal_tmpfiles = NULL;
+size_t __metal_tmpfiles_size = 0;
 
 textstartup void InitializeMetalFile(void) {
   size_t size;
@@ -82,63 +94,129 @@ textstartup void InitializeMetalFile(void) {
       KINFOF("%s @ %p,+%#zx", APE_COM_NAME, copied_base, size);
     }
 
-    size = 4 * sizeof(*__metal_dirs) + sizeof("/") + sizeof("zip") +
-      sizeof("/proc") + sizeof("/proc/self");
+    size = DIR_COUNT * sizeof(*__metal_dirs) + sizeof("/") + sizeof("/proc") +
+      sizeof("/proc/self") + sizeof("/tmp");
     dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
                         MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
     __metal_dirs = dm.addr;
     npassert(__metal_dirs != (void *)-1);
 
-    char *strs = dm.addr + 4 * sizeof(*__metal_dirs);
-    strs[0] = '/';
-    strs[1] = 0;
-    strs[2] = 'z';
-    strs[3] = 'i';
-    strs[4] = 'p';
-    strs[5] = 0;
-    strs[6] = '/';
-    strs[7] = 'p';
-    strs[8] = 'r';
-    strs[9] = 'o';
-    strs[10] = 'c';
-    strs[11] = 0;
-    strs[12] = '/';
-    strs[13] = 'p';
-    strs[14] = 'r';
-    strs[15] = 'o';
-    strs[16] = 'c';
-    strs[17] = '/';
-    strs[18] = 's';
-    strs[19] = 'e';
-    strs[20] = 'l';
-    strs[21] = 'f';
-    strs[22] = 0;
+    char *strs = dm.addr + DIR_COUNT * sizeof(*__metal_dirs);
+    char *root_path = strs;
+    strs[0] =  '/';
+    strs[1] =  0;
 
-    // / -> /proc, /zip
-    __metal_dirs[0] = (struct MetalDirInfo){strs, 0, {
-        {2, 3, sizeof(*__metal_dirs), DT_DIR},
-        {1, 2, sizeof(*__metal_dirs), DT_LNK}, {0, -1}
+    char *proc_path = strs + 2;
+    strs[2] =  '/';
+    char *proc_name = strs + 3;
+    strs[3] =  'p';
+    strs[4] =  'r';
+    strs[5] =  'o';
+    strs[6] =  'c';
+    strs[7] = 0;
+
+    char *proc_self_path = strs + 8;
+    strs[8] =  '/';
+    strs[9] =  'p';
+    strs[10] = 'r';
+    strs[11] = 'o';
+    strs[12] = 'c';
+    strs[13] = '/';
+    char *self_name = strs + 14;
+    strs[14] = 's';
+    strs[15] = 'e';
+    strs[16] = 'l';
+    strs[17] = 'f';
+    strs[18] = 0;
+
+    char *tmp_path = strs + 19;
+    strs[19] = '/';
+    char *tmp_name = strs + 20;
+    strs[20] = 't';
+    strs[21] = 'm';
+    strs[22] = 'p';
+    strs[23] = 0;
+
+    // / -> /proc, /tmp, /zip
+    __metal_dirs[0] = (struct MetalDirInfo){root_path, ROOT_INO, {
+        {PROC_INO, 2, sizeof(*__metal_dirs), DT_DIR},
+        { TMP_INO, 3, sizeof(*__metal_dirs), DT_DIR},
+        { ZIP_INO, 4, sizeof(*__metal_dirs), DT_LNK}, EOD
     }};
-    memcpy(__metal_dirs[0].ents[0].d_name, strs + 7, sizeof("proc"));
-    memcpy(__metal_dirs[0].ents[1].d_name, strs + 2, sizeof("zip"));
+    memcpy(__metal_dirs[0].ents[0].d_name, proc_name, sizeof("proc"));
+    memcpy(__metal_dirs[0].ents[1].d_name, tmp_name, sizeof("tmp"));
+    __metal_dirs[0].ents[2].d_name[0] = 'z';
+    __metal_dirs[0].ents[2].d_name[1] = 'i';
+    __metal_dirs[0].ents[2].d_name[2] = 'p';
+    __metal_dirs[0].ents[2].d_name[3] = 0;
 
     // /proc -> /proc/self
-    __metal_dirs[1] = (struct MetalDirInfo){strs + 6, 2, {
-        {3, 2, sizeof(*__metal_dirs), DT_DIR}, {0, -1}
+    __metal_dirs[1] = (struct MetalDirInfo){proc_path, PROC_INO, {
+        {PROC_SELF_INO, 2, sizeof(*__metal_dirs), DT_DIR}, EOD
     }};
-    memcpy(__metal_dirs[1].ents[0].d_name, strs + 18, sizeof("self"));
+    memcpy(__metal_dirs[1].ents[0].d_name, self_name, sizeof("self"));
 
-    // /proc/self -> /self/proc/exec
-    __metal_dirs[2] = (struct MetalDirInfo){strs + 12, 3, {
-        {4, 2, sizeof(*__metal_dirs), DT_REG}, {0, -1}
+    // /proc/self -> /proc/self/exec
+    __metal_dirs[2] = (struct MetalDirInfo){proc_self_path, PROC_SELF_INO, {
+        {PROC_SELF_EXE_INO, 2, sizeof(*__metal_dirs), DT_REG}, EOD
     }};
     __metal_dirs[2].ents[0].d_name[0] = 'e';
     __metal_dirs[2].ents[0].d_name[1] = 'x';
     __metal_dirs[2].ents[0].d_name[2] = 'e';
     __metal_dirs[2].ents[0].d_name[3] = 0;
 
-    __metal_dirs[3] = (struct MetalDirInfo){0};
+    // /tmp
+    __metal_dirs[3] = (struct MetalDirInfo){tmp_path, TMP_INO, {EOD}};
+
+    __metal_dirs[4] = (struct MetalDirInfo){0};
   }
+}
+
+bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
+  size_t idx = 0;
+  size_t size;
+  struct DirectMap dm;
+  if (__metal_tmpfiles) {
+    for (; __metal_tmpfiles[idx]; ++idx) {
+      if (strcmp(file, __metal_tmpfiles[idx]) == 0) return false;
+    }
+  }
+
+  if ((idx + 1) * sizeof(*__metal_tmpfiles) >= __metal_tmpfiles_size) {
+    size = MAX(__metal_tmpfiles_size * __metal_tmpfiles_size, 4);
+    dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
+                        MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
+    npassert(dm.addr != (void *)-1);
+    memcpy(dm.addr, __metal_tmpfiles, __metal_tmpfiles_size);
+    sys_munmap_metal(__metal_tmpfiles, __metal_tmpfiles_size);
+    __metal_tmpfiles = dm.addr;
+    __metal_tmpfiles_size = size;
+  }
+
+  size = strlen(file) + 1;
+  dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
+                      MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
+  npassert(dm.addr != (void *)-1);
+  memcpy(dm.addr, file, size);
+  state->type = kMetalTmp;
+  state->base = __metal_tmpfiles[idx] = dm.addr;
+  state->size = size;
+  return true;
+}
+
+bool32 CloseMetalTmpFile(struct MetalFile *state) {
+  size_t idx = 0;
+  for (; __metal_tmpfiles[idx]; ++idx) {
+    if (strcmp(state->base, __metal_tmpfiles[idx]) == 0) break;
+  }
+
+  if ((idx + 1) * sizeof(*__metal_tmpfiles) == __metal_tmpfiles_size) {
+    return false;
+  }
+
+  __metal_tmpfiles[idx] = 0;
+  sys_munmap_metal(state->base, state->size);
+  return true;
 }
 
 #endif /* __x86_64__ */

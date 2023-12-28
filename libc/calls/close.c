@@ -53,17 +53,15 @@ static int close_impl(int fd) {
   if (__isfdkind(fd, kFdZip)) {
     unassert(_weaken(__zipos_close));
     return _weaken(__zipos_close)(fd);
-  }
-
-  if (!IsWindows() && !IsMetal()) {
+  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     return sys_close(fd);
-  }
-
-  if (IsWindows()) {
+  } else if (IsWindows()) {
     return sys_close_nt(fd, fd);
+  } else if (IsMetal()) {
+    return sys_close_metal(fd);
+  } else {
+    return enosys();
   }
-
-  return 0;
 }
 
 /**

@@ -7,6 +7,7 @@
 │   • http://creativecommons.org/publicdomain/zero/1.0/            │
 ╚─────────────────────────────────────────────────────────────────*/
 #endif
+#include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/runtime/runtime.h"
 #include "libc/stdio/stdio.h"
@@ -46,7 +47,11 @@ int main(int argc, char *argv[]) {
   const char *dir;
   if (argc > 2 && strchr(argv[2], 'd') != NULL) flags |= FTW_DEPTH;
   if (argc > 2 && strchr(argv[2], 'p') != NULL) flags |= FTW_PHYS;
-  dir = argc < 2 ? "." : argv[1];
+  if (IsMetal()) {
+    dir = "/";
+  } else {
+    dir = argc < 2 ? "." : argv[1];
+  }
   if (nftw(dir, display_info, 20, flags) == -1) {
     fprintf(stderr, "nftw() failed: %s: %s\n", strerror(errno), dir);
     exit(EXIT_FAILURE);

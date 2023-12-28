@@ -517,16 +517,16 @@ static struct dirent *bad_readdir(void) {
 static struct dirent *readdir_metal(DIR *dir) {
   struct Fd *sfd;
   struct MetalFile *file;
-  struct MetalDirInfo *dirInfo;
+  struct MetalDirInfo *dir_info;
   struct dirent *ent = 0;
   sfd = &g_fds.p[dir->fd];
   if (sfd->kind != kFdFile) return bad_readdir();
   file = (struct MetalFile *)sfd->handle;
   if (file->type != kMetalDir) return bad_readdir();
-  dirInfo = __metal_dirs + file->pos;
+  dir_info = __metal_dirs + file->pos;
   if (!dir->tell) {
     ent = &dir->ent;
-    ent->d_ino = dirInfo->ino;
+    ent->d_ino = dir_info->ino;
     ent->d_off = dir->tell;
     ent->d_reclen = sizeof(*ent);
     ent->d_type = DT_DIR;
@@ -534,15 +534,24 @@ static struct dirent *readdir_metal(DIR *dir) {
     ent->d_name[1] = 0;
   } else if (dir->tell == 1) {
     ent = &dir->ent;
-    ent->d_ino = dirInfo->ino;
+    ent->d_ino = dir_info->ino;
     ent->d_off = dir->tell;
     ent->d_reclen = sizeof(*ent);
     ent->d_type = DT_DIR;
     ent->d_name[0] = '.';
     ent->d_name[1] = '.';
     ent->d_name[2] = 0;
+  } else if (strcmp(dir_info->path, "/tmp") == 0) {
+    if (__metal_tmpfiles[dir->tell - 2]) {
+      ent = &dir->ent;
+      ent->d_ino = TMP_INO_START + dir->tell - 2;
+      ent->d_off = dir->tell;
+      ent->d_reclen = sizeof(*ent);
+      ent->d_type = DT_REG;
+      strcpy(ent->d_name, __metal_tmpfiles[dir->tell - 2]);
+    }
   } else {
-    ent = dirInfo->ents + dir->tell - 2;
+    ent = dir_info->ents + dir->tell - 2;
     if (ent->d_off == -1) ent = 0;
   }
   ++dir->tell;

@@ -60,17 +60,27 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
     state->type = kMetalApe;
     state->base = (char *)__ape_com_base;
     state->size = __ape_com_size;
-  } else {
+  // TODO(joshua): Support AT_FDCWD
+  } else if (((flags & O_ACCMODE) == O_RDONLY) &&
+             (~flags | (O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY))) {
     if (!_weaken(__metal_dirs)) return eopnotsupp();
     for (size_t i = 0; __metal_dirs[i].path; ++i) {
       if (strcmp(file, __metal_dirs[i].path) != 0) continue;
-      if (flags & ~(O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY)) return eacces();
       if ((state = allocate_metal_file()) <= (struct MetalFile *)0) return enosys();
       state->type = kMetalDir;
       state->pos = i;
     }
-    if (!state) return enoent();
+  // TODO(joshua): Support AT_FDCWD
+  // TODO(joshua): Support directories within /tmp?
+  } else if (flags & (O_RDWR|O_CREAT|O_EXCL|O_UNLINK) && strncmp("/tmp/", file, 5) == 0 &&
+             file[5] != 0 && strchr(file + 5, '/') == NULL) {
+    if (!_weaken(__metal_tmpfiles) || !_weaken(__metal_tmpfiles_size)) return eopnotsupp();
+    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) return enosys();
+    if (!OpenMetalTmpFile(file + 5, state)) return eacces();
+  } else {
+    return eacces();
   }
+  if (!state) return enoent();
   if ((fd = __reservefd(-1)) == -1) enosys();
   g_fds.p[fd].kind = kFdFile;
   g_fds.p[fd].flags = flags;

@@ -41,6 +41,7 @@ forceinline bool __isfdkind(int fd, int kind) {
 
 int _check_signal(bool);
 int _check_cancel(void);
+int sys_close_metal(int);
 int sys_close_nt(int, int);
 int _park_norestart(uint32_t, uint64_t);
 int _park_restartable(uint32_t, uint64_t);
