@@ -28,7 +28,6 @@
 #include "ape/relocations.h"
 #include "libc/assert.h"
 #include "libc/calls/metalfile.internal.h"
-#include "libc/calls/struct/iovec.h"
 #include "libc/intrin/directmap.internal.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/weaken.h"

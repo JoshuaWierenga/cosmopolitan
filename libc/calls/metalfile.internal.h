@@ -2,7 +2,6 @@
 #define COSMOPOLITAN_LIBC_CALLS_METALFILE_INTERNAL_H_
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 #include "libc/calls/struct/dirent.h"
-#include "libc/calls/struct/iovec.h"
 
 COSMOPOLITAN_C_START_
 
