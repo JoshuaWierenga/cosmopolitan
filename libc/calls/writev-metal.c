@@ -16,22 +16,41 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/calls/metalfile.internal.h"
 #include "libc/calls/struct/fd.internal.h"
 #include "libc/calls/struct/iovec.h"
 #include "libc/calls/struct/iovec.internal.h"
 #include "libc/intrin/weaken.h"
+#include "libc/macros.internal.h"
+#include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/vga/vga.internal.h"
 
 #ifdef __x86_64__
 
 ssize_t sys_writev_metal(struct Fd *fd, const struct iovec *iov, int iovlen) {
+  int i;
+  size_t toto;
+  struct MetalFile *file;
   switch (fd->kind) {
     case kFdConsole:
       if (_weaken(sys_writev_vga)) _weaken(sys_writev_vga)(fd, iov, iovlen);
       /* fallthrough */
     case kFdSerial:
       return sys_writev_serial(fd, iov, iovlen);
+    case kFdFile:
+      file = (struct MetalFile *)fd->handle;
+      if (file->type != kMetalTmp) return ebadf();
+      for (toto = i = 0; i < iovlen; ++i) {
+        if (iov[i].iov_len > 0) {
+          if (file->size - file->pos < iov->iov_len) {
+            ResizeMetalTmpFile(file, file->pos + iov->iov_len);
+          }
+          memcpy(file->base + file->pos, iov->iov_base, iov->iov_len);
+        }
+        toto += iov[i].iov_len;
+      }
+      return toto;
     default:
       return ebadf();
   }

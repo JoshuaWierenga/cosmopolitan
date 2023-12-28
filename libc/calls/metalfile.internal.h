@@ -2,6 +2,7 @@
 #define COSMOPOLITAN_LIBC_CALLS_METALFILE_INTERNAL_H_
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 #include "libc/calls/struct/dirent.h"
+#include "libc/calls/struct/iovec.h"
 
 COSMOPOLITAN_C_START_
 
@@ -33,8 +34,9 @@ extern char **__metal_tmpfiles;
 extern size_t __metal_tmpfiles_max;
 extern size_t __metal_tmpfiles_size;
 
-// Do not call directly, use openat and close
+// Do not call directly, use openat, writev and close
 bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state);
+void ResizeMetalTmpFile(struct MetalFile *file, const size_t min_size);
 bool32 CloseMetalTmpFile(struct MetalFile *state);
 
 COSMOPOLITAN_C_END_

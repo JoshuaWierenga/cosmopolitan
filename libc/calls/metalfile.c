@@ -24,24 +24,19 @@
 │ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR        │
 │ OTHER DEALINGS IN THE SOFTWARE.                                              │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/dce.h"
 #include "ape/relocations.h"
-#include "ape/sections.internal.h"
 #include "libc/assert.h"
-#include "libc/calls/internal.h"
 #include "libc/calls/metalfile.internal.h"
+#include "libc/calls/struct/iovec.h"
 #include "libc/intrin/directmap.internal.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/weaken.h"
 #include "libc/macros.internal.h"
-#include "libc/mem/mem.h"
 #include "libc/runtime/pc.internal.h"
-#include "libc/runtime/runtime.h"
 #include "libc/str/str.h"
-#include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/dt.h"
-#include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/prot.h"
-#include "libc/sysv/errfuns.h"
 
 #ifdef __x86_64__
 
@@ -206,12 +201,25 @@ bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
   return true;
 }
 
+void ResizeMetalTmpFile(struct MetalFile *file, const size_t min_size) {
+  size_t size;
+  struct DirectMap dm;
+  size = MAX(file->size << 1, min_size);
+  dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
+                      MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
+  npassert(dm.addr != (void *)-1);
+  memcpy(dm.addr, file->base, file->size);
+  sys_munmap_metal(file->base, file->size);
+  file->base = dm.addr;
+  file->size = size;
+}
+
 bool32 CloseMetalTmpFile(struct MetalFile *state) {
   if (state->idx >= __metal_tmpfiles_max ||
       __metal_tmpfiles[state->idx] == NULL) {
     return false;
   }
-
+  sys_munmap_metal(state->base, state->size);
   sys_munmap_metal(__metal_tmpfiles[state->idx],
                    strlen(__metal_tmpfiles[state->idx]) + 1);
   __metal_tmpfiles[state->idx] = 0;
