@@ -542,13 +542,18 @@ static struct dirent *readdir_metal(DIR *dir) {
     ent->d_name[1] = '.';
     ent->d_name[2] = 0;
   } else if (strcmp(dir_info->path, "/tmp") == 0) {
-    if (__metal_tmpfiles[dir->tell - 2]) {
-      ent = &dir->ent;
-      ent->d_ino = TMP_INO_START + dir->tell - 2;
-      ent->d_off = dir->tell;
-      ent->d_reclen = sizeof(*ent);
-      ent->d_type = DT_REG;
-      strcpy(ent->d_name, __metal_tmpfiles[dir->tell - 2]);
+    ent = &dir->ent;
+    ent->d_ino = TMP_INO_START + dir->tell - 2;
+    ent->d_off = dir->tell == 2 ? 0 : ent->d_off + 1;
+    ent->d_reclen = sizeof(*ent);
+    ent->d_type = DT_REG;
+    while(ent->d_off <= __metal_tmpfiles_max && !__metal_tmpfiles[ent->d_off]) {
+      ++ent->d_off;
+    }
+    if (ent->d_off >= __metal_tmpfiles_max) {
+      ent = 0;
+    } else {
+      strcpy(ent->d_name, __metal_tmpfiles[ent->d_off]);
     }
   } else {
     ent = dir_info->ents + dir->tell - 2;

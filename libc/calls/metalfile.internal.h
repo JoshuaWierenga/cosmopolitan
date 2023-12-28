@@ -29,6 +29,7 @@ extern size_t __ape_com_size;
 extern uint16_t __ape_com_sectors;  // ape/ape.S
 extern struct MetalDirInfo *__metal_dirs;
 extern char **__metal_tmpfiles;
+extern size_t __metal_tmpfiles_max;
 extern size_t __metal_tmpfiles_size;
 
 // Do not call directly, use openat and close

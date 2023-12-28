@@ -66,6 +66,7 @@ size_t __ape_com_size = 0;
 struct MetalDirInfo *__metal_dirs;
 
 char **__metal_tmpfiles = NULL;
+size_t __metal_tmpfiles_max = 0;
 size_t __metal_tmpfiles_size = 0;
 
 textstartup void InitializeMetalFile(void) {
@@ -183,7 +184,7 @@ bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
   }
 
   if ((idx + 1) * sizeof(*__metal_tmpfiles) >= __metal_tmpfiles_size) {
-    size = MAX(__metal_tmpfiles_size * __metal_tmpfiles_size, 4);
+    size = MAX(__metal_tmpfiles_size << 1, 32); // min is 4 ptrs
     dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
                         MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
     npassert(dm.addr != (void *)-1);
@@ -201,21 +202,24 @@ bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
   state->type = kMetalTmp;
   state->base = __metal_tmpfiles[idx] = dm.addr;
   state->size = size;
+  state->pos = idx;
+  __metal_tmpfiles_max = MAX(__metal_tmpfiles_max, idx + 1);
   return true;
 }
 
 bool32 CloseMetalTmpFile(struct MetalFile *state) {
-  size_t idx = 0;
-  for (; __metal_tmpfiles[idx]; ++idx) {
-    if (strcmp(state->base, __metal_tmpfiles[idx]) == 0) break;
-  }
-
-  if ((idx + 1) * sizeof(*__metal_tmpfiles) == __metal_tmpfiles_size) {
+  if ((state->pos + 1) * sizeof(*__metal_tmpfiles) == __metal_tmpfiles_size ||
+      __metal_tmpfiles[state->pos] == NULL) {
     return false;
   }
 
-  __metal_tmpfiles[idx] = 0;
   sys_munmap_metal(state->base, state->size);
+  state->base = __metal_tmpfiles[state->pos] = 0;
+  if (state->pos + 1 == __metal_tmpfiles_max) {
+    while(__metal_tmpfiles_max > 0 && !__metal_tmpfiles[__metal_tmpfiles_max - 1]) {
+      --__metal_tmpfiles_max;
+    }
+  }
   return true;
 }
 
