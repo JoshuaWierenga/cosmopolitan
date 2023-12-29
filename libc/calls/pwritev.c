@@ -65,7 +65,7 @@ static ssize_t Pwritev(int fd, const struct iovec *iov, int iovlen,
   }
 
   if (IsMetal()) {
-    return espipe();  // must be serial or console if not zipos
+    return sys_write_metal(fd, iov, iovlen, off);
   }
 
   while (iovlen && !iov->iov_len) {

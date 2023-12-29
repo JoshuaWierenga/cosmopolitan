@@ -34,7 +34,7 @@ extern char **__metal_tmpfiles;
 extern size_t __metal_tmpfiles_max;
 extern size_t __metal_tmpfiles_size;
 
-// Do not call directly, use openat, writev and close
+// Do not call directly, use openat, write/writev/pwrite/pwritev and close
 bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state);
 void ResizeMetalTmpFile(struct MetalFile *file, const size_t min_size);
 bool32 CloseMetalTmpFile(struct MetalFile *state);

@@ -54,7 +54,11 @@ static ssize_t Preadv(int fd, struct iovec *iov, int iovlen, int64_t off) {
   }
 
   if (IsMetal()) {
-    return espipe();  // must be serial or console if not zipos
+    if (fd < g_fds.n) {
+      return sys_read_metal(fd, iov, iovlen, off);
+     }else {
+      return ebadf();
+    }
   }
 
   if (IsWindows()) {

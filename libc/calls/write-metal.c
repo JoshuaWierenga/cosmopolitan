@@ -30,7 +30,8 @@
 
 ssize_t sys_write_metal(int fd, const struct iovec *iov, int iovlen, int64_t offset) {
   int i;
-  size_t old_pos, res;
+  size_t old_pos;
+  ssize_t res;
   struct MetalFile *file;
   switch (g_fds.p[fd].kind) {
     case kFdConsole:
