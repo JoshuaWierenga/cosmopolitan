@@ -30,7 +30,7 @@
 
 ssize_t sys_readv_metal(int fd, const struct iovec *iov, int iovlen) {
   int i;
-  size_t got, toto;
+  size_t got, old_pos;
   struct MetalFile *file;
   switch (g_fds.p[fd].kind) {
     case kFdConsole:
@@ -50,12 +50,13 @@ ssize_t sys_readv_metal(int fd, const struct iovec *iov, int iovlen) {
       file = (struct MetalFile *)g_fds.p[fd].handle;
       if (file->type == kMetalDir) return eisdir();
       if (file->type != kMetalApe && file->type != kMetalTmp) return espipe();
-      for (toto = i = 0; i < iovlen && file->pos < file->size; ++i) {
+      old_pos = file->pos;
+      for (i = 0; i < iovlen && file->pos < file->size; ++i) {
         got = MIN(iov[i].iov_len, file->size - file->pos);
-        if (got) memcpy(iov[i].iov_base, file->base, got);
-        toto += got;
+        if (got) memcpy(iov[i].iov_base, file->base + file->pos, got);
+        file->pos += got;
       }
-      return toto;
+      return file->pos - old_pos;
     default:
       return ebadf();
   }

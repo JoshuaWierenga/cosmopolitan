@@ -29,7 +29,7 @@
 
 ssize_t sys_writev_metal(struct Fd *fd, const struct iovec *iov, int iovlen) {
   int i;
-  size_t toto;
+  size_t old_pos;
   struct MetalFile *file;
   switch (fd->kind) {
     case kFdConsole:
@@ -39,17 +39,16 @@ ssize_t sys_writev_metal(struct Fd *fd, const struct iovec *iov, int iovlen) {
       return sys_writev_serial(fd, iov, iovlen);
     case kFdFile:
       file = (struct MetalFile *)fd->handle;
-      if (file->type != kMetalTmp) return ebadf();
-      for (toto = i = 0; i < iovlen; ++i) {
-        if (iov[i].iov_len > 0) {
-          if (file->size - file->pos < iov->iov_len) {
-            ResizeMetalTmpFile(file, file->pos + iov->iov_len);
-          }
-          memcpy(file->base + file->pos, iov->iov_base, iov->iov_len);
+      if (file->type != kMetalTmp) return espipe();
+      old_pos = file->pos;
+      for (i = 0; i < iovlen; ++i) {
+        if (file->size - file->pos < iov[i].iov_len) {
+          ResizeMetalTmpFile(file, file->pos + iov[i].iov_len);
         }
-        toto += iov[i].iov_len;
+        memcpy(file->base + file->pos, iov[i].iov_base, iov[i].iov_len);
+        file->pos += iov[i].iov_len;
       }
-      return toto;
+      return file->pos - old_pos;
     default:
       return ebadf();
   }
