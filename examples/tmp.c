@@ -4,7 +4,9 @@
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 
-int main(void) {
+void vector_test(void) {
+  puts("vector test");
+
   int fd;
   if ((fd = tmpfd()) == -1) {
     perror("Creating tmp file failed");
@@ -64,5 +66,81 @@ int main(void) {
   }
 
   close(fd);
+}
+
+void pread_test(void) {
+  puts("\npread test");
+
+  int fd;
+  if ((fd = tmpfd()) == -1) {
+    perror("Creating tmp file failed");
+    exit(1);
+  }
+
+  char *out_buf = "Junk, Test 1, Junk";
+  size_t out_buf_len = strlen(out_buf);
+  ssize_t bytes_written = write(fd, out_buf, out_buf_len);
+  if (bytes_written != out_buf_len) {
+    perror("Write failed");
+    exit(1);
+  }
+  printf("Wrote: %.*s\n", out_buf_len, out_buf);
+
+  char in_buf[6];
+  size_t in_buf_len = sizeof(in_buf);
+  size_t bytes_read = pread(fd, in_buf, in_buf_len, 6);
+  if (bytes_read == in_buf_len) {
+    printf("Final file contents from 6 to 12: %.*s\n", in_buf_len, in_buf);
+  } else {
+    perror("Read failed");
+    exit(1);
+  }
+
+  close(fd);
+}
+
+void pwrite_test(void) {
+  puts("\npwrite test");
+
+  int fd;
+  if ((fd = tmpfd()) == -1) {
+    perror("Creating tmp file failed");
+    exit(1);
+  }
+
+  char *out_buf1 = "Test 2";
+  char *out_buf2 = "Test 1, ";
+  size_t out_buf_len1 = strlen(out_buf1);
+  size_t out_buf_len2 = strlen(out_buf2);
+  ssize_t bytes_written = pwrite(fd, out_buf1, out_buf_len1, out_buf_len2);
+  bytes_written += write(fd, out_buf2, out_buf_len2);
+  if (bytes_written != out_buf_len1 + out_buf_len2) {
+    perror("Write failed");
+    exit(1);
+  }
+  printf("Wrote: %.*s%.*s\n", out_buf_len2, out_buf2, out_buf_len1, out_buf1);
+
+  int64_t pos = lseek(fd, 0, SEEK_SET);
+  if (pos != 0) {
+    perror("Moving to beginning failed");
+    exit(1);
+  }
+
+  char in_buf[bytes_written];
+  size_t bytes_read = read(fd, in_buf, bytes_written);
+  if (bytes_read == bytes_written) {
+    printf("Final file contents: %.*s\n", bytes_written, in_buf);
+  } else {
+    perror("Read failed");
+    exit(1);
+  }
+
+  close(fd);
+}
+
+int main(void) {
+  vector_test();
+  pread_test();
+  pwrite_test();
   return 0;
 }

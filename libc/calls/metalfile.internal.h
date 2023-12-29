@@ -17,6 +17,7 @@ struct MetalDirInfo {
   struct dirent ents[4];
 };
 
+// TODO(joshua): Support kFdDevNull?
 struct MetalFile {
   char type;
   char *base;

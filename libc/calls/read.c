@@ -80,7 +80,7 @@ ssize_t read(int fd, void *buf, size_t size) {
   } else if (fd >= g_fds.n) {
     rc = ebadf();
   } else if (IsMetal()) {
-    rc = sys_readv_metal(fd, &(struct iovec){buf, size}, 1);
+    rc = sys_read_metal(fd, &(struct iovec){buf, size}, 1, -1);
   } else if (IsWindows()) {
     rc = sys_readv_nt(fd, &(struct iovec){buf, size}, 1);
   } else {

@@ -61,11 +61,13 @@ ssize_t pwrite(int fd, const void *buf, size_t size, int64_t offset) {
     rc = efault();
   } else if (__isfdkind(fd, kFdZip)) {
     rc = ebadf();
-  } else if (!IsWindows()) {
+  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     rc = sys_pwrite(fd, buf, size, offset, offset);
   } else if (__isfdkind(fd, kFdSocket)) {
     rc = espipe();
-  } else if (__isfdkind(fd, kFdFile) || __isfdkind(fd, kFdDevNull)) {
+  } else if (IsMetal()) {
+    rc = sys_write_metal(fd, (struct iovec[]){{(void *)buf, size}}, 1, offset);
+  } else if (IsWindows() && (__isfdkind(fd, kFdFile) || __isfdkind(fd, kFdDevNull))) {
     rc = sys_write_nt(fd, (struct iovec[]){{(void *)buf, size}}, 1, offset);
   } else {
     return ebadf();

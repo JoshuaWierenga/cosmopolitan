@@ -70,7 +70,7 @@ ssize_t writev(int fd, const struct iovec *iov, int iovlen) {
   } else if (fd >= g_fds.n) {
     rc = ebadf();
   } else if (IsMetal()) {
-    rc = sys_writev_metal(g_fds.p + fd, iov, iovlen);
+    rc = sys_write_metal(fd, iov, iovlen, -1);
   } else if (IsWindows()) {
     rc = sys_writev_nt(fd, iov, iovlen);
   } else {

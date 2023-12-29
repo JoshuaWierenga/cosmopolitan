@@ -22,41 +22,41 @@
 #include "libc/calls/struct/iovec.h"
 #include "libc/calls/struct/iovec.internal.h"
 #include "libc/intrin/weaken.h"
-#include "libc/macros.internal.h"
 #include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/vga/vga.internal.h"
+
 #ifdef __x86_64__
 
-ssize_t sys_readv_metal(int fd, const struct iovec *iov, int iovlen) {
+ssize_t sys_write_metal(int fd, const struct iovec *iov, int iovlen, int64_t offset) {
   int i;
-  size_t got, old_pos;
+  size_t old_pos, res;
   struct MetalFile *file;
   switch (g_fds.p[fd].kind) {
     case kFdConsole:
-      /*
-       * The VGA teletypewriter code may wish to send out "status report"
-       * escape sequences, in response to requests sent to it via write().
-       * Read & return these if they are available.
-       */
-      if (_weaken(sys_readv_vga)) {
-        ssize_t res = _weaken(sys_readv_vga)(g_fds.p + fd, iov, iovlen);
-        if (res > 0) return res;
-      }
-      /* fall through */
+      if (_weaken(sys_writev_vga)) _weaken(sys_writev_vga)(g_fds.p + fd, iov, iovlen);
+      /* fallthrough */
     case kFdSerial:
-      return sys_readv_serial(fd, iov, iovlen);
+      return sys_writev_serial(g_fds.p + fd, iov, iovlen);
     case kFdFile:
       file = (struct MetalFile *)g_fds.p[fd].handle;
-      if (file->type == kMetalDir) return eisdir();
-      if (file->type != kMetalApe && file->type != kMetalTmp) return espipe();
+      if (file->type != kMetalTmp) return espipe();
       old_pos = file->pos;
-      for (i = 0; i < iovlen && file->pos < file->size; ++i) {
-        got = MIN(iov[i].iov_len, file->size - file->pos);
-        if (got) memcpy(iov[i].iov_base, file->base + file->pos, got);
-        file->pos += got;
+      if (offset != -1) file->pos = offset;
+      for (i = 0; i < iovlen; ++i) {
+        if (file->size < file->pos || file->size - file->pos < iov[i].iov_len) {
+          ResizeMetalTmpFile(file, file->pos + iov[i].iov_len);
+        }
+        memcpy(file->base + file->pos, iov[i].iov_base, iov[i].iov_len);
+        file->pos += iov[i].iov_len;
       }
-      return file->pos - old_pos;
+      if (offset != -1) {
+        res = file->pos - offset;
+        file->pos = old_pos;
+      } else {
+        res = file->pos - old_pos;
+      }
+      return res;
     default:
       return ebadf();
   }

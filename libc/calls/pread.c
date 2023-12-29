@@ -68,11 +68,13 @@ ssize_t pread(int fd, void *buf, size_t size, int64_t offset) {
     rc = _weaken(__zipos_read)(
         (struct ZiposHandle *)(intptr_t)g_fds.p[fd].handle,
         (struct iovec[]){{buf, size}}, 1, offset);
-  } else if (!IsWindows()) {
+  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     rc = sys_pread(fd, buf, size, offset, offset);
   } else if (__isfdkind(fd, kFdSocket)) {
     rc = espipe();
-  } else if (__isfdkind(fd, kFdFile) || __isfdkind(fd, kFdDevNull)) {
+  } else if (IsMetal()) {
+    rc = sys_read_metal(fd, (struct iovec[]){{buf, size}}, 1, offset);
+  } else if (IsWindows() && (__isfdkind(fd, kFdFile) || __isfdkind(fd, kFdDevNull))) {
     rc = sys_read_nt(fd, (struct iovec[]){{buf, size}}, 1, offset);
   } else {
     rc = ebadf();
