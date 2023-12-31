@@ -49,33 +49,44 @@ static struct MetalFile *allocate_metal_file(void) {
   }
 }
 
+// TODO(joshua): Support !AT_FDCWD
 int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
   int fd;
   struct MetalFile *state = 0;
-  if (dirfd != AT_FDCWD) return enoent();
+  if (dirfd != AT_FDCWD) return enosys();
   if (strcmp(file, APE_COM_NAME) == 0) {
     if (flags != O_RDONLY) return eacces();
-    if (!_weaken(__ape_com_base) || !_weaken(__ape_com_size)) return eopnotsupp();
-    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) return enosys();
+    if (!_weaken(__ape_com_base) || !_weaken(__ape_com_size)) {
+      return eopnotsupp();
+    }
+    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
+      return enosys();
+    }
     state->type = kMetalApe;
     state->base = (char *)__ape_com_base;
     state->size = __ape_com_size;
-  // TODO(joshua): Support AT_FDCWD
   } else if (((flags & O_ACCMODE) == O_RDONLY) &&
              (~flags | (O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY))) {
     if (!_weaken(__metal_dirs)) return eopnotsupp();
-    for (size_t i = 0; __metal_dirs[i].path; ++i) {
-      if (strcmp(file, __metal_dirs[i].path) != 0) continue;
-      if ((state = allocate_metal_file()) <= (struct MetalFile *)0) return enosys();
+    for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
+      if (!__metal_dirs[i].path || strcmp(file, __metal_dirs[i].path) != 0) {
+        continue;
+      }
+      if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
+        return enosys();
+      }
       state->type = kMetalDir;
-      state->pos = i;
+      state->idx = i;
     }
-  // TODO(joshua): Support AT_FDCWD
-  // TODO(joshua): Support directories within /tmp?
-  } else if (flags & (O_RDWR|O_CREAT|O_EXCL|O_UNLINK) && strncmp("/tmp/", file, 5) == 0 &&
+  } else if (flags & (O_RDWR|O_CREAT|O_EXCL|O_UNLINK) &&
+             strncmp("/tmp/", file, 5) == 0 &&
              file[5] != 0 && strchr(file + 5, '/') == NULL) {
-    if (!_weaken(__metal_tmpfiles) || !_weaken(__metal_tmpfiles_size)) return eopnotsupp();
-    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) return enosys();
+    if (!_weaken(__metal_tmpfiles) || !_weaken(__metal_tmpfiles_size)) {
+      return eopnotsupp();
+    }
+    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
+      return enosys();
+    }
     if (!OpenMetalTmpFile(file + 5, state)) return eacces();
   } else {
     return eacces();

@@ -43,11 +43,9 @@
 #define MAP_FIXED_linux     0x00000010
 #define MAP_SHARED_linux    0x00000001
 
-#define DIR_COUNT 5
-#define EOD {0, -1}
+// Some defines are in metalfile.internal.h
 #define ROOT_INO          0
 #define PROC_INO          1
-#define TMP_INO           2
 #define ZIP_INO           3
 #define PROC_SELF_INO     4
 #define PROC_SELF_EXE_INO 5
@@ -60,7 +58,7 @@ size_t __ape_com_size = 0;
 struct MetalDirInfo *__metal_dirs;
 
 char **__metal_tmpfiles = NULL;
-size_t __metal_tmpfiles_max = 0;
+ptrdiff_t __metal_tmpfiles_max = 0;
 size_t __metal_tmpfiles_size = 0;
 
 textstartup void InitializeMetalFile(void) {
@@ -89,14 +87,14 @@ textstartup void InitializeMetalFile(void) {
       KINFOF("%s @ %p,+%#zx", APE_COM_NAME, copied_base, size);
     }
 
-    size = DIR_COUNT * sizeof(*__metal_dirs) + sizeof("/") + sizeof("/proc") +
-      sizeof("/proc/self") + sizeof("/tmp");
+    size = kMetalDirCount * sizeof(*__metal_dirs) + sizeof("/") +
+      sizeof("/proc") + sizeof("/proc/self") + sizeof("/tmp");
     dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
                         MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
     __metal_dirs = dm.addr;
     npassert(__metal_dirs != (void *)-1);
 
-    char *strs = dm.addr + DIR_COUNT * sizeof(*__metal_dirs);
+    char *strs = dm.addr + kMetalDirCount * sizeof(*__metal_dirs);
     char *root_path = strs;
     strs[0] =  '/';
     strs[1] =  0;
@@ -133,47 +131,48 @@ textstartup void InitializeMetalFile(void) {
     strs[23] = 0;
 
     // / -> /proc, /tmp, /zip
-    __metal_dirs[0] = (struct MetalDirInfo){root_path, ROOT_INO, {
-        {PROC_INO, 2, sizeof(*__metal_dirs), DT_DIR},
-        { TMP_INO, 3, sizeof(*__metal_dirs), DT_DIR},
-        { ZIP_INO, 4, sizeof(*__metal_dirs), DT_LNK}, EOD
+    __metal_dirs[ROOT_INO] = (struct MetalDirInfo){root_path, 3, 3, {
+        {PROC_INO,        2, sizeof(*__metal_dirs), DT_DIR},
+        {kMetalTmpDirIno, 3, sizeof(*__metal_dirs), DT_DIR},
+        {ZIP_INO,         4, sizeof(*__metal_dirs), DT_LNK},
     }};
-    memcpy(__metal_dirs[0].ents[0].d_name, proc_name, sizeof("proc"));
-    memcpy(__metal_dirs[0].ents[1].d_name, tmp_name, sizeof("tmp"));
-    __metal_dirs[0].ents[2].d_name[0] = 'z';
-    __metal_dirs[0].ents[2].d_name[1] = 'i';
-    __metal_dirs[0].ents[2].d_name[2] = 'p';
-    __metal_dirs[0].ents[2].d_name[3] = 0;
+    memcpy(__metal_dirs[ROOT_INO].ents[0].d_name, proc_name, sizeof("proc"));
+    memcpy(__metal_dirs[ROOT_INO].ents[1].d_name, tmp_name, sizeof("tmp"));
+    __metal_dirs[ROOT_INO].ents[2].d_name[0] = 'z';
+    __metal_dirs[ROOT_INO].ents[2].d_name[1] = 'i';
+    __metal_dirs[ROOT_INO].ents[2].d_name[2] = 'p';
+    __metal_dirs[ROOT_INO].ents[2].d_name[3] = 0;
 
     // /proc -> /proc/self
-    __metal_dirs[1] = (struct MetalDirInfo){proc_path, PROC_INO, {
-        {PROC_SELF_INO, 2, sizeof(*__metal_dirs), DT_DIR}, EOD
+    __metal_dirs[PROC_INO] = (struct MetalDirInfo){proc_path, 1, 1, {
+        {PROC_SELF_INO, 2, sizeof(*__metal_dirs), DT_DIR}
     }};
-    memcpy(__metal_dirs[1].ents[0].d_name, self_name, sizeof("self"));
+    memcpy(__metal_dirs[PROC_INO].ents[0].d_name, self_name, sizeof("self"));
 
     // /proc/self -> /proc/self/exec
-    __metal_dirs[2] = (struct MetalDirInfo){proc_self_path, PROC_SELF_INO, {
-        {PROC_SELF_EXE_INO, 2, sizeof(*__metal_dirs), DT_REG}, EOD
+    __metal_dirs[PROC_SELF_INO] = (struct MetalDirInfo){proc_self_path, 1, 1, {
+        {PROC_SELF_EXE_INO, 2, sizeof(*__metal_dirs), DT_REG}
     }};
-    __metal_dirs[2].ents[0].d_name[0] = 'e';
-    __metal_dirs[2].ents[0].d_name[1] = 'x';
-    __metal_dirs[2].ents[0].d_name[2] = 'e';
-    __metal_dirs[2].ents[0].d_name[3] = 0;
+    __metal_dirs[PROC_SELF_INO].ents[0].d_name[0] = 'e';
+    __metal_dirs[PROC_SELF_INO].ents[0].d_name[1] = 'x';
+    __metal_dirs[PROC_SELF_INO].ents[0].d_name[2] = 'e';
+    __metal_dirs[PROC_SELF_INO].ents[0].d_name[3] = 0;
 
     // /tmp
-    __metal_dirs[3] = (struct MetalDirInfo){tmp_path, TMP_INO, {EOD}};
+    __metal_dirs[kMetalTmpDirIno] = (struct MetalDirInfo){tmp_path, 0, 0};
 
-    __metal_dirs[4] = (struct MetalDirInfo){0};
+    // /zip, managed seperately
+    __metal_dirs[ZIP_INO] = (struct MetalDirInfo){0, 0, 0};
   }
 }
 
-bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
+bool32 OpenMetalTmpFile(const char *path, struct MetalFile *file) {
   ptrdiff_t idx = 0;
   size_t size;
   struct DirectMap dm;
   if (__metal_tmpfiles) {
     for (; __metal_tmpfiles[idx]; ++idx) {
-      if (strcmp(file, __metal_tmpfiles[idx]) == 0) return false;
+      if (strcmp(path, __metal_tmpfiles[idx]) == 0) return false;
     }
   }
 
@@ -188,15 +187,16 @@ bool32 OpenMetalTmpFile(const char *file, struct MetalFile *state) {
     __metal_tmpfiles_size = size;
   }
 
-  size = strlen(file) + 1;
+  size = strlen(path) + 1;
   dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
                       MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
   npassert(dm.addr != (void *)-1);
-  memcpy(dm.addr, file, size);
-  state->type = kMetalTmp;
+  memcpy(dm.addr, path, size);
+  file->type = kMetalTmp;
   __metal_tmpfiles[idx] = dm.addr;
-  state->idx = idx;
+  file->idx = idx;
   __metal_tmpfiles_max = MAX(__metal_tmpfiles_max, idx + 1);
+  ++__metal_dirs[kMetalTmpDirIno].file_count;
   return true;
 }
 
@@ -213,20 +213,22 @@ void ResizeMetalTmpFile(struct MetalFile *file, const size_t min_size) {
   file->size = size;
 }
 
-bool32 CloseMetalTmpFile(struct MetalFile *state) {
-  if (state->idx >= __metal_tmpfiles_max ||
-      __metal_tmpfiles[state->idx] == NULL) {
+bool32 CloseMetalTmpFile(struct MetalFile *file) {
+  if (file->idx >= __metal_tmpfiles_max ||
+      __metal_tmpfiles[file->idx] == NULL) {
     return false;
   }
-  sys_munmap_metal(state->base, state->size);
-  sys_munmap_metal(__metal_tmpfiles[state->idx],
-                   strlen(__metal_tmpfiles[state->idx]) + 1);
-  __metal_tmpfiles[state->idx] = 0;
-  if (state->idx + 1 == __metal_tmpfiles_max) {
-    while(__metal_tmpfiles_max > 0 && !__metal_tmpfiles[__metal_tmpfiles_max - 1]) {
+  if (file->base) sys_munmap_metal(file->base, file->size);
+  sys_munmap_metal(__metal_tmpfiles[file->idx],
+                   strlen(__metal_tmpfiles[file->idx]) + 1);
+  __metal_tmpfiles[file->idx] = 0;
+  if (file->idx + 1 == __metal_tmpfiles_max) {
+    while(__metal_tmpfiles_max > 0 &&
+          !__metal_tmpfiles[__metal_tmpfiles_max - 1]) {
       --__metal_tmpfiles_max;
     }
   }
+  --__metal_dirs[kMetalTmpDirIno].file_count;
   return true;
 }
 

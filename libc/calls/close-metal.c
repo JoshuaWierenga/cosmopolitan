@@ -20,6 +20,7 @@
 #include "libc/calls/metalfile.internal.h"
 #include "libc/sysv/errfuns.h"
 
+// TODO(joshua): Support !O_UNLINK
 int sys_close_metal(int fd) {
   if (fd < 0 || fd >= g_fds.n) return ebadf();
   struct Fd *f = g_fds.p + fd;

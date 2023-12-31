@@ -25,6 +25,8 @@
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 
+// TODO(joshua): Support !AT_FDCWD
+// TODO(joshua): Support tmp files
 int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
   if (dirfd != AT_FDCWD) return enosys();
   if (!path) return efault();
@@ -38,10 +40,12 @@ int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
     return 0;
   }
   if (!_weaken(__metal_dirs)) return eopnotsupp();
-  for (size_t i = 0; __metal_dirs[i].path; ++i) {
-    if (strcmp(path, __metal_dirs[i].path) != 0) continue;
+  for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
+    if (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0) {
+      continue;
+    }
     bzero(st, sizeof(*st));
-    st->st_ino = __metal_dirs[i].ino;
+    st->st_ino = i;
     st->st_nlink = 2;
     st->st_mode = S_IFDIR | 0600;
     st->st_blksize = 1;

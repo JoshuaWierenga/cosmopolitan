@@ -23,6 +23,7 @@
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 
+// TODO(joshua): Support tmp files
 int sys_fstat_metal(int fd, struct stat *st) {
   struct MetalFile *file;
   if (fd < 0 || fd >= g_fds.n) return einval();
@@ -47,11 +48,13 @@ int sys_fstat_metal(int fd, struct stat *st) {
           return 0;
         case kMetalDir:
           bzero(st, sizeof(*st));
-          st->st_ino = __metal_dirs[file->pos].ino;
+          st->st_ino = file->idx;
           st->st_nlink = 2;
           st->st_mode = S_IFDIR | 0600;
           st->st_blksize = 1;
           return 0;
+        case kMetalTmp:
+          return enosys();
         default:
           return ebadf();
       }

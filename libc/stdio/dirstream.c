@@ -523,43 +523,41 @@ static struct dirent *readdir_metal(DIR *dir) {
   if (sfd->kind != kFdFile) return bad_readdir();
   file = (struct MetalFile *)sfd->handle;
   if (file->type != kMetalDir) return bad_readdir();
-  dir_info = __metal_dirs + file->pos;
-  if (!dir->tell) {
+  dir_info = __metal_dirs + file->idx;
+  if (file->pos == 0) {
     ent = &dir->ent;
-    ent->d_ino = dir_info->ino;
-    ent->d_off = dir->tell;
+    ent->d_ino = file->idx;
+    ent->d_off = file->pos;
     ent->d_reclen = sizeof(*ent);
     ent->d_type = DT_DIR;
     ent->d_name[0] = '.';
     ent->d_name[1] = 0;
-  } else if (dir->tell == 1) {
+  } else if (file->pos == 1) {
     ent = &dir->ent;
-    ent->d_ino = dir_info->ino;
-    ent->d_off = dir->tell;
+    ent->d_ino = file->idx;
+    ent->d_off = file->pos;
     ent->d_reclen = sizeof(*ent);
     ent->d_type = DT_DIR;
     ent->d_name[0] = '.';
     ent->d_name[1] = '.';
     ent->d_name[2] = 0;
-  } else if (strcmp(dir_info->path, "/tmp") == 0) {
-    ent = &dir->ent;
-    ent->d_ino = TMP_INO_START + dir->tell - 2;
-    ent->d_off = dir->tell == 2 ? 0 : ent->d_off + 1;
-    ent->d_reclen = sizeof(*ent);
-    ent->d_type = DT_REG;
-    while(ent->d_off <= __metal_tmpfiles_max && !__metal_tmpfiles[ent->d_off]) {
-      ++ent->d_off;
+  } else if (file->idx == kMetalTmpDirIno) {
+    while(file->pos - 2 < __metal_tmpfiles_max &&
+          !__metal_tmpfiles[file->pos - 2]) {
+      ++file->pos;
     }
-    if (ent->d_off >= __metal_tmpfiles_max) {
-      ent = 0;
-    } else {
-      strcpy(ent->d_name, __metal_tmpfiles[ent->d_off]);
+    if (file->pos - 2 < __metal_tmpfiles_max) {
+      ent = &dir->ent;
+      ent->d_ino = kMetalTmpInoStart + file->pos - 2;
+      ent->d_off = file->pos;
+      ent->d_reclen = sizeof(*ent);
+      ent->d_type = DT_REG;
+      strcpy(ent->d_name, __metal_tmpfiles[file->pos - 2]);
     }
-  } else {
-    ent = dir_info->ents + dir->tell - 2;
-    if (ent->d_off == -1) ent = 0;
+  } else if (file->pos - 2 < dir_info->ent_count) {
+    ent = dir_info->ents + file->pos - 2;
   }
-  ++dir->tell;
+  dir->tell = ++file->pos;
   return ent;
 }
 
