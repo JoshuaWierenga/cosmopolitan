@@ -27,6 +27,9 @@
 
 // TODO(joshua): Support !AT_FDCWD
 // TODO(joshua): Support tmp files
+// TODO(joshua): Support paths with .. and . in them
+// TODO(joshua): Support relative paths
+// TODO(joshua): Support excess slashes in path
 int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
   if (dirfd != AT_FDCWD) return enosys();
   if (!path) return efault();

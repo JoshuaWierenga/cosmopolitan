@@ -61,6 +61,8 @@ char **__metal_tmpfiles = NULL;
 ptrdiff_t __metal_tmpfiles_max = 0;
 size_t __metal_tmpfiles_size = 0;
 
+ptrdiff_t __metal_cwd_ino = ZIP_INO;
+
 textstartup void InitializeMetalFile(void) {
   size_t size;
   struct DirectMap dm;
@@ -88,7 +90,7 @@ textstartup void InitializeMetalFile(void) {
     }
 
     size = kMetalDirCount * sizeof(*__metal_dirs) + sizeof("/") +
-      sizeof("/proc") + sizeof("/proc/self") + sizeof("/tmp");
+      sizeof("/proc") + sizeof("/proc/self") + sizeof("/tmp") + sizeof("/zip");
     dm = sys_mmap_metal(NULL, size, PROT_READ | PROT_WRITE,
                         MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
     __metal_dirs = dm.addr;
@@ -130,6 +132,14 @@ textstartup void InitializeMetalFile(void) {
     strs[22] = 'p';
     strs[23] = 0;
 
+    char *zip_path = strs + 24;
+    strs[24] = '/';
+    char *zip_name = strs + 25;
+    strs[25] = 'z';
+    strs[26] = 'i';
+    strs[27] = 'p';
+    strs[28] = 0;
+
     // / -> /proc, /tmp, /zip
     __metal_dirs[ROOT_INO] = (struct MetalDirInfo){root_path, 3, 3, {
         {PROC_INO,        2, sizeof(*__metal_dirs), DT_DIR},
@@ -138,10 +148,7 @@ textstartup void InitializeMetalFile(void) {
     }};
     memcpy(__metal_dirs[ROOT_INO].ents[0].d_name, proc_name, sizeof("proc"));
     memcpy(__metal_dirs[ROOT_INO].ents[1].d_name, tmp_name, sizeof("tmp"));
-    __metal_dirs[ROOT_INO].ents[2].d_name[0] = 'z';
-    __metal_dirs[ROOT_INO].ents[2].d_name[1] = 'i';
-    __metal_dirs[ROOT_INO].ents[2].d_name[2] = 'p';
-    __metal_dirs[ROOT_INO].ents[2].d_name[3] = 0;
+    memcpy(__metal_dirs[ROOT_INO].ents[2].d_name, zip_name, sizeof("zip"));
 
     // /proc -> /proc/self
     __metal_dirs[PROC_INO] = (struct MetalDirInfo){proc_path, 1, 1, {
@@ -162,7 +169,7 @@ textstartup void InitializeMetalFile(void) {
     __metal_dirs[kMetalTmpDirIno] = (struct MetalDirInfo){tmp_path, 0, 0};
 
     // /zip, managed seperately
-    __metal_dirs[ZIP_INO] = (struct MetalDirInfo){0, 0, 0};
+    __metal_dirs[ZIP_INO] = (struct MetalDirInfo){zip_path, 0, 0};
   }
 }
 

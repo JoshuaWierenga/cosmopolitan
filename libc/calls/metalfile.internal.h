@@ -77,10 +77,17 @@ struct MetalFile {
 extern void *__ape_com_base;
 extern size_t __ape_com_size;
 extern uint16_t __ape_com_sectors;  // ape/ape.S
+
 extern struct MetalDirInfo *__metal_dirs;
+
 extern char **__metal_tmpfiles;
 extern ptrdiff_t __metal_tmpfiles_max;
 extern size_t __metal_tmpfiles_size;
+
+extern ptrdiff_t __metal_cwd_ino;
+
+int sys_chdir_metal(const char *path);
+int sys_fchdir_metal(int dirfd);
 
 // Do not call directly, use the openat, write and close functions and their wrappers
 bool32 OpenMetalTmpFile(const char *path, struct MetalFile *file);

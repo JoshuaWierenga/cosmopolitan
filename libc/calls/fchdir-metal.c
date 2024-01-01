@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,40 +16,28 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/calls.h"
 #include "libc/calls/internal.h"
 #include "libc/calls/metalfile.internal.h"
-#include "libc/calls/syscall-nt.internal.h"
-#include "libc/calls/syscall-sysv.internal.h"
-#include "libc/dce.h"
-#include "libc/intrin/strace.internal.h"
 #include "libc/sysv/errfuns.h"
 
-/**
- * Sets current directory based on file descriptor.
- *
- * This does *not* update the `PWD` environment variable.
- *
- * @raise EACCES if search permission was denied on directory
- * @raise ENOTDIR if `dirfd` doesn't refer to a directory
- * @raise EBADF if `dirfd` isn't a valid file descriptor
- * @raise ENOTSUP if `dirfd` refers to `/zip/...` file
- * @see open(path, O_DIRECTORY)
- * @asyncsignalsafe
- */
-int fchdir(int dirfd) {
-  int rc;
-  if (__isfdkind(dirfd, kFdZip)) {
-    rc = enotsup();
-  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
-    rc = sys_fchdir(dirfd);
-  } else if (IsMetal()) {
-    rc = sys_fchdir_metal(dirfd);
-  } else if (IsWindows()) {
-    rc = sys_fchdir_nt(dirfd);
-  } else {
-    rc = enosys();
+int sys_fchdir_metal(int dirfd) {
+  struct Fd *f;
+  struct MetalFile *m;
+
+  if (dirfd < 0 || dirfd >= g_fds.n) {
+    return ebadf();
   }
-  STRACE("fchdir(%d) → %d% m", dirfd, rc);
-  return rc;
+
+  f = &g_fds.p[dirfd];
+  if (f->kind != kFdFile) {
+    return enotdir();
+  }
+
+  m = (struct MetalFile *)f->handle;
+  if (m->type != kMetalDir) {
+    return enotdir();
+  }
+
+  __metal_cwd_ino = m->idx;
+  return 0;
 }

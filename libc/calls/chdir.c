@@ -16,6 +16,7 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/calls/metalfile.internal.h"
 #include "libc/calls/syscall-nt.internal.h"
 #include "libc/calls/syscall-sysv.internal.h"
 #include "libc/dce.h"
@@ -64,10 +65,14 @@ int chdir(const char *path) {
   } else if (_weaken(__zipos_parseuri) &&
              _weaken(__zipos_parseuri)(path, &zipname) != -1) {
     rc = enotsup();
-  } else if (!IsWindows()) {
+  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     rc = sys_chdir(path);
-  } else {
+  } else if (IsMetal()) {
+    rc = sys_chdir_metal(path);
+  } else if (IsWindows()) {
     rc = sys_chdir_nt(path);
+  } else {
+    rc = enosys();
   }
   STRACE("%s(%#s) → %d% m", "chdir", path, rc);
   return rc;

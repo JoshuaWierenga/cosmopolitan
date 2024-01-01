@@ -17,6 +17,7 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
+#include "libc/calls/metalfile.internal.h"
 #include "libc/calls/struct/metastat.internal.h"
 #include "libc/calls/syscall-nt.internal.h"
 #include "libc/calls/syscall-sysv.internal.h"
@@ -65,12 +66,21 @@ static int sys_getcwd_xnu(char *res, size_t size) {
 }
 
 static int sys_getcwd_metal(char *buf, size_t size) {
-  if (size >= 5) {
-    strcpy(buf, "/zip");
-    return 5;
-  } else {
-    return erange();
+  size_t len;
+  if (__metal_cwd_ino >= kMetalDirCount ||
+      !__metal_dirs[__metal_cwd_ino].path) {
+    eacces();
+    return 0;
   }
+
+  len = strlen(__metal_dirs[__metal_cwd_ino].path);
+  if (size < len) {
+    erange();
+    return 0;
+  }
+
+  strcpy(buf, __metal_dirs[__metal_cwd_ino].path);
+  return len;
 }
 
 static inline int IsAlpha(int c) {
@@ -161,8 +171,10 @@ int __getcwd(char *buf, size_t size) {
     } else {
       rc = -1;
     }
-  } else {
+  } else if (IsMetal()) {
     rc = sys_getcwd_metal(buf, size);
+  } else {
+    rc = enosys();
   }
   STRACE("getcwd([%#hhs], %'zu) → %d% m", rc != -1 ? buf : "n/a", size, rc);
   return rc;

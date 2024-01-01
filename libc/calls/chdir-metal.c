@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,40 +16,22 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/calls.h"
-#include "libc/calls/internal.h"
 #include "libc/calls/metalfile.internal.h"
-#include "libc/calls/syscall-nt.internal.h"
-#include "libc/calls/syscall-sysv.internal.h"
-#include "libc/dce.h"
-#include "libc/intrin/strace.internal.h"
+#include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
 
-/**
- * Sets current directory based on file descriptor.
- *
- * This does *not* update the `PWD` environment variable.
- *
- * @raise EACCES if search permission was denied on directory
- * @raise ENOTDIR if `dirfd` doesn't refer to a directory
- * @raise EBADF if `dirfd` isn't a valid file descriptor
- * @raise ENOTSUP if `dirfd` refers to `/zip/...` file
- * @see open(path, O_DIRECTORY)
- * @asyncsignalsafe
- */
-int fchdir(int dirfd) {
-  int rc;
-  if (__isfdkind(dirfd, kFdZip)) {
-    rc = enotsup();
-  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
-    rc = sys_fchdir(dirfd);
-  } else if (IsMetal()) {
-    rc = sys_fchdir_metal(dirfd);
-  } else if (IsWindows()) {
-    rc = sys_fchdir_nt(dirfd);
-  } else {
-    rc = enosys();
+// TODO(joshua): Support paths with .. and . in them
+// TODO(joshua): Support relative paths
+// TODO(joshua): Support excess slashes in path
+// TODO(joshua): Check for file match to return enotdir?
+int sys_chdir_metal(const char *path) {
+  if (path[0] != '/') return enosys();
+  for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
+    if (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0) {
+      continue;
+    }
+    __metal_cwd_ino = i;
+    return 0;
   }
-  STRACE("fchdir(%d) → %d% m", dirfd, rc);
-  return rc;
+  return enoent();
 }
