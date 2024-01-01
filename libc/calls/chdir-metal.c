@@ -16,22 +16,39 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
+#include "libc/calls/calls.h"
 #include "libc/calls/metalfile.internal.h"
+#include "libc/intrin/weaken.h"
+#include "libc/limits.h"
 #include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
 
-// TODO(joshua): Support paths with .. and . in them
-// TODO(joshua): Support relative paths
-// TODO(joshua): Support excess slashes in path
-// TODO(joshua): Check for file match to return enotdir?
 int sys_chdir_metal(const char *path) {
-  if (path[0] != '/') return enosys();
+  char full_path[PATH_MAX];
+  if (_weaken(realpath)) {
+    if (!_weaken(realpath)(path, full_path)) {
+      return enoent();
+    }
+  } else {
+    strlcpy(full_path, path, PATH_MAX);
+    if (path[0] != '/') {
+      return enosys();
+    }
+  }
   for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
-    if (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0) {
+    if (!__metal_dirs[i].path || strcmp(full_path, __metal_dirs[i].path) != 0) {
       continue;
     }
     __metal_cwd_ino = i;
     return 0;
+  }
+  if (strcmp(full_path, APE_COM_NAME) == 0) {
+    return enotdir();
+  }
+  for (ptrdiff_t i = 0; i < __metal_tmpfiles_max; ++i) {
+    if (__metal_tmpfiles[i] && strcmp(full_path, __metal_tmpfiles[i]) == 0) {
+      return enotdir();
+    }
   }
   return enoent();
 }

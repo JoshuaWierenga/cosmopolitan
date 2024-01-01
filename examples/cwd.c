@@ -14,13 +14,7 @@ int main(void) {
   printf("initial cwd: %s\n", path);
 
   puts("changing cwd to /tmp/ via chdir");
-  // TODO(joshua): Handle realpath in chdir
-  if (!realpath("/tmp/", path)) {
-    perror("realpath failed");
-    return 1;
-  }
-  printf("realpath turned /tmp/ into %s\n", path);
-  if (chdir(path)) {
+  if (chdir("/tmp/")) {
     perror("chdir failed");
     return 1;
   }
@@ -53,12 +47,7 @@ int main(void) {
   printf("new cwd: %s\n", path);
 
   puts("changing cwd to ./././//./ via chdir");
-  if (!realpath("././//./", path)) {
-    perror("realpath failed");
-    return 1;
-  }
-  printf("realpath turned ././//./ into %s\n", path);
-  if (chdir(path)) {
+  if (chdir("./././//./")) {
     perror("chdir failed");
     return 1;
   }
