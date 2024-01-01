@@ -58,10 +58,14 @@ ssize_t readlinkat(int dirfd, const char *path, char *buf, size_t bufsiz) {
   } else if (_weaken(__zipos_notat) &&
              (bytes = __zipos_notat(dirfd, path)) == -1) {
     STRACE("TODO: zipos support for readlinkat");
-  } else if (!IsWindows()) {
+  } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     bytes = sys_readlinkat(dirfd, path, buf, bufsiz);
-  } else {
+  } else if (IsMetal()) {
+    bytes = einval();
+  } else if (IsWindows()) {
     bytes = sys_readlinkat_nt(dirfd, path, buf, bufsiz);
+  } else {
+    bytes = enosys();
   }
   STRACE("readlinkat(%s, %#s, [%#.*s]) → %d% m", DescribeDirfd(dirfd), path,
          (int)MAX(0, bytes), buf, bytes);

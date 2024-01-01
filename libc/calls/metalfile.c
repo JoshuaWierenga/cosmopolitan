@@ -144,7 +144,7 @@ textstartup void InitializeMetalFile(void) {
     __metal_dirs[ROOT_INO] = (struct MetalDirInfo){root_path, 3, 3, {
         {PROC_INO,        2, sizeof(*__metal_dirs), DT_DIR},
         {kMetalTmpDirIno, 3, sizeof(*__metal_dirs), DT_DIR},
-        {ZIP_INO,         4, sizeof(*__metal_dirs), DT_LNK},
+        {ZIP_INO,         4, sizeof(*__metal_dirs), DT_DIR},
     }};
     memcpy(__metal_dirs[ROOT_INO].ents[0].d_name, proc_name, sizeof("proc"));
     memcpy(__metal_dirs[ROOT_INO].ents[1].d_name, tmp_name, sizeof("tmp"));

@@ -1,27 +1,71 @@
 #include "libc/calls/calls.h"
 #include "libc/calls/struct/dirent.h"
 #include "libc/limits.h"
+#include "libc/mem/gc.h"
 #include "libc/stdio/stdio.h"
-#include "libc/str/str.h"
-#include "libc/sysv/consts/at.h"
-#include "libc/sysv/consts/o.h"
 
 int main(void) {
-  char cwd[PATH_MAX];
+  char path[PATH_MAX];
   DIR *dir;
-  getcwd(cwd, PATH_MAX);
-  printf("initial cwd: %s\n", cwd);
+  if (!getcwd(path, PATH_MAX)) {
+    perror("getcwd failed");
+    return 1;
+  }
+  printf("initial cwd: %s\n", path);
 
-  puts("changing cwd to /tmp via chdir");
-  chdir("/tmp");
-  getcwd(cwd, PATH_MAX);
-  printf("new cwd: %s\n", cwd);
+  puts("changing cwd to /tmp/ via chdir");
+  // TODO(joshua): Handle realpath in chdir
+  if (!realpath("/tmp/", path)) {
+    perror("realpath failed");
+    return 1;
+  }
+  printf("realpath turned /tmp/ into %s\n", path);
+  if (chdir(path)) {
+    perror("chdir failed");
+    return 1;
+  }
+  if (!getcwd(path, PATH_MAX)) {
+    perror("getcwd failed");
+    return 1;
+  }
+  printf("new cwd: %s\n", path);
 
-  puts("changing cwd to /proc/self via fchdir");
-  dir = opendir("/proc/self");
-  fchdir(dirfd(dir));
-  getcwd(cwd, PATH_MAX);
-  printf("new cwd: %s\n", cwd);
-  closedir(dir);
+  puts("changing cwd to /proc/../proc/self/./// via fchdir");
+  // TODO(joshua): Handle realpath in openat
+  if (!realpath("/proc/../proc/self/.///", path)) {
+    perror("realpath failed");
+    return 1;
+  }
+  printf("realpath turned /proc/../proc/self/./// into %s\n", path);
+  if (!(dir = opendir(path))) {
+    perror("opendir failed");
+    return 1;
+  }
+  _defer(closedir, dir);
+  if (fchdir(dirfd(dir))) {
+    perror("fchdir failed");
+    return 1;
+  }
+  if (!getcwd(path, PATH_MAX)) {
+    perror("getcwd failed");
+    return 1;
+  }
+  printf("new cwd: %s\n", path);
+
+  puts("changing cwd to ./././//./ via chdir");
+  if (!realpath("././//./", path)) {
+    perror("realpath failed");
+    return 1;
+  }
+  printf("realpath turned ././//./ into %s\n", path);
+  if (chdir(path)) {
+    perror("chdir failed");
+    return 1;
+  }
+  if (!getcwd(path, PATH_MAX)) {
+    perror("getcwd failed");
+    return 1;
+  }
+  printf("new cwd: %s\n", path);
   return 0;
 }
