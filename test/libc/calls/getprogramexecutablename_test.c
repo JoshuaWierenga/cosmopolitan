@@ -18,6 +18,7 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
 #include "libc/calls/metalfile.internal.h"
+#include "libc/calls/syscall-sysv.internal.h"
 #include "libc/dce.h"
 #include "libc/limits.h"
 #include "libc/runtime/runtime.h"
@@ -57,6 +58,9 @@ void SetUpOnce(void) {
 
 __attribute__((__constructor__)) static void Child(int argc, char *argv[]) {
   if (argc >= 2 && !strcmp(argv[1], "Child")) {
+    if (sys_chdir("/")) {
+      exit(122);
+    }
     if (strcmp(argv[2], GetProgramExecutableName())) {
       exit(123);
     }
@@ -99,27 +103,6 @@ TEST(GetProramExecutableName, weirdArgv0NullEnv) {
   EXITS(0);
 }
 
-TEST(GetProgramExecutableName, weirdArgv0CosmoVar) {
-  if (skiptests) return;
-  char buf[32 + PATH_MAX];
-  stpcpy(stpcpy(buf, "COSMOPOLITAN_PROGRAM_EXECUTABLE="), self);
-  SPAWN(fork);
-  execve(self, (char *[]){"hello", "Child", self, "hello", 0},
-         (char *[]){buf, 0});
-  abort();
-  EXITS(0);
-}
-
-TEST(GetProgramExecutableName, weirdArgv0WrongCosmoVar) {
-  if (skiptests) return;
-  char *bad = "COSMOPOLITAN_PROGRAM_EXECUTABLE=hi";
-  SPAWN(fork);
-  execve(self, (char *[]){"hello", "Child", self, "hello", 0},
-         (char *[]){bad, 0});
-  abort();
-  EXITS(0);
-}
-
 TEST(GetProgramExecutableName, movedSelf) {
   if (skiptests) return;
   char buf[BUFSIZ];
@@ -136,6 +119,11 @@ TEST(GetProgramExecutableName, movedSelf) {
   stpcpy(buf + strlen(buf), "/test");
   SPAWN(fork);
   execve(buf, (char *[]){"hello", "Child", buf, "hello", 0}, (char *[]){0});
+  abort();
+  EXITS(0);
+  SPAWN(fork);
+  execve("./test", (char *[]){"hello", "Child", buf, "hello", 0},
+         (char *[]){0});
   abort();
   EXITS(0);
 }
