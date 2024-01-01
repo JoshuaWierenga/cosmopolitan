@@ -86,6 +86,10 @@ extern size_t __metal_tmpfiles_size;
 
 extern ptrdiff_t __metal_cwd_ino;
 
+char *metalpath(const char *filename, char *resolved);
+// Note that this function returns static memory so don't keep the result around
+char *GetFullMetalPath(int dirfd, const char *file);
+
 int sys_chdir_metal(const char *path);
 int sys_fchdir_metal(int dirfd);
 

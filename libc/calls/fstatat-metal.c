@@ -25,14 +25,13 @@
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 
-// TODO(joshua): Support !AT_FDCWD
 // TODO(joshua): Support tmp files
-// TODO(joshua): Support paths with .. and . in them
-// TODO(joshua): Support relative paths
-// TODO(joshua): Support excess slashes in path
-int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
-  if (dirfd != AT_FDCWD) return enosys();
-  if (!path) return efault();
+int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
+  if (!file) return efault();
+  char *path;
+  if (!(path = GetFullMetalPath(dirfd, file))) {
+    return -1;
+  }
   if (strcmp(path, APE_COM_NAME) == 0) {
     if (!_weaken(__ape_com_size)) return eopnotsupp();
     bzero(st, sizeof(*st));

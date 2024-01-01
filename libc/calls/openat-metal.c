@@ -16,24 +16,16 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "ape/relocations.h"
-#include "ape/sections.internal.h"
-#include "libc/assert.h"
 #include "libc/calls/internal.h"
 #include "libc/calls/metalfile.internal.h"
 #include "libc/intrin/directmap.internal.h"
 #include "libc/intrin/weaken.h"
-#include "libc/macros.internal.h"
 #include "libc/mem/mem.h"
-#include "libc/runtime/pc.internal.h"
-#include "libc/runtime/runtime.h"
 #include "libc/str/str.h"
-#include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/map.h"
 #include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/prot.h"
 #include "libc/sysv/errfuns.h"
-#include "libc/runtime/zipos.internal.h"
 
 #ifdef __x86_64__
 
@@ -49,12 +41,14 @@ static struct MetalFile *allocate_metal_file(void) {
   }
 }
 
-// TODO(joshua): Support !AT_FDCWD
 int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
   int fd;
   struct MetalFile *state = 0;
-  if (dirfd != AT_FDCWD) return enosys();
-  if (strcmp(file, APE_COM_NAME) == 0) {
+  char *path;
+  if (!(path = GetFullMetalPath(dirfd, file))) {
+    return -1;
+  }
+  if (strcmp(path, APE_COM_NAME) == 0) {
     if (flags != O_RDONLY) return eacces();
     if (!_weaken(__ape_com_base) || !_weaken(__ape_com_size)) {
       return eopnotsupp();
@@ -69,7 +63,7 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
              (~flags | (O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY))) {
     if (!_weaken(__metal_dirs)) return eopnotsupp();
     for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
-      if (!__metal_dirs[i].path || strcmp(file, __metal_dirs[i].path) != 0) {
+      if (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0) {
         continue;
       }
       if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
@@ -79,15 +73,15 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
       state->idx = i;
     }
   } else if (flags & (O_RDWR|O_CREAT|O_EXCL|O_UNLINK) &&
-             strncmp("/tmp/", file, 5) == 0 &&
-             file[5] != 0 && strchr(file + 5, '/') == NULL) {
+             strncmp(__metal_dirs[kMetalTmpDirIno].path, path, 4) == 0 &&
+             path[4] == '/' && path[5] != 0 && strchr(path + 5, '/') == NULL) {
     if (!_weaken(__metal_tmpfiles) || !_weaken(__metal_tmpfiles_size)) {
       return eopnotsupp();
     }
     if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
       return enosys();
     }
-    if (!OpenMetalTmpFile(file + 5, state)) return eacces();
+    if (!OpenMetalTmpFile(path + 5, state)) return eacces();
   } else {
     return eacces();
   }

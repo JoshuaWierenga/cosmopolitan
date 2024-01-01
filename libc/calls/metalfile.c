@@ -28,14 +28,18 @@
 #include "ape/relocations.h"
 #include "libc/assert.h"
 #include "libc/calls/metalfile.internal.h"
+#include "libc/calls/internal.h"
 #include "libc/intrin/directmap.internal.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/weaken.h"
+#include "libc/limits.h"
 #include "libc/macros.internal.h"
 #include "libc/runtime/pc.internal.h"
 #include "libc/str/str.h"
+#include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/dt.h"
 #include "libc/sysv/consts/prot.h"
+#include "libc/sysv/errfuns.h"
 
 #ifdef __x86_64__
 
@@ -237,6 +241,47 @@ bool32 CloseMetalTmpFile(struct MetalFile *file) {
   }
   --__metal_dirs[kMetalTmpDirIno].file_count;
   return true;
+}
+
+char *GetFullMetalPath(int dirfd, const char *file) {
+  struct Fd *f = 0;
+  struct MetalFile *m;
+  char abs_path[PATH_MAX];
+  static char full_path[PATH_MAX];
+
+  if (dirfd != AT_FDCWD && file[0] != '/') {
+    if (dirfd < 0 || dirfd >= g_fds.n) {
+      ebadf();
+      return 0;
+    }
+
+    f = &g_fds.p[dirfd];
+    if (f->kind != kFdFile) {
+      enotdir();
+      return 0;
+    }
+
+    m = (struct MetalFile *)f->handle;
+    if (m->type != kMetalDir) {
+      enotdir();
+      return 0;
+    }
+
+    if (m->idx >= kMetalDirCount || !__metal_dirs[m->idx].path) {
+      ebadf();
+      return 0;
+    }
+
+    strlcpy(abs_path, __metal_dirs[__metal_cwd_ino].path, PATH_MAX);
+    strlcat(abs_path, "/", PATH_MAX);
+    strlcat(abs_path, file, PATH_MAX);
+  }
+
+  if (!metalpath(f ? abs_path : file, full_path)) {
+    enoent();
+    return 0;
+  }
+  return full_path;
 }
 
 #endif /* __x86_64__ */

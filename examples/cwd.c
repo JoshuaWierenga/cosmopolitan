@@ -25,13 +25,7 @@ int main(void) {
   printf("new cwd: %s\n", path);
 
   puts("changing cwd to /proc/../proc/self/./// via fchdir");
-  // TODO(joshua): Handle realpath in openat
-  if (!realpath("/proc/../proc/self/.///", path)) {
-    perror("realpath failed");
-    return 1;
-  }
-  printf("realpath turned /proc/../proc/self/./// into %s\n", path);
-  if (!(dir = opendir(path))) {
+  if (!(dir = opendir("/proc/../proc/self/.///"))) {
     perror("opendir failed");
     return 1;
   }
