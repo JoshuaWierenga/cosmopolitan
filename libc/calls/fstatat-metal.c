@@ -33,7 +33,9 @@ int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
     return -1;
   }
   if (strcmp(path, APE_COM_NAME) == 0) {
-    if (!_weaken(__ape_com_size)) return eopnotsupp();
+    if (!_weaken(__ape_com_sectors)) {
+      return enxio();
+    }
     bzero(st, sizeof(*st));
     st->st_nlink = 1;
     st->st_size = __ape_com_size;
@@ -41,7 +43,6 @@ int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
     st->st_blksize = 1;
     return 0;
   }
-  if (!_weaken(__metal_dirs)) return eopnotsupp();
   for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
     if (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0) {
       continue;

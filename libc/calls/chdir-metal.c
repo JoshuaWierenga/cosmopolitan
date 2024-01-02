@@ -38,7 +38,8 @@ int sys_chdir_metal(const char *file) {
   if (strcmp(path, APE_COM_NAME) == 0) {
     return enotdir();
   }
-  if (strncmp(__metal_dirs[kMetalTmpDirIno].path, path, 4) == 0 &&
+  if (__metal_tmpfiles &&
+      strncmp(__metal_dirs[kMetalTmpDirIno].path, path, 4) == 0 &&
       path[4] == '/' && path[5] != 0 && strchr(path + 5, '/') == NULL) {
     for (ptrdiff_t i = 0; i < __metal_tmpfiles_max; ++i) {
       if (__metal_tmpfiles[i] && strcmp(path + 5, __metal_tmpfiles[i]) == 0) {
