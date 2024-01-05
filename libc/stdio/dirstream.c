@@ -543,7 +543,7 @@ static struct dirent *readdir_metal(DIR *dir) {
     ent->d_name[2] = 0;
   } else if (file->idx == kMetalTmpDirIno) {
     while(file->pos - 2 < __metal_tmpfiles_max &&
-          !__metal_tmpfiles[file->pos - 2]) {
+          __metal_tmpfiles[file->pos - 2].deleted) {
       ++file->pos;
     }
     if (file->pos - 2 < __metal_tmpfiles_max) {
@@ -552,7 +552,7 @@ static struct dirent *readdir_metal(DIR *dir) {
       ent->d_off = file->pos;
       ent->d_reclen = sizeof(*ent);
       ent->d_type = DT_REG;
-      strcpy(ent->d_name, __metal_tmpfiles[file->pos - 2]);
+      strcpy(ent->d_name, __metal_tmpfiles[file->pos - 2].name);
     }
   } else if (file->pos - 2 < dir_info->ent_count) {
     ent = dir_info->ents + file->pos - 2;

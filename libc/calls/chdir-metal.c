@@ -25,7 +25,7 @@
 
 int sys_chdir_metal(const char *file) {
   char path[PATH_MAX];
-  if (!(metalpath(file, path))) {
+  if (!_MetalPath(file, path)) {
     return enoent();
   }
   for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
@@ -42,7 +42,8 @@ int sys_chdir_metal(const char *file) {
       strncmp(__metal_dirs[kMetalTmpDirIno].path, path, 4) == 0 &&
       path[4] == '/' && path[5] != 0 && strchr(path + 5, '/') == NULL) {
     for (ptrdiff_t i = 0; i < __metal_tmpfiles_max; ++i) {
-      if (__metal_tmpfiles[i] && strcmp(path + 5, __metal_tmpfiles[i]) == 0) {
+      if (!__metal_tmpfiles[i].deleted &&
+          strcmp(path + 5, __metal_tmpfiles[i].name) == 0) {
         return enotdir();
       }
     }

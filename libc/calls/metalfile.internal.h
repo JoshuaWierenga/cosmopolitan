@@ -65,6 +65,14 @@ struct MetalDirInfo {
   struct dirent ents[kMetalDirStaticMax];
 };
 
+// TODO(joshua): Store copies of MetalFile's base and size
+struct MetalTmpInfo {
+  char *name;
+  int64_t namesize; // allocated size of name
+  int64_t filesize; // allocated size of file, can be larger than MetalFile's size
+  bool32 deleted;
+};
+
 // TODO(joshua): Support kFdDevNull?
 struct MetalFile {
   char type;
@@ -80,23 +88,25 @@ extern uint16_t __ape_com_sectors;  // ape/ape.S
 
 extern struct MetalDirInfo *__metal_dirs;
 
-extern char **__metal_tmpfiles;
+extern struct MetalTmpInfo *__metal_tmpfiles;
 extern ptrdiff_t __metal_tmpfiles_max;
 extern size_t __metal_tmpfiles_size;
 
 extern ptrdiff_t __metal_cwd_ino;
 
-char *metalpath(const char *filename, char *resolved);
-// Note that this function returns static memory so don't keep the result around
-char *GetFullMetalPath(int dirfd, const char *file);
-
 int sys_chdir_metal(const char *path);
 int sys_fchdir_metal(int dirfd);
 
+char *_MetalPath(const char *filename, char *resolved);
+// This function returns static memory so don't keep the result around
+char *_MetalFullPath(int dirfd, const char *file);
+
+size_t _MetalAllocate(size_t size, void **addr);
+
 // Do not call directly, use the openat, write and close functions and their wrappers
-bool32 OpenMetalTmpFile(const char *path, struct MetalFile *file);
-void ResizeMetalTmpFile(struct MetalFile *file, const size_t min_size);
-bool32 CloseMetalTmpFile(struct MetalFile *file);
+bool32 _OpenMetalTmpFile(const char *path, struct MetalFile *file);
+void _ExpandMetalTmpFile(struct MetalFile *file, const size_t min_size);
+bool32 _CloseMetalTmpFile(struct MetalFile *file);
 
 COSMOPOLITAN_C_END_
 #endif /* !(__ASSEMBLER__ + __LINKER__ + 0) */

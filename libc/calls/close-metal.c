@@ -27,6 +27,6 @@ int sys_close_metal(int fd) {
   if (f->kind != kFdFile) return 0;
   struct MetalFile *file = (struct MetalFile *)f->handle;
   if (file->type != kMetalTmp) return 0;
-  if (!CloseMetalTmpFile(file)) return ebadf();
+  if (!_CloseMetalTmpFile(file)) return ebadf();
   return 0;
 }

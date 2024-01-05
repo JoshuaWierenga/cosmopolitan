@@ -105,7 +105,7 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
       (~flags & O_CREAT && flags & O_EXCL)) {
     return einval();
   }
-  if (!(path = GetFullMetalPath(dirfd, file))) {
+  if (!(path = _MetalFullPath(dirfd, file))) {
     return -1;
   }
   if (strcmp(path, APE_COM_NAME) == 0) {
@@ -159,7 +159,7 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
     if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
       return enomem(); // enfile?
     }
-    if (!OpenMetalTmpFile(path + 5, state)) {
+    if (!_OpenMetalTmpFile(path + 5, state)) {
       return eacces();
     }
   } else if ((flags & O_ACCMODE) != O_RDONLY || flags & (O_CREAT/*|O_TRUNC*/)) {

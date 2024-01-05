@@ -29,7 +29,7 @@
 int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
   if (!file) return efault();
   char *path;
-  if (!(path = GetFullMetalPath(dirfd, file))) {
+  if (!(path = _MetalFullPath(dirfd, file))) {
     return -1;
   }
   if (strcmp(path, APE_COM_NAME) == 0) {

@@ -80,7 +80,7 @@ static char *ResolvePath(char *d, const char *s, size_t n) {
  * @raise ENOTDIR if base component ends with slash and is not a dir
  * @raise ENAMETOOLONG if filename resolution exceeded `PATH_MAX`
  */
-char *metalpath(const char *filename, char *resolved) {
+char *_MetalPath(const char *filename, char *resolved) {
 	ssize_t rc;
 	int up, check_dir=0;
 	size_t k, p, q, l, l0, nup=0;

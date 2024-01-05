@@ -46,7 +46,7 @@ ssize_t sys_write_metal(int fd, const struct iovec *iov, int iovlen, int64_t off
       if (offset != -1) file->pos = offset;
       for (i = 0; i < iovlen; ++i) {
         if (file->size < file->pos || file->size - file->pos < iov[i].iov_len) {
-          ResizeMetalTmpFile(file, file->pos + iov[i].iov_len);
+          _ExpandMetalTmpFile(file, file->pos + iov[i].iov_len);
         }
         memcpy(file->base + file->pos, iov[i].iov_base, iov[i].iov_len);
         file->pos += iov[i].iov_len;
