@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2024 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,13 +16,19 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/sysdir.internal.h"
-#include "libc/dce.h"
+#include "ape/sections.internal.h"
+#include "libc/calls/calls.h"
+#include "libc/calls/syscall-sysv.internal.h"
+#include "libc/errno.h"
 
-const char *GetProtocolsTxtPath(char *buf, size_t size) {
-  if (!IsWindows()) {
-    return "/etc/protocols";
-  } else {
-    return GetSystemDirectoryPath(buf, "\\drivers\\etc\\protocol", size);
-  }
+/**
+ * Returns true if process is running under qemu-x86_64 or qemu-aarch64.
+ */
+int IsQemu(void) {
+  // qemu doesn't validate the advice argument
+  // we could also check if __getcwd(0, 0) raises efault
+  int e = errno;
+  int r = !sys_madvise(__executable_start, 16384, 127);
+  errno = e;
+  return r;
 }

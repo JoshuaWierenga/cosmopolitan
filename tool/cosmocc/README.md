@@ -134,6 +134,13 @@ kinds of codebases using `cosmocc` which is just a convenient wrapper
 around the cross compilers, which would be a better choice to use in
 this type of circumstance.
 
+## Usage
+
+By default, all the code you compile will use the baseline of the X86_64
+and AARCH64, which is K8 and ARMv8.0. You can pass architecture specific
+flags to use newer ISAs by using the `-Xx86_64` and `-Xaarch64` prefixes
+like `-Xx86_64-mssse3` and `-Xaarch64-march=armv8.2-a+dotprod`.
+
 ## Troubleshooting
 
 Your `cosmocc` compiler runs a number commands under the hood. If
@@ -291,7 +298,7 @@ statements instead, so that Cosmopolitan Libc's system constants will
 work as expected. Our modifications to GNU GCC are published under the
 ISC license at <https://github.com/ahgamut/gcc/tree/portcosmo-11.2>. The
 binaries you see here were first published at
-<https://github.com/ahgamut/superconfigure/releases/tag/z0.0.29> which
+<https://github.com/ahgamut/superconfigure/releases/tag/z0.0.30> which
 is regularly updated.
 
 ## Legal
