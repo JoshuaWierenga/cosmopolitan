@@ -874,9 +874,12 @@ void *cosmo_dlsym(void *handle, const char *name) {
  */
 void *cosmo_dltramp(void *foreign_func) {
   if (!IsWindows()) {
-    return foreign_thunk_sysv(foreign_func);
+    return foreign_thunk(foreign_tramp_sysv, foreign_func);
+  } else if (IsXnu() && !IsXnuSilicon()) {
+    dlerror_set("dlopen() isn't supported on x86-64 MacOS");
+    return 0;
   } else {
-    return foreign_thunk_nt(foreign_func);
+    return foreign_thunk(foreign_tramp_nt, foreign_func);
   }
 }
 
@@ -921,26 +924,6 @@ char *cosmo_dlerror(void) {
   }
   STRACE("dlerror() → %#s", res);
   return res;
-}
-
-/**
- * Make symbols obtained by a library specific method instead of dlsym
- * mostly safe to call.
- *
- * @param address of obtained symbol
- * @return address of safe symbol, or NULL w/ dlerror()
- */
-void *cosmo_dlfix(void *symbol) {
-  void *func = 0;
-  if (IsWindows()) {
-    func = foreign_thunk(foreign_tramp_nt, symbol);
-  } else if (IsXnu() && !IsXnuSilicon()) {
-    dlerror_set("dlopen() isn't supported on x86-64 MacOS");
-  } else {
-    func = foreign_thunk(foreign_tramp_sysv, symbol);
-  }
-  STRACE("dlfix(%p) → %p", symbol, func);
-  return func;
 }
 
 /**

@@ -22,7 +22,6 @@ void *cosmo_dlopen(const char *, int);
 void *cosmo_dlsym(void *, const char *);
 void *cosmo_dltramp(void *);
 int cosmo_dlclose(void *);
-void *cosmo_dlfix(void *);
 void *cosmo_dlprep(void *);
 #endif
 
