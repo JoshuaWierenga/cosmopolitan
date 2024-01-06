@@ -59,7 +59,7 @@ __static_yoink("_init_metalfile");
 void *__ape_com_base;
 size_t __ape_com_size = 0;
 
-struct MetalDirInfo *__metal_dirs;
+struct MetalDir *__metal_dirs;
 
 ptrdiff_t __metal_cwd_ino = ZIP_INO;
 
@@ -134,7 +134,7 @@ textstartup void InitializeMetalFile(void) {
   strs[28] = 0;
 
   // / -> /proc, /tmp, /zip
-  __metal_dirs[ROOT_INO] = (struct MetalDirInfo){root_path, 3, 3, {
+  __metal_dirs[ROOT_INO] = (struct MetalDir){root_path, 3, 3, {
       {PROC_INO,        2, sizeof(*__metal_dirs), DT_DIR},
       {kMetalTmpDirIno, 3, sizeof(*__metal_dirs), DT_DIR},
       {ZIP_INO,         4, sizeof(*__metal_dirs), DT_DIR},
@@ -144,14 +144,14 @@ textstartup void InitializeMetalFile(void) {
   memcpy(__metal_dirs[ROOT_INO].ents[2].d_name, zip_name, sizeof("zip"));
 
   // /proc -> /proc/self
-  __metal_dirs[PROC_INO] = (struct MetalDirInfo){proc_path, 1, 1, {
+  __metal_dirs[PROC_INO] = (struct MetalDir){proc_path, 1, 1, {
       {PROC_SELF_INO, 2, sizeof(*__metal_dirs), DT_DIR}
   }};
   memcpy(__metal_dirs[PROC_INO].ents[0].d_name, self_name, sizeof("self"));
 
   // /proc/self -> /proc/self/exec
-  __metal_dirs[PROC_SELF_INO] = (struct MetalDirInfo){proc_self_path, 1, 1, {
-      {PROC_SELF_EXE_INO, 2, sizeof(*__metal_dirs), DT_REG}
+  __metal_dirs[PROC_SELF_INO] = (struct MetalDir){proc_self_path, 1, 1, {
+      {PROC_SELF_EXE_INO, 2, sizeof(*__metal_dirs), DT_CHR}
   }};
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[0] = 'e';
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[1] = 'x';
@@ -159,10 +159,10 @@ textstartup void InitializeMetalFile(void) {
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[3] = 0;
 
   // /tmp
-  __metal_dirs[kMetalTmpDirIno] = (struct MetalDirInfo){tmp_path, 0, 0};
+  __metal_dirs[kMetalTmpDirIno] = (struct MetalDir){tmp_path, 0, 0};
 
   // /zip, managed seperately
-  __metal_dirs[ZIP_INO] = (struct MetalDirInfo){zip_path, 0, 0};
+  __metal_dirs[ZIP_INO] = (struct MetalDir){zip_path, 0, 0};
 }
 
 size_t _MetalAllocate(size_t size, void **addr) {
@@ -176,6 +176,7 @@ size_t _MetalAllocate(size_t size, void **addr) {
   return full_size;
 }
 
+// TODO(joshua): Confirm that dirfd is actually a directory
 char *_MetalFullPath(int dirfd, const char *file) {
   struct Fd *f = 0;
   struct MetalFile *m;

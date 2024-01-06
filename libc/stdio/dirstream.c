@@ -517,7 +517,7 @@ static struct dirent *bad_readdir(void) {
 static struct dirent *readdir_metal(DIR *dir) {
   struct Fd *sfd;
   struct MetalFile *file;
-  struct MetalDirInfo *dir_info;
+  struct MetalDir *dir_info;
   struct dirent *ent = 0;
   sfd = &g_fds.p[dir->fd];
   if (sfd->kind != kFdFile) return bad_readdir();

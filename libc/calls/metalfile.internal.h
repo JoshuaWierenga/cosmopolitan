@@ -5,9 +5,10 @@
 
 COSMOPOLITAN_C_START_
 
-#define kMetalApe  0
-#define kMetalDir  1
-#define kMetalTmp  2
+#define kMetalBad  0 // used if file does not exist
+#define kMetalApe  1
+#define kMetalDir  2
+#define kMetalTmp  3
 
 #define kMetalDirCount     5 // __metal_tmpfiles element count
 #define kMetalDirStaticMax 4 // __metal_tmpfiles[i].ents max element count
@@ -56,9 +57,15 @@ COSMOPOLITAN_C_START_
   }
 */
 
+/* metal has 3 simulated filesystems:
+/:    read only, contains /proc/self/exe
+/tmp: read write
+/zip: zipos
+*/
+
 // TODO(joshua): Support directories within /tmp? If so only store name here and use recursion to construct full path
 // TODO(joshua): Use or remove file_count
-struct MetalDirInfo {
+struct MetalDir {
   char *path;
   ptrdiff_t file_count; // total number of files, for kMetalTmp this can be different from ent_count
   ptrdiff_t ent_count;  // number of files in ents
@@ -66,19 +73,25 @@ struct MetalDirInfo {
 };
 
 // TODO(joshua): Store copies of MetalFile's base and size
-struct MetalTmpInfo {
+struct MetalTmpFile {
   char *name;
   int64_t namesize; // allocated size of name
   int64_t filesize; // allocated size of file, can be larger than MetalFile's size
   bool32 deleted;
 };
 
+struct MetalFileInfo {
+  uint8_t type;  // the reset is only set if !kMetalBad
+  uint32_t mode;
+  ptrdiff_t idx; // ino/__metal_dirs index for kMetalDir, __metal_tmpfiles index for kMetalTmp
+};
+
 // TODO(joshua): Support kFdDevNull?
 struct MetalFile {
-  char type;
-  char *base;
-  size_t size;   // size of base for kMetalApe and kMetalTmp
-  size_t pos;    // offset from base for kMetalApe and kMetalTmp, tell for kMetalDir
+  uint8_t type;
+  uint8_t *base; // base address of file for kMetalApe and kMetalTmp
+  size_t size;   // size of file at base for kMetalApe and kMetalTmp
+  size_t pos;    // byte offset from base for kMetalApe and kMetalTmp, tell for kMetalDir
   ptrdiff_t idx; // ino/__metal_dirs index for kMetalDir, __metal_tmpfiles index for kMetalTmp
 };
 
@@ -86,9 +99,9 @@ extern void *__ape_com_base;
 extern size_t __ape_com_size;
 extern uint16_t __ape_com_sectors;  // ape/ape.S
 
-extern struct MetalDirInfo *__metal_dirs;
+extern struct MetalDir *__metal_dirs;
 
-extern struct MetalTmpInfo *__metal_tmpfiles;
+extern struct MetalTmpFile *__metal_tmpfiles;
 extern ptrdiff_t __metal_tmpfiles_max;
 extern size_t __metal_tmpfiles_size;
 

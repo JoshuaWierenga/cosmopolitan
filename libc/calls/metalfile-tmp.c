@@ -33,7 +33,7 @@
 
 #ifdef __x86_64__
 
-struct MetalTmpInfo *__metal_tmpfiles = NULL;
+struct MetalTmpFile *__metal_tmpfiles = NULL;
 ptrdiff_t __metal_tmpfiles_max = 0;
 size_t __metal_tmpfiles_size = 0;
 
