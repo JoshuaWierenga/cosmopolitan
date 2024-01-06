@@ -116,7 +116,7 @@ struct Loaded {
   Elf64_Phdr ph[25];
 };
 
-static struct {
+struct {
   atomic_uint once;
   bool is_supported;
   struct CosmoTib *tib;
@@ -125,9 +125,10 @@ static struct {
   int (*dlclose)(void *);
   char *(*dlerror)(void);
   jmp_buf jb;
-} foreign;
+} __foreign;
 
 long __nt2sysv();
+long foreign_tramp_sysv();
 
 static _Thread_local char dlerror_buf[128];
 #ifdef __x86_64__
@@ -160,17 +161,13 @@ static int is_file_newer_than(const char *path, const char *other) {
   return timespec_cmp(st1.st_mtim, st2.st_mtim) > 0;
 }
 
-// on system five we sadly need this brutal trampoline
-// todo(jart): add tls trampoline to sigaction() handlers
-// todo(jart): morph binary to get tls from host c library
 #ifdef __x86_64__
 extern void foreign_tramp_nt(void);
-extern void foreign_tramp_sysv(void);
 
 void foreign_tramp_setup(void) {
   cosmoSigMask = __sig_block();
   cosmoTib = __get_tls();
-  __set_tls(foreign.tib);
+  __set_tls(__foreign.tib);
 }
 
 void foreign_tramp_restore(void) {
@@ -179,22 +176,7 @@ void foreign_tramp_restore(void) {
 }
 #elif defined(__aarch64__)
 // Just needs to exist, foreign_thunk already emits x86 assembly which won't run
-void foreign_tramp_nt(void) {}
-
-// TODO(joshua): rewrite in assembly to solve stack issues
-static long foreign_tramp_sysv(long a, long b, long c, long d, long e, long f,
-                               long g, long h, long i,
-                               double A, double B, double C, double D, double E,
-                               double F, double G, double H) {
-  long res;
-  long (*func)(long, long, long, long, long, long, long, long, long,
-               double, double, double, double, double, double, double, double);
-  asm("\t mov %0,x11" : "=r"(func));
-  BLOCK_SIGNALS;
-  res = func(a, b, c, d, e, f, g, h, i, A, B, C, D, E, F, G, H);
-  ALLOW_SIGNALS;
-  return res;
-}
+static void foreign_tramp_nt(void) {}
 #else
 #error "unsupported architecture"
 #endif
@@ -210,7 +192,7 @@ static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f
 #ifdef __x86_64__
   asm("\t movq %%r11,%0" : "=r"(func));
 #elif defined(__aarch64__)
-  asm("\t mov %0,x11" : "=r"(func));
+  asm("\t mov %0,x8" : "=r"(func));
 #else
 #error "unsupported architecture"
 #endif
@@ -219,7 +201,7 @@ static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f
 #endif
   res = func(a, b, c, d, e, f, A, B, C, D, E, F);
 #ifdef __x86_64__
-  __set_tls(foreign.tib);
+  __set_tls(__foreign.tib);
 #endif
   return res;
 }
@@ -354,11 +336,11 @@ static long *push_strs(long *sp, char **list, int count) {
 }
 
 static wontreturn dontinstrument void foreign_helper(void **p) {
-  foreign.dlopen = p[0];
-  foreign.dlsym = p[1];
-  foreign.dlclose = p[2];
-  foreign.dlerror = p[3];
-  longjmp(foreign.jb, 1);
+  __foreign.dlopen = p[0];
+  __foreign.dlsym = p[1];
+  __foreign.dlclose = p[2];
+  __foreign.dlerror = p[3];
+  longjmp(__foreign.jb, 1);
 }
 
 static dontinline void elf_exec(const char *file, char **envp) {
@@ -574,7 +556,7 @@ static void *foreign_thunk(void *tramp, void *func) {
 #elif defined(__aarch64__)
   __jit_begin();
   if ((p = code = foreign_alloc(36))) {
-    p = movimm(p, 11, (uintptr_t)func);
+    p = movimm(p, 8, (uintptr_t)func);
     p = movimm(p, 10, (uintptr_t)tramp);
     *(uint32_t *)p = 0xd61f0140;  // br x10
     __clear_cache(code, p + 4);
@@ -694,19 +676,19 @@ static bool foreign_setup(void) {
 #ifdef __x86_64__
   struct CosmoTib *cosmo_tib = __get_tls();
 #endif
-  if (!setjmp(foreign.jb)) {
+  if (!setjmp(__foreign.jb)) {
     elf_exec(exe, environ);
     return false;  // if elf_exec() returns, it failed
   }
 #ifdef __x86_64__
-  foreign.tib = __get_tls();
+  __foreign.tib = __get_tls();
   __set_tls(cosmo_tib);
 #endif
-  foreign.dlopen = foreign_thunk(foreign_tramp_sysv, foreign.dlopen);
-  foreign.dlsym = foreign_thunk(foreign_tramp_sysv, foreign.dlsym);
-  foreign.dlclose = foreign_thunk(foreign_tramp_sysv, foreign.dlclose);
-  foreign.dlerror = foreign_thunk(foreign_tramp_sysv, foreign.dlerror);
-  foreign.is_supported = true;
+  __foreign.dlopen = foreign_thunk(foreign_tramp_sysv, __foreign.dlopen);
+  __foreign.dlsym = foreign_thunk(foreign_tramp_sysv, __foreign.dlsym);
+  __foreign.dlclose = foreign_thunk(foreign_tramp_sysv, __foreign.dlclose);
+  __foreign.dlerror = foreign_thunk(foreign_tramp_sysv, __foreign.dlerror);
+  __foreign.is_supported = true;
   return true;
 }
 
@@ -716,8 +698,8 @@ static void foreign_once(void) {
 
 static bool foreign_init(void) {
   bool res;
-  cosmo_once(&foreign.once, foreign_once);
-  if (!(res = foreign.is_supported)) {
+  cosmo_once(&__foreign.once, foreign_once);
+  if (!(res = __foreign.is_supported)) {
     dlerror_set("dlopen() isn't supported on this platform");
   }
   return res;
@@ -847,7 +829,7 @@ void *cosmo_dlopen(const char *path, int mode) {
     dlerror_set("dlopen() isn't supported on OpenBSD yet");
     res = 0;
   } else if (foreign_init()) {
-    res = foreign.dlopen(path, mode);
+    res = __foreign.dlopen(path, mode);
   } else {
     res = 0;
   }
@@ -877,7 +859,7 @@ void *cosmo_dlsym(void *handle, const char *name) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
     func = 0;
   } else if (foreign_init()) {
-    if ((func = foreign.dlsym(handle, name))) {
+    if ((func = __foreign.dlsym(handle, name))) {
       func = foreign_thunk(foreign_tramp_sysv, func);
     }
   } else {
@@ -903,7 +885,7 @@ int cosmo_dlclose(void *handle) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
     res = -1;
   } else if (foreign_init()) {
-    res = foreign.dlclose(handle);
+    res = __foreign.dlclose(handle);
   } else {
     res = -1;
   }
@@ -921,7 +903,7 @@ char *cosmo_dlerror(void) {
   } else if (IsWindows() || IsXnu()) {
     res = dlerror_buf;
   } else if (foreign_init()) {
-    res = foreign.dlerror();
+    res = __foreign.dlerror();
     res = dlerror_set(res);
   } else {
     res = dlerror_buf;

@@ -8,16 +8,13 @@ LIBC_DLOPEN = $(LIBC_DLOPEN_A_DEPS) $(LIBC_DLOPEN_A)
 LIBC_DLOPEN_A = o/$(MODE)/libc/dlopen/dlopen.a
 LIBC_DLOPEN_A_FILES := $(wildcard libc/dlopen/*)
 LIBC_DLOPEN_A_HDRS = $(filter %.h,$(LIBC_DLOPEN_A_FILES))
-LIBC_DLOPEN_A_SRCS_S = $(filter %.S,$(LIBC_DLOPEN_A_FILES))
 LIBC_DLOPEN_A_SRCS_C = $(filter %.c,$(LIBC_DLOPEN_A_FILES))
+LIBC_DLOPEN_A_SRCS_S = $(filter %.S,$(LIBC_DLOPEN_A_FILES))
+LIBC_DLOPEN_A_SRCS = $(LIBC_DLOPEN_A_SRCS_C) $(LIBC_DLOPEN_A_SRCS_S)
 
-LIBC_DLOPEN_A_SRCS =					\
-	$(LIBC_DLOPEN_A_SRCS_S)			\
-	$(LIBC_DLOPEN_A_SRCS_C)
-
-LIBC_DLOPEN_A_OBJS =					\
-	$(LIBC_DLOPEN_A_SRCS_S:%.S=o/$(MODE)/%.o)	\
-	$(LIBC_DLOPEN_A_SRCS_C:%.c=o/$(MODE)/%.o)
+LIBC_DLOPEN_A_OBJS =							\
+	$(LIBC_DLOPEN_A_SRCS_C:%.c=o/$(MODE)/%.o)			\
+	$(LIBC_DLOPEN_A_SRCS_S:%.S=o/$(MODE)/%.o)
 
 LIBC_DLOPEN_A_CHECKS =							\
 	$(LIBC_DLOPEN_A).pkg						\
@@ -27,6 +24,7 @@ LIBC_DLOPEN_A_DIRECTDEPS =						\
 	LIBC_CALLS							\
 	LIBC_ELF							\
 	LIBC_INTRIN							\
+	LIBC_MEM							\
 	LIBC_NEXGEN32E							\
 	LIBC_NT_KERNEL32						\
 	LIBC_PROC							\
@@ -53,7 +51,8 @@ $(LIBC_DLOPEN_A_OBJS): private						\
 			-Wframe-larger-than=4096			\
 			-Walloca-larger-than=4096
 
-o/$(MODE)/libc/dlopen/foreign-tramp.o: libc/dlopen/foreign-tramp.S
+# these assembly files are safe to build on aarch64
+o/$(MODE)/libc/dlopen/foreign_tramp.o: libc/dlopen/foreign_tramp.S
 	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
 
 LIBC_DLOPEN_LIBS = $(foreach x,$(LIBC_DLOPEN_ARTIFACTS),$($(x)))

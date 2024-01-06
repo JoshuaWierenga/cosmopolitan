@@ -1,6 +1,25 @@
+/*-*- mode:unix-assembly; indent-tabs-mode:t; tab-width:8; coding:utf-8     -*-│
+│ vi: set et ft=asm ts=8 tw=8 fenc=utf-8                                   :vi │
+╞══════════════════════════════════════════════════════════════════════════════╡
+│ Copyright 2024 Justine Alexandra Roberts Tunney                              │
+│                                                                              │
+│ Permission to use, copy, modify, and/or distribute this software for         │
+│ any purpose with or without fee is hereby granted, provided that the         │
+│ above copyright notice and this permission notice appear in all copies.      │
+│                                                                              │
+│ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL                │
+│ WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED                │
+│ WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE             │
+│ AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL         │
+│ DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR        │
+│ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER               │
+│ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
+│ PERFORMANCE OF THIS SOFTWARE.                                                │
+╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/macros.internal.h"
-.privileged
 
+#define SIZE 0x0200
+#define SKEW 0x10
 
 #ifdef __x86_64__
 // Wrapper for dlsym loaded function to ensure all passed
@@ -69,7 +88,13 @@ foreign_tramp_nt:
   popq   %rbp
   ret
 
-	.endfn	foreign_tramp_nt,globl,hidden
+	.endfn	foreign_tramp_nt,globl
+
+#endif /* __x86_64__ */
+
+foreign_tramp_sysv:
+
+#ifdef __x86_64__
 
 // Wrapper for dlsym loaded function to block signals, switch tls
 // and ensure all passed parameters actually make it.
@@ -77,7 +102,7 @@ foreign_tramp_nt:
 // @params all x86_64 sysv parameter registers + any on stack
 // @param r11  is pointer to dlsym loaded function
 // @return dlsym loaded function's return value
-foreign_tramp_sysv:
+
   pushq  %rbp
   mov    %rsp, %rbp
   pushq  %r11
@@ -159,5 +184,97 @@ foreign_tramp_sysv:
   popq   %rbp
   ret
 
-	.endfn	foreign_tramp_sysv,globl,hidden
-#endif /* __x86_64__ */
+#elif defined(__aarch64__)
+
+	stp	x29,x30,[sp,-0x100]!
+	mov	x29,sp
+
+//	save vector arguments
+	stp	q0,q1,[sp,0x10]
+	stp	q2,q3,[sp,0x30]
+	stp	q4,q5,[sp,0x50]
+	stp	q6,q7,[sp,0x70]
+
+//	save register arguments
+	stp	x0,x1,[sp,0x90]
+	stp	x2,x3,[sp,0xa0]
+	stp	x4,x5,[sp,0xb0]
+	stp	x6,x7,[sp,0xc0]
+
+//	save function pointer
+	str	x8,[sp,0xd0]
+
+//	block signals
+	bl	__sig_block
+	str	x0,[sp,0xd8]
+
+//	move stack arguments
+	sub	sp,sp,#0x100
+	ldp	q0,q1,[sp,SIZE+0x00]
+	ldp	q2,q3,[sp,SIZE+0x20]
+	ldp	q4,q5,[sp,SIZE+0x40]
+	ldp	q6,q7,[sp,SIZE+0x60]
+	stp	q0,q1,[sp,0x00]
+	stp	q2,q3,[sp,0x20]
+	stp	q4,q5,[sp,0x40]
+	stp	q6,q7,[sp,0x60]
+	ldp	q0,q1,[sp,SIZE+0x80]
+	ldp	q2,q3,[sp,SIZE+0xa0]
+	ldp	q4,q5,[sp,SIZE+0xc0]
+	ldp	q6,q7,[sp,SIZE+0xe0]
+	stp	q0,q1,[sp,0x80]
+	stp	q2,q3,[sp,0xa0]
+	stp	q4,q5,[sp,0xc0]
+	stp	q6,q7,[sp,0xe0]
+
+//	restore vector arguments
+	ldp	q0,q1,[sp,0x100+0x10]
+	ldp	q2,q3,[sp,0x100+0x30]
+	ldp	q4,q5,[sp,0x100+0x50]
+	ldp	q6,q7,[sp,0x100+0x70]
+
+//	restore register arguments
+	ldp	x0,x1,[sp,0x100+0x90]
+	ldp	x2,x3,[sp,0x100+0xa0]
+	ldp	x4,x5,[sp,0x100+0xb0]
+	ldp	x6,x7,[sp,0x100+0xc0]
+
+//	call function
+	ldr	x8,[sp,0x100+0xd0]
+	blr	x8
+	add	sp,sp,#0x100
+
+//	save vector results
+	stp	q0,q1,[sp,0x10]
+	stp	q2,q3,[sp,0x30]
+	stp	q4,q5,[sp,0x50]
+	stp	q6,q7,[sp,0x70]
+
+//	save register results
+	stp	x0,x1,[sp,0x90]
+	stp	x2,x3,[sp,0xa0]
+	stp	x4,x5,[sp,0xb0]
+	stp	x6,x7,[sp,0xc0]
+
+//	unblock signals
+	ldr	x0,[sp,0xd8]
+	bl	__sig_unblock
+
+//	restore vector results
+	ldp	q0,q1,[sp,0x10]
+	ldp	q2,q3,[sp,0x30]
+	ldp	q4,q5,[sp,0x50]
+	ldp	q6,q7,[sp,0x70]
+
+//	restore register results
+	ldp	x0,x1,[sp,0x90]
+	ldp	x2,x3,[sp,0xa0]
+	ldp	x4,x5,[sp,0xb0]
+	ldp	x6,x7,[sp,0xc0]
+
+	ldp	x29,x30,[sp],0x100
+	ret
+
+#endif // __x86_64__
+
+	.endfn	foreign_tramp_sysv,globl
