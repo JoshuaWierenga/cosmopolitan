@@ -64,7 +64,7 @@ static ptrdiff_t is_tmp_file(const char *path) {
   }
 
   while (i < __metal_tmpfiles_max && (__metal_tmpfiles[i].deleted ||
-         strcmp(path, __metal_tmpfiles[i].name) != 0)) {
+         strcmp(path + 5, __metal_tmpfiles[i].name) != 0)) {
     ++i;
   }
 
