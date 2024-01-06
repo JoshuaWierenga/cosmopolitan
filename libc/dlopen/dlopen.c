@@ -291,7 +291,7 @@ static wontreturn dontinstrument void foreign_helper(void **p) {
   __foreign.dlsym = p[1];
   __foreign.dlclose = p[2];
   __foreign.dlerror = p[3];
-  longjmp(__foreign.jb, 1);
+  _longjmp(__foreign.jb, 1);
 }
 
 static dontinline void elf_exec(const char *file, char **envp) {
@@ -841,6 +841,17 @@ void *cosmo_dlsym(void *handle, const char *name) {
   }
   STRACE("dlsym(%p, %#s) → %p", handle, name, func);
   return func;
+}
+
+/**
+ * Trampolines foreign function pointer so it can be called safely.
+ */
+void *cosmo_dltramp(void *foreign_func) {
+  if (!IsWindows()) {
+    return foreign_thunk_sysv(foreign_func);
+  } else {
+    return foreign_thunk_nt(foreign_func);
+  }
 }
 
 /**
