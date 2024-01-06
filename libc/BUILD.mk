@@ -164,6 +164,7 @@ libc/isystem/semaphore.h \
 libc/isystem/set \
 libc/isystem/setjmp.h \
 libc/isystem/sgxintrin.h \
+libc/isystem/shadow.h \
 libc/isystem/shared_mutex \
 libc/isystem/signal.h \
 libc/isystem/smmintrin.h \
@@ -276,7 +277,6 @@ LIBC_FILES := $(wildcard libc/*)
 o/$(MODE)/libc:	o/$(MODE)/libc/calls		\
 		o/$(MODE)/libc/crt		\
 		o/$(MODE)/libc/dlopen		\
-		o/$(MODE)/libc/dns		\
 		o/$(MODE)/libc/elf		\
 		o/$(MODE)/libc/fmt		\
 		o/$(MODE)/libc/intrin		\

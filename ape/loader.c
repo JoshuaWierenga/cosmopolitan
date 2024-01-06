@@ -87,7 +87,7 @@
 #define MIN(X, Y) ((Y) > (X) ? (X) : (Y))
 #define MAX(X, Y) ((Y) < (X) ? (X) : (Y))
 
-#define PATH_MAX 1024   /* XXX verify */
+#define PATH_MAX 1024 /* XXX verify */
 
 #define SupportsLinux()   (SUPPORT_VECTOR & LINUX)
 #define SupportsXnu()     (SUPPORT_VECTOR & XNU)
@@ -224,8 +224,8 @@ struct ApeLoader {
 };
 
 EXTERN_C long SystemCall(long, long, long, long, long, long, long, int);
-EXTERN_C void
-Launch(void *, long, void *, void *, int) __attribute__((__noreturn__));
+EXTERN_C void Launch(void *, long, void *, int, void *)
+    __attribute__((__noreturn__));
 
 extern char __executable_start[];
 extern char _end[];
@@ -597,8 +597,9 @@ static char FindCommand(struct PathSearcher *ps) {
   return SearchPath(ps);
 }
 
-static char *Commandv(struct PathSearcher *ps, int os, const char *name,
-                      const char *syspath) {
+static char *Commandv(struct PathSearcher *ps, int os, char *name,
+                      const char *syspath, int may_path_search) {
+  if (!may_path_search) return name;
   ps->os = os;
   ps->syspath = syspath ? syspath : "/bin:/usr/local/bin:/usr/bin";
   if (!(ps->namelen = StrLen((ps->name = name)))) return 0;
@@ -768,7 +769,7 @@ __attribute__((__noreturn__)) static void Spawn(int os, char *exe, int fd,
   Msyscall(dynbase + code, codesize, os);
 
   /* call program entrypoint */
-  Launch(IsFreebsd() ? sp : 0, dynbase + e->e_entry, exe, sp, os);
+  Launch(IsFreebsd() ? sp : 0, dynbase + e->e_entry, exe, os, sp);
 }
 
 static const char *TryElf(struct ApeLoader *M, union ElfEhdrBuf *ebuf,
@@ -901,13 +902,8 @@ __attribute__((__noreturn__)) static void ShowUsage(int os, int fd, int rc) {
         "\n"
         "USAGE\n"
         "\n"
-        "  ape [FLAGS]   PROG [ARGV1,ARGV2,...]\n"
-        "  ape [FLAGS] - PROG [ARGV0,ARGV1,...]\n"
-        "\n"
-        "FLAGS\n"
-        "\n"
-        "  -h     show this help\n"
-        "  -f     force loading of program (do not use execve)\n"
+        "  ape   PROG [ARGV1,ARGV2,...]\n"
+        "  ape - PROG [ARGV0,ARGV1,...]\n"
         "\n",
         0l);
   Exit(rc, os);
@@ -982,21 +978,8 @@ EXTERN_C __attribute__((__noreturn__)) void ApeLoader(long di, long *sp,
     os = LINUX;
   }
 
-  /* parse flags */
-  while (argc > 1) {
-    if (argv[1][0] != '-') break; /* normal argument */
-    if (!argv[1][1]) break;       /* hyphen argument */
-    if (!StrCmp(argv[1], "-h") || !StrCmp(argv[1], "--help")) {
-      ShowUsage(os, 1, 0);
-    } else {
-      Print(os, 2, ape, ": invalid flag (pass -h for help)\n", 0l);
-      Exit(1, os);
-    }
-    *++sp = --argc;
-    ++argv;
-  }
-
   /* we can load via shell, shebang, or binfmt_misc */
+  int may_path_search = 1;
   if ((literally = argc >= 3 && !StrCmp(argv[1], "-"))) {
     /* if the first argument is a hyphen then we give the user the
        power to change argv[0] or omit it entirely. most operating
@@ -1005,10 +988,14 @@ EXTERN_C __attribute__((__noreturn__)) void ApeLoader(long di, long *sp,
     prog = (char *)sp[3];
     argc = sp[3] = sp[0] - 3;
     argv = (char **)((sp += 3) + 1);
+    may_path_search = 0;
   } else if (argc < 2) {
-    Print(os, 2, ape, ": missing command name (pass -h for help)\n", 0l);
-    Exit(1, os);
+    ShowUsage(os, 2, 1);
   } else {
+    if (argv[1][0] == '-') {
+      rc = !(argv[1][1] == 'h' && !argv[1][2]) || !StrCmp(argv[1] + 1, "-help");
+      ShowUsage(os, 1 + rc, rc);
+    }
     prog = (char *)sp[2];
     argc = sp[1] = sp[0] - 1;
     argv = (char **)((sp += 1) + 1);
@@ -1042,7 +1029,8 @@ EXTERN_C __attribute__((__noreturn__)) void ApeLoader(long di, long *sp,
   }
 
   /* resolve path of executable and read its first page */
-  if (!(exe = Commandv(&M->ps, os, prog, GetEnv(envp, "PATH")))) {
+  if (!(exe = Commandv(&M->ps, os, prog, GetEnv(envp, "PATH"),
+                       may_path_search))) {
     Pexit(os, prog, 0, "not found (maybe chmod +x or ./ needed)");
   } else if ((fd = Open(exe, O_RDONLY, 0, os)) < 0) {
     Pexit(os, exe, fd, "open");
