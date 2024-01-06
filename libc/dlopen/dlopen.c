@@ -340,7 +340,7 @@ static wontreturn dontinstrument void foreign_helper(void **p) {
   __foreign.dlsym = p[1];
   __foreign.dlclose = p[2];
   __foreign.dlerror = p[3];
-  longjmp(__foreign.jb, 1);
+  _longjmp(__foreign.jb, 1);
 }
 
 static dontinline void elf_exec(const char *file, char **envp) {
@@ -423,7 +423,6 @@ static dontinline void elf_exec(const char *file, char **envp) {
   STRACE("running dlopen importer %p...", interp.entry);
 
   // XXX: ideally we should set most registers to zero
-  // TODO(joshua): fix ftrace crash at this point, I tried ftrace_enabled but no change
 #ifdef __x86_64__
   struct ps_strings {
     char **argv;
@@ -908,7 +907,7 @@ int cosmo_dlclose(void *handle) {
 }
 
 /**
- * Returns string describing last dlopen/dlsym/dlclose/dlfix/dlprep error.
+ * Returns string describing last dlopen/dlsym/dltramp/dlclose/dlprep error.
  */
 char *cosmo_dlerror(void) {
   char *res;
