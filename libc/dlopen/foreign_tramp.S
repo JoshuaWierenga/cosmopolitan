@@ -21,168 +21,124 @@
 #define SIZE 0x0200
 #define SKEW 0x10
 
-#ifdef __x86_64__
-// Wrapper for dlsym loaded function to ensure all passed
-// parameters actually make it.
-//
-// @params all x86_64 sysv integer parameter registers and
-// 4 float/vector registers + any on stack
-// This wrapper is unlikely to work for structs passed by value
-// @param r11 is pointer to dlsym loaded function
-// @return dlsym loaded function's return value in rax or xmm0
-foreign_tramp_nt:
-  popq   %r10 # return pointer
-  pushq  %r9  # integer/pointer argument 6
-  pushq  %r8  # integer/pointer argument 5
-  pushq  %r10
-  pushq  %rbp
-  mov    %rsp, %rbp
-  pushq  %r11 # windows function pointer
-  pushq  %rdi # integer/pointer argument 1
-  pushq  %rsi # integer/pointer argument 2
-  pushq  %rdx # integer/pointer argument 3
-  pushq  %rcx # integer/pointer argument 4
-  sub    $72, %rsp
-  # TODO: Support vectorcall
-  movdqa %xmm0, (%rsp)   # floating point argument 1
-  movdqa %xmm1, 16(%rsp) # floating point argument 2
-  movdqa %xmm2, 32(%rsp) # floating point argument 3
-  movdqa %xmm3, 48(%rsp) # floating point argument 4
-  # 3 pointer array: %rbx, %rbp, return pointer to caller from stack
-  movq   $24, %rdi
-  call   malloc
-  movq   %rbx, (%rax)
-  movq   %rbp, 8(%rax)
-  movq   %rax, %rbx
-  movdqa 48(%rsp), %xmm3
-  movdqa 32(%rsp), %xmm2
-  movdqa 16(%rsp), %xmm1
-  movdqa (%rsp), %xmm0
-  add    $72, %rsp
-  popq   %r9
-  popq   %r8
-  popq   %rdx
-  popq   %rcx
-  popq   %r11
-  popq   %rbp
-  popq   16(%rbx)
-
-  sub    $32, %rsp
-  call   *%r11
-  add    $32, %rsp
-  popq   %r8
-  popq   %r9
-
-  pushq  16(%rbx)
-  pushq  %rbp
-  movq   8(%rbx), %rbp
-  pushq  %rax # integer/pointer return
-  sub    $24, %rsp
-  movdqa %xmm0, (%rsp) # floating point return
-  mov    %rbx, %rdi
-  movq   (%rdi), %rbx
-  call   free
-  movdqa (%rsp), %xmm0
-  add    $24, %rsp
-  popq   %rax
-  popq   %rbp
-  ret
-
-	.endfn	foreign_tramp_nt,globl
-
-#endif /* __x86_64__ */
-
-foreign_tramp_sysv:
+foreign_tramp:
 
 #ifdef __x86_64__
 
-// Wrapper for dlsym loaded function to block signals, switch tls
-// and ensure all passed parameters actually make it.
-//
-// @params all x86_64 sysv parameter registers + any on stack
-// @param r11  is pointer to dlsym loaded function
-// @return dlsym loaded function's return value
+	push	%rbp
+	mov	%rsp,%rbp
+	sub	$SIZE,%rsp
 
-  pushq  %rbp
-  mov    %rsp, %rbp
-  pushq  %r11
-  pushq  %rax # vararg vector register count
-  pushq  %rdi # integer/pointer argument 1
-  pushq  %rsi # integer/pointer argument 2
-  pushq  %rdx # integer/pointer argument 3
-  pushq  %rcx # integer/pointer argument 4
-  pushq  %r8  # integer/pointer argument 5
-  pushq  %r9  # integer/pointer argument 6
-  # TODO(joshua): Check if ymm and zmm are used
-  sub    $128, %rsp
-  movdqa %xmm0, (%rsp)    # floating point argument 1
-  movdqa %xmm1, 16(%rsp)  # floating point argument 2
-  movdqa %xmm2, 32(%rsp)  # floating point argument 3
-  movdqa %xmm3, 48(%rsp)  # floating point argument 4
-  movdqa %xmm4, 64(%rsp)  # floating point argument 5
-  movdqa %xmm5, 80(%rsp)  # floating point argument 6
-  movdqa %xmm6, 96(%rsp)  # floating point argument 7
-  movdqa %xmm7, 112(%rsp) # floating point argument 8
-  # TODO: Move malloc/free into setup and restore functions?
-  # TODO: Avoid continual malloc/free by mallocing once and reusing?
-  # 3 pointer array: %rbx, %rbp(with original %rsp in it), return pointer to caller from stack
-  movq   $24, %rdi
-  call   malloc
-  movq   %rbx, (%rax)
-  movq   %rbp, 8(%rax)
-  movq   %rax, %rbx
-  call   foreign_tramp_setup
-  movdqa 112(%rsp), %xmm7
-  movdqa 96(%rsp), %xmm6
-  movdqa 80(%rsp), %xmm5
-  movdqa 64(%rsp), %xmm4
-  movdqa 48(%rsp), %xmm3
-  movdqa 32(%rsp), %xmm2
-  movdqa 16(%rsp), %xmm1
-  movdqa (%rsp), %xmm0
-  add    $128, %rsp
-  popq   %r9
-  popq   %r8
-  popq   %rcx
-  popq   %rdx
-  popq   %rsi
-  popq   %rdi
-  popq   %rax
-  popq   %r11
-  popq   %rbp
-  popq   16(%rbx)
+//	save vector arguments
+	movdqu	%xmm0,-0x10(%rbp)
+	movdqu	%xmm1,-0x20(%rbp)
+	movdqu	%xmm2,-0x30(%rbp)
+	movdqu	%xmm3,-0x40(%rbp)
+	movdqu	%xmm4,-0x50(%rbp)
+	movdqu	%xmm5,-0x60(%rbp)
+	movdqu	%xmm6,-0x70(%rbp)
+	movdqu	%xmm7,-0x80(%rbp)
 
-  # At this point everything is the same as it was right before this function
-  # was called except that %rbx contains a 3 pointer array and so we can call
-  # the requested function and have it be able to read of its all parameters.
-  call   *%r11
+//	save register arguments
+	mov	%rdi,-0x88(%rbp)
+	mov	%rsi,-0x90(%rbp)
+	mov	%rdx,-0x98(%rbp)
+	mov	%rcx,-0xa0(%rbp)
+	mov	%r8,-0xa8(%rbp)
+	mov	%r9,-0xb0(%rbp)
 
-  pushq  16(%rbx)
-  pushq  %rbp
-  movq   8(%rbx), %rbp
-  # TODO(joshua): Confirm that c/c++ can actually use the second return registers in each case
-  # I just followed Figure 3.4 from the sysv x86_64 abi
-  pushq  %rax # integer/pointer return 1
-  pushq  %rdx # integer/pointer return 2
-  sub    $64, %rsp
-  # TODO(joshua): Check if ymm and zmm are used
-  movdqa %xmm0, (%rsp)   # floating point return 1
-  movdqa %xmm1, 16(%rsp) # floating point return 2
-  fstpt  32(%rsp) # long double return 1
-  fstpt  48(%rsp) # long double return 2
-  call   foreign_tramp_restore
-  mov    %rbx, %rdi
-  movq   (%rdi), %rbx
-  call   free
-  fldt   48(%rsp)
-  fldt   32(%rsp)
-  movdqa 16(%rsp), %xmm1
-  movdqa (%rsp), %xmm0
-  add    $64, %rsp
-  popq   %rdx
-  popq   %rax
-  popq   %rbp
-  ret
+//	save function pointer
+	mov	%rax,-0xb8(%rbp)
+
+//	block signals
+	call	__sig_block
+	mov	%rax,-0xc0(%rbp)
+
+//	switch to foreign tls
+	mov	%fs:0,%rax
+	mov	%rax,-0xc8(%rbp)
+	mov	__foreign+8(%rip),%rdi
+	call	__set_tls
+
+//	move stack arguments
+	movdqu	SKEW+0x00(%rbp),%xmm0
+	movdqu	SKEW+0x10(%rbp),%xmm1
+	movdqu	SKEW+0x20(%rbp),%xmm2
+	movdqu	SKEW+0x30(%rbp),%xmm3
+	movdqu	SKEW+0x40(%rbp),%xmm4
+	movdqu	SKEW+0x50(%rbp),%xmm5
+	movdqu	SKEW+0x60(%rbp),%xmm6
+	movdqu	SKEW+0x70(%rbp),%xmm7
+	movdqu	%xmm0,-SIZE+0x00(%rbp)
+	movdqu	%xmm1,-SIZE+0x10(%rbp)
+	movdqu	%xmm2,-SIZE+0x20(%rbp)
+	movdqu	%xmm3,-SIZE+0x30(%rbp)
+	movdqu	%xmm4,-SIZE+0x40(%rbp)
+	movdqu	%xmm5,-SIZE+0x50(%rbp)
+	movdqu	%xmm6,-SIZE+0x60(%rbp)
+	movdqu	%xmm7,-SIZE+0x70(%rbp)
+	movdqu	SKEW+0x80(%rbp),%xmm0
+	movdqu	SKEW+0x90(%rbp),%xmm1
+	movdqu	SKEW+0xa0(%rbp),%xmm2
+	movdqu	SKEW+0xb0(%rbp),%xmm3
+	movdqu	SKEW+0xc0(%rbp),%xmm4
+	movdqu	SKEW+0xd0(%rbp),%xmm5
+	movdqu	SKEW+0xe0(%rbp),%xmm6
+	movdqu	SKEW+0xf0(%rbp),%xmm7
+	movdqu	%xmm0,-SIZE+0x80(%rbp)
+	movdqu	%xmm1,-SIZE+0x90(%rbp)
+	movdqu	%xmm2,-SIZE+0xa0(%rbp)
+	movdqu	%xmm3,-SIZE+0xb0(%rbp)
+	movdqu	%xmm4,-SIZE+0xc0(%rbp)
+	movdqu	%xmm5,-SIZE+0xd0(%rbp)
+	movdqu	%xmm6,-SIZE+0xe0(%rbp)
+	movdqu	%xmm7,-SIZE+0xf0(%rbp)
+
+//	restore vector arguments
+	movdqu	-0x10(%rbp),%xmm0
+	movdqu	-0x20(%rbp),%xmm1
+	movdqu	-0x30(%rbp),%xmm2
+	movdqu	-0x40(%rbp),%xmm3
+	movdqu	-0x50(%rbp),%xmm4
+	movdqu	-0x60(%rbp),%xmm5
+	movdqu	-0x70(%rbp),%xmm6
+	movdqu	-0x80(%rbp),%xmm7
+
+//	restore register arguments
+	mov	-0x88(%rbp),%rdi
+	mov	-0x90(%rbp),%rsi
+	mov	-0x98(%rbp),%rdx
+	mov	-0xa0(%rbp),%rcx
+	mov	-0xa8(%rbp),%r8
+	mov	-0xb0(%rbp),%r9
+
+//	call function
+	mov	-0xb8(%rbp),%rax
+	call	*%rax
+
+//	save function result
+	movdqu	%xmm0,-0x10(%rbp)
+	movdqu	%xmm1,-0x20(%rbp)
+	mov	%rax,-0x28(%rbp)
+	mov	%rdx,-0x30(%rbp)
+
+//	restore tls
+	mov	-0xc8(%rbp),%rdi
+	call	__set_tls
+
+//	unblock signals
+	mov	-0xc0(%rbp),%rdi
+	call	__sig_unblock
+
+//	restore function result
+	mov	-0x28(%rbp),%rax
+	mov	-0x30(%rbp),%rdx
+	movdqu	-0x10(%rbp),%xmm0
+	movdqu	-0x20(%rbp),%xmm1
+
+	add	$SIZE,%rsp
+	pop	%rbp
+	ret
 
 #elif defined(__aarch64__)
 
@@ -277,4 +233,4 @@ foreign_tramp_sysv:
 
 #endif // __x86_64__
 
-	.endfn	foreign_tramp_sysv,globl
+	.endfn	foreign_tramp,globl

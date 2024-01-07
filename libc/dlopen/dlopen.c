@@ -128,14 +128,11 @@ struct {
   jmp_buf jb;
 } __foreign;
 
+long __sysv2nt14();
 long __nt2sysv();
-long foreign_tramp_sysv();
+long foreign_tramp();
 
 static _Thread_local char dlerror_buf[128];
-#ifdef __x86_64__
-static struct CosmoTib *cosmoTib;
-static sigset_t cosmoSigMask;
-#endif
 
 static const char *get_tmp_dir(void) {
   const char *tmpdir;
@@ -160,51 +157,6 @@ static int is_file_newer_than(const char *path, const char *other) {
     }
   }
   return timespec_cmp(st1.st_mtim, st2.st_mtim) > 0;
-}
-
-#ifdef __x86_64__
-extern void foreign_tramp_nt(void);
-
-void foreign_tramp_setup(void) {
-  cosmoSigMask = __sig_block();
-  cosmoTib = __get_tls();
-  __set_tls(__foreign.tib);
-}
-
-void foreign_tramp_restore(void) {
-  __set_tls(cosmoTib);
-  __sig_unblock(cosmoSigMask);
-}
-#elif defined(__aarch64__)
-// Just needs to exist, foreign_thunk already emits x86 assembly which won't run
-static void foreign_tramp_nt(void) {}
-#else
-#error "unsupported architecture"
-#endif
-
-// TODO(joshua): restore signals?
-// TODO(joshua): rewrite in assembly twice to solve stack issues
-static long reverse_foreign_tramp(long a, long b, long c, long d, long e, long f,
-                                  double A, double B, double C, double D, double E,
-                                  double F) {
-  long res;
-  long (*func)(long, long, long, long, long, long, 
-               double, double, double, double, double, double);
-#ifdef __x86_64__
-  asm("\t movq %%r11,%0" : "=r"(func));
-#elif defined(__aarch64__)
-  asm("\t mov %0,x8" : "=r"(func));
-#else
-#error "unsupported architecture"
-#endif
-#ifdef __x86_64__
-  __set_tls(cosmoTib);
-#endif
-  res = func(a, b, c, d, e, f, A, B, C, D, E, F);
-#ifdef __x86_64__
-  __set_tls(__foreign.tib);
-#endif
-  return res;
 }
 
 static unsigned elf2prot(unsigned x) {
@@ -550,7 +502,7 @@ static void *foreign_thunk(void *tramp, void *func) {
   // movabs $tramp,%r10
   // jmp *%r10
   if (!(p = code = foreign_alloc(23))) return 0;  // 10 + 10 + 3 = 23
-  p = movimm(p, 11, (uintptr_t)func);
+  p = movimm(p, 0, (uintptr_t)func);
   p = movimm(p, 10, (uintptr_t)tramp);
   *p++ = 0x41;
   *p++ = 0xff;
@@ -567,6 +519,30 @@ static void *foreign_thunk(void *tramp, void *func) {
 #else
 #error "unsupported architecture"
 #endif
+  return code;
+}
+
+static void *foreign_thunk_nt(void *func) {
+  uint8_t *code;
+  if (!(code = foreign_alloc(27))) return 0;
+  // push %rbp
+  code[0] = 0x55;
+  // mov %rsp,%rbp
+  code[1] = 0x48;
+  code[2] = 0x89;
+  code[3] = 0xe5;
+  // movabs $func,%rax
+  code[4] = 0x48;
+  code[5] = 0xb8;
+  WRITE64LE(code + 6, (uintptr_t)func);
+  // movabs $tramp,%r10
+  code[14] = 0x49;
+  code[15] = 0xba;
+  WRITE64LE(code + 16, (uintptr_t)__sysv2nt14);
+  // jmp *%r10
+  code[24] = 0x41;
+  code[25] = 0xff;
+  code[26] = 0xe2;
   return code;
 }
 
@@ -686,10 +662,10 @@ static bool foreign_setup(void) {
   __foreign.tib = __get_tls();
   __set_tls(cosmo_tib);
 #endif
-  __foreign.dlopen = foreign_thunk(foreign_tramp_sysv, __foreign.dlopen);
-  __foreign.dlsym = foreign_thunk(foreign_tramp_sysv, __foreign.dlsym);
-  __foreign.dlclose = foreign_thunk(foreign_tramp_sysv, __foreign.dlclose);
-  __foreign.dlerror = foreign_thunk(foreign_tramp_sysv, __foreign.dlerror);
+  __foreign.dlopen = foreign_thunk(foreign_tramp, __foreign.dlopen);
+  __foreign.dlsym = foreign_thunk(foreign_tramp, __foreign.dlsym);
+  __foreign.dlclose = foreign_thunk(foreign_tramp, __foreign.dlclose);
+  __foreign.dlerror = foreign_thunk(foreign_tramp, __foreign.dlerror);
   __foreign.is_supported = true;
   return true;
 }
@@ -886,12 +862,12 @@ void *cosmo_dlsym(void *handle, const char *name) {
  */
 void *cosmo_dltramp(void *foreign_func) {
   if (!IsWindows()) {
-    return foreign_thunk(foreign_tramp_sysv, foreign_func);
+    return foreign_thunk(foreign_tramp, foreign_func);
   } else if (IsXnu() && !IsXnuSilicon()) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
     return 0;
   } else {
-    return foreign_thunk(foreign_tramp_nt, foreign_func);
+    return foreign_thunk_nt(foreign_func);
   }
 }
 
@@ -945,6 +921,7 @@ char *cosmo_dlerror(void) {
  * @param address of cosmo function
  * @return address of safe symbol, or NULL w/ dlerror()
  */
+// TODO(joshua): Check if this still works
 void *cosmo_dlprep(void *symbol) {
   void *func = 0;
   if (IsWindows()) {
@@ -952,7 +929,7 @@ void *cosmo_dlprep(void *symbol) {
   } else if (IsXnu() && !IsXnuSilicon()) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
   } else {
-    func = foreign_thunk(reverse_foreign_tramp, symbol);
+    func = symbol;
   }
   STRACE("dlprep(%p) → %p", symbol, func);
   return func;

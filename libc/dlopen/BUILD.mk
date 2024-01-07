@@ -24,7 +24,6 @@ LIBC_DLOPEN_A_DIRECTDEPS =						\
 	LIBC_CALLS							\
 	LIBC_ELF							\
 	LIBC_INTRIN							\
-	LIBC_MEM							\
 	LIBC_NEXGEN32E							\
 	LIBC_NT_KERNEL32						\
 	LIBC_PROC							\
