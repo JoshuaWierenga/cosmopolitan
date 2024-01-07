@@ -876,7 +876,7 @@ __attribute__((__noreturn__)) static void ShowUsage(int os, int fd, int rc) {
         "NAME\n"
         "\n"
         "  actually portable executable loader version " APE_VERSION_STR "\n"
-        "  copyright 2023 justine alexandra roberts tunney\n"
+        "  copyrights 2024 justine alexandra roberts tunney\n"
         "  https://justine.lol/ape.html\n"
         "\n"
         "USAGE\n"
@@ -947,6 +947,7 @@ EXTERN_C __attribute__((__noreturn__)) void ApeLoader(long di, long *sp,
     } else if (SupportsNetbsd() && !os && ap[0] == AT_EXECFN_NETBSD) {
       os = NETBSD;
     } else if (SupportsLinux() && ap[0] == AT_FLAGS) {
+      // TODO(mrdomino): maybe set/insert this when we are called as "ape -".
       arg0 = !!(ap[1] & AT_FLAGS_PRESERVE_ARGV0);
     }
   }
@@ -978,7 +979,8 @@ EXTERN_C __attribute__((__noreturn__)) void ApeLoader(long di, long *sp,
     ShowUsage(os, 2, 1);
   } else {
     if (argv[1][0] == '-') {
-      rc = !(argv[1][1] == 'h' && !argv[1][2]) || !StrCmp(argv[1] + 1, "-help");
+      rc = !((argv[1][1] == 'h' && !argv[1][2]) ||
+             !StrCmp(argv[1] + 1, "-help"));
       ShowUsage(os, 1 + rc, rc);
     }
     prog = (char *)sp[2];
