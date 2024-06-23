@@ -1,0 +1,29 @@
+#ifndef COSMOPOLITAN_LIBC_NT_VERSION_H_
+#define COSMOPOLITAN_LIBC_NT_VERSION_H_
+#if !(__ASSEMBLER__ + __LINKER__ + 0)
+COSMOPOLITAN_C_START_
+
+#if defined(__GNUC__) && !defined(__STRICT_ANSI__)
+#define IsAtLeastWindows8p1() \
+  (GetNtMajorVersion() > 6 || (GetNtMajorVersion() == 6 && GetNtMinorVersion() == 3))
+#define GetNtMajorVersion()    \
+  ({                           \
+    uintptr_t __x;             \
+    asm("mov\t%%gs:96,%q0\r\n" \
+        "mov\t280(%q0),%b0"    \
+        : "=q"(__x));          \
+    (unsigned char)__x;        \
+  })
+#define GetNtMinorVersion()    \
+  ({                           \
+    uintptr_t __x;             \
+    asm("mov\t%%gs:96,%q0\r\n" \
+        "mov\t284(%q0),%b0"    \
+        : "=q"(__x));          \
+    (unsigned char)__x;        \
+  })
+#endif
+
+COSMOPOLITAN_C_END_
+#endif /* !(__ASSEMBLER__ + __LINKER__ + 0) */
+#endif /* COSMOPOLITAN_LIBC_NT_VERSION_H_ */

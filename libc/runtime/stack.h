@@ -1,6 +1,7 @@
 #ifdef _COSMO_SOURCE
 #ifndef COSMOPOLITAN_LIBC_RUNTIME_STACK_H_
 #define COSMOPOLITAN_LIBC_RUNTIME_STACK_H_
+#include "libc/nt/version.h"
 
 /**
  * Returns preferred size and alignment of thread stack.
@@ -100,14 +101,18 @@ int FreeCosmoStack(void *) libcesque;
  * needed because polyfilling fork requires that we know, precicely
  * where the stack memory begins and ends.
  */
-#define GetStaticStackAddr(ADDEND)          \
-  ({                                        \
-    intptr_t vAddr;                         \
-    __asm__(".weak\tape_stack_vaddr\n\t"    \
-            "movabs\t%1+ape_stack_vaddr,%0" \
-            : "=r"(vAddr)                   \
-            : "i"(ADDEND));                 \
-    vAddr;                                  \
+#define GetStaticStackAddr(ADDEND)               \
+  ({                                             \
+    intptr_t vAddr;                              \
+    if (!IsWindows() || IsAtLeastWindows8p1()) { \
+      __asm__(".weak\tape_stack_vaddr\n\t"       \
+              "movabs\t%1+ape_stack_vaddr,%0"    \
+              : "=r"(vAddr)                      \
+              : "i"(ADDEND));                    \
+    } else {                                     \
+      vAddr = 0x070000000000 + ADDEND;           \
+    }                                            \
+    vAddr;                                       \
   })
 #endif
 

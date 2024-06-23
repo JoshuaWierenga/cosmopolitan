@@ -44,8 +44,8 @@
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/thread.h"
 
-#define WINBASE 0x100080040000  // TODO: Can we support Windows Vista again?
-#define WINMAXX 0x200080000000
+#define WINBASE 0x010008040000  // TODO: Can we support Windows Vista again?
+#define WINMAXX 0x020008000000
 
 #define MAP_FIXED_NOREPLACE_linux 0x100000
 
