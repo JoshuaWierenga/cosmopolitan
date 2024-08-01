@@ -39,7 +39,7 @@ privileged int64_t __winerr(void) {
   } else {
     e = ENOSYS;
   }
-  if (__tls_enabled) {
+  if (!IsMetal() && __tls_enabled) {
     __get_tls_privileged()->tib_errno = e;
   } else {
     __errno = e;

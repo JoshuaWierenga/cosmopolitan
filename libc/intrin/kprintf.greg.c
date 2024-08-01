@@ -535,7 +535,7 @@ privileged static size_t kformat(char *b, size_t n, const char *fmt,
           goto FormatUnsigned;
 
         case 'P':
-          tib = __tls_enabled ? __get_tls_privileged() : 0;
+          tib = (!IsMetal() && __tls_enabled) ? __get_tls_privileged() : 0;
           if (!(tib && (tib->tib_flags & TIB_FLAG_VFORKED))) {
             x = __pid;
 #ifdef __x86_64__
@@ -561,7 +561,7 @@ privileged static size_t kformat(char *b, size_t n, const char *fmt,
           goto FormatDecimal;
 
         case 'H':
-          tib = __tls_enabled ? __get_tls_privileged() : 0;
+          tib = (!IsMetal() && __tls_enabled) ? __get_tls_privileged() : 0;
           if (!(tib && (tib->tib_flags & TIB_FLAG_VFORKED))) {
             if (tib) {
               x = atomic_load_explicit(&tib->tib_tid, memory_order_relaxed);
@@ -730,7 +730,7 @@ privileged static size_t kformat(char *b, size_t n, const char *fmt,
 
         case 'm': {
           int e;
-          tib = __tls_enabled ? __get_tls_privileged() : 0;
+          tib = (!IsMetal() && __tls_enabled) ? __get_tls_privileged() : 0;
           if (!(e = tib ? tib->tib_errno : __errno) && sign == ' ') {
             break;
           } else {

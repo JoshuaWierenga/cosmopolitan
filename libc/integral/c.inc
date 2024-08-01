@@ -615,7 +615,7 @@ typedef struct {
 #endif
 
 #if defined(__x86_64__) && (defined(__GNUC__) || defined(__llvm__)) && \
-    !defined(__chibicc__) && defined(__OPTIMIZE__)
+    !defined(__chibicc__) && 0 /* TODO: figure out why this breaks metal support */
 #define __target_clones(x) __attribute__((__target_clones__(x ",default")))
 #else
 #define __target_clones(x)
