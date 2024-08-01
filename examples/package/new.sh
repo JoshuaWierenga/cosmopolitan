@@ -31,10 +31,10 @@ mkdir -p "$DIR" &&
         s~%AUTHOR%~$(git config user.name) <$(git config user.email)>~g
       " &&
   sed -i -e "
-      s~include $DIR/build.mk~# XXX: include $DIR/build.mk~
-      s~include $DIR/lib/build.mk~# XXX: include $DIR/lib/build.mk~
+      s~include $DIR/BUILD.mk~# XXX: include $DIR/BUILD.mk~
+      s~include $DIR/lib/BUILD.mk~# XXX: include $DIR/lib/BUILD.mk~
       /#-φ-examples\/package\/new\.sh/i\
-include $DIR/lib/build.mk
+include $DIR/lib/BUILD.mk
       /#-φ-examples\/package\/new\.sh/i\
-include $DIR/build.mk
+include $DIR/BUILD.mk
     " Makefile
