@@ -382,6 +382,8 @@ include test/dsp/tty/BUILD.mk
 include test/dsp/BUILD.mk
 include examples/package/lib/BUILD.mk
 include examples/package/BUILD.mk
+include third_party/euidemo/lib/BUILD.mk
+include third_party/euidemo/BUILD.mk
 #-φ-examples/package/new.sh
 include test/BUILD.mk
 
