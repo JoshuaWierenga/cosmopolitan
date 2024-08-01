@@ -29,11 +29,17 @@
 #include <X11/Xutil.h>
 #endif
 
-// For some reason this doesn't work if not in the monorepo
+// For some reason this gives a black screen if not in the monorepo(also no tty-graph.c but that is easily fixable)
 #define SupportMetal defined(__x86_64__) && __has_include("libc/vga/tty-graph.c")
 #if SupportMetal
 __static_yoink("vga_console");
 #include "libc/vga/tty-graph.c"
+#endif
+
+// I have a better idea for this toggle but just (un)commenting this works for now
+#define SupportUEFI
+#ifdef SupportUEFI
+__static_yoink("EfiMain");
 #endif
 
 
@@ -96,8 +102,14 @@ BOOL SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT value) {
 }
 
 
+// My copy of QEMU only has one resolution in the boot manager and the runtime list that cosmo has for bios doesn't appear
+#ifdef SupportUEFI
+const int width = 1280;
+const int height = 800;
+#else
 const int width = 320;
 const int height = 200;
+#endif
 
 uint8_t  *framebuf8  = NULL;
 uint32_t *framebuf32 = NULL;
@@ -161,14 +173,18 @@ uint32_t colourmap[256] = {
 
 void destroy_framebuffers(HWND hWnd) {
   eui_quit();
-  free(framebuf8);
+  // This crashes under qemu uefi for some reason
+#ifndef SupportUEFI
+    free(framebuf8);
+#endif
 
   if (IsWindows()) {
     SelectObject(cDC, oldBmp);
     DeleteObject(dib);
     DeleteDC(cDC);
     ReleaseDC(hWnd, hDC);
-  } else {
+  // This also fails under uefi but also if allocation fails then _vga_reinit can directly map to system memory
+  } else if (!IsMetal()) {
     free(framebuf32);
   }
 }
@@ -184,6 +200,20 @@ bool create_framebuffers(HWND hWnd) {
     if (_TtyCanvasType(&tty) != PC_VIDEO_BGRX8888 || tty.xp != width || tty.yp != height) {
       destroy_framebuffers(hWnd);
       printf("Not in desired outptut mode, reboot and set to %ix%ix32.\n", width, height);
+      printf("Current mode is %ix%i", tty.xp, tty.yp);
+      switch (_TtyCanvasType(&tty)) {
+        case PC_VIDEO_BGRX8888:
+          printf("x32");
+          break;
+        case PC_VIDEO_TEXT:
+          printf(", text only");
+          break;
+        default:
+          printf(", unknown colour mode");
+          break;
+
+      }
+      puts(".");
       return false;
     }
     framebuf32 = (uint32_t *)tty.canvas;
@@ -259,7 +289,7 @@ void show_gui_vga(void) {
     show_gui();
     DIRTY(&tty, 0, 0, tty.yp, tty.xp);
     tty.update(&tty);
- }
+  }
 }
 #endif
 
