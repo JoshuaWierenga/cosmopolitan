@@ -1,7 +1,7 @@
-/*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
-│ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
+/*-*-mode:c++;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8-*-│
+│ vi: set et ft=c++ ts=2 sts=2 sw=2 fenc=utf-8                             :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2021 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2024 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,15 +16,14 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "third_party/quickjs/diglet.h"
+#include <type_traits>
+#include <utility>
 
-int to_digit(int c) {
-  if (c >= '0' && c <= '9')
-    return c - '0';
-  else if (c >= 'A' && c <= 'Z')
-    return c - 'A' + 10;
-  else if (c >= 'a' && c <= 'z')
-    return c - 'a' + 10;
-  else
-    return 36;
+static_assert(std::is_trivially_copyable<int>::value);
+static_assert(std::is_trivially_copyable<const int>::value);
+static_assert(std::is_trivially_copyable<std::pair<int *, const int>>::value);
+static_assert(
+    std::is_trivially_copyable<std::pair<const int, const int>>::value);
+
+int main(int argc, char *argv[]) {
 }

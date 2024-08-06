@@ -116,7 +116,7 @@ ZIPCOPY = build/bootstrap/zipcopy.com
 PECHECK = build/bootstrap/pecheck.com
 FIXUPOBJ = build/bootstrap/fixupobj.com
 MKDIR = build/bootstrap/mkdir.com -p
-COMPILE = build/bootstrap/compile.com -V9 -P4096 $(QUOTA)
+COMPILE = build/bootstrap/compile.com -V9 -M2048m -P8192 $(QUOTA)
 
 IGNORE := $(shell $(MKDIR) $(TMPDIR))
 
@@ -299,6 +299,7 @@ include libc/testlib/BUILD.mk
 include tool/viz/lib/BUILD.mk
 include tool/args/BUILD.mk
 include test/posix/BUILD.mk
+include test/libcxx/BUILD.mk
 include test/tool/args/BUILD.mk
 include third_party/linenoise/BUILD.mk
 include third_party/maxmind/BUILD.mk
@@ -318,7 +319,6 @@ include third_party/argon2/BUILD.mk
 include third_party/smallz4/BUILD.mk
 include third_party/sqlite3/BUILD.mk
 include third_party/mbedtls/test/BUILD.mk
-include third_party/quickjs/BUILD.mk
 include third_party/lz4cli/BUILD.mk
 include third_party/zip/BUILD.mk
 include third_party/xxhash/BUILD.mk

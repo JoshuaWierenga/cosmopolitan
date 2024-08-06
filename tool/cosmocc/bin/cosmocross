@@ -127,7 +127,9 @@ for x; do
     continue
   elif [ x"$x" = x"-r" ]; then
     RELOCATABLE=1
-  elif [ x"$x" = x"-E" ]; then
+  elif [ x"$x" = x"-E" ] ||
+       [ x"$x" = x"-M" ] ||
+       [ x"$x" = x"-MM" ]; then
     INTENT=cpp
   elif [ x"$x" = x"-o" ]; then
     NEED_OUTPUT=1
