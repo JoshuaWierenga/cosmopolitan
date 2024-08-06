@@ -120,6 +120,18 @@ COMPILE = build/bootstrap/compile.com -V9 -P4096 $(QUOTA)
 
 IGNORE := $(shell $(MKDIR) $(TMPDIR))
 
+# the default build modes is empty string
+# on x86_64 hosts, MODE= is the same as MODE=x86_64
+# on aarch64 hosts, MODE= is changed to MODE=aarch64
+ifeq ($(MODE),)
+ifeq ($(UNAME_M),arm64)
+MODE := aarch64
+endif
+ifeq ($(UNAME_M),aarch64)
+MODE := aarch64
+endif
+endif
+
 ifneq ($(findstring aarch64,$(MODE)),)
 ARCH = aarch64
 HOSTS ?= pi studio freebsdarm
@@ -138,7 +150,7 @@ export MODE
 export SOURCE_DATE_EPOCH
 export TMPDIR
 
-COSMOCC = cosmocc/3.2
+COSMOCC = .cosmocc/3.2
 TOOLCHAIN = $(COSMOCC)/bin/$(ARCH)-linux-cosmo-
 DOWNLOAD := $(shell build/download-cosmocc.sh $(COSMOCC) 3.2 28b48682595f0f46b45ab381118cdffdabc8fcfa29aa54e301fe6ffe35269f5e)
 
@@ -156,18 +168,6 @@ ifneq ($(wildcard $(PWD)/$(TOOLCHAIN)addr2line),)
 ADDR2LINE = $(PWD)/$(TOOLCHAIN)addr2line
 else
 ADDR2LINE = $(TOOLCHAIN)addr2line
-endif
-
-# the default build modes is empty string
-# on x86_64 hosts, MODE= is the same as MODE=x86_64
-# on aarch64 hosts, MODE= is changed to MODE=aarch64
-ifeq ($(MODE),)
-ifeq ($(UNAME_M),arm64)
-MODE := aarch64
-endif
-ifeq ($(UNAME_M),aarch64)
-MODE := aarch64
-endif
 endif
 
 # primary build rules
@@ -249,7 +249,6 @@ include libc/calls/BUILD.mk			#─┐
 include libc/irq/BUILD.mk			# ├──SYSTEMS RUNTIME
 include third_party/nsync/BUILD.mk		# │  You can issue system calls
 include libc/runtime/BUILD.mk			# │
-include third_party/double-conversion/BUILD.mk	# │
 include libc/crt/BUILD.mk			# │
 include third_party/dlmalloc/BUILD.mk		#─┘
 include libc/mem/BUILD.mk			#─┐
@@ -284,7 +283,10 @@ include third_party/stb/BUILD.mk		# │
 include third_party/mbedtls/BUILD.mk		# │
 include third_party/ncurses/BUILD.mk		# │
 include third_party/readline/BUILD.mk		# │
+include third_party/libunwind/BUILD.mk		# |
+include third_party/libcxxabi/BUILD.mk		# |
 include third_party/libcxx/BUILD.mk		# │
+include third_party/double-conversion/BUILD.mk	# │
 include third_party/pcre/BUILD.mk		# │
 include third_party/less/BUILD.mk		# │
 include net/https/BUILD.mk			# │
@@ -328,6 +330,7 @@ include third_party/python/BUILD.mk
 include tool/build/BUILD.mk
 include tool/curl/BUILD.mk
 include third_party/qemu/BUILD.mk
+include third_party/libcxxabi/test/BUILD.mk
 include examples/BUILD.mk
 include examples/pyapp/BUILD.mk
 include examples/pylife/BUILD.mk
@@ -440,6 +443,8 @@ COSMOPOLITAN_OBJECTS =			\
 	LIBC_TIME			\
 	THIRD_PARTY_MUSL		\
 	THIRD_PARTY_ZLIB_GZ		\
+	THIRD_PARTY_LIBCXXABI		\
+	THIRD_PARTY_LIBUNWIND		\
 	LIBC_STDIO			\
 	THIRD_PARTY_GDTOA		\
 	THIRD_PARTY_REGEX		\
@@ -509,12 +514,14 @@ COSMOPOLITAN_H_PKGS =			\
 	THIRD_PARTY_GETOPT		\
 	THIRD_PARTY_MUSL		\
 	THIRD_PARTY_ZLIB		\
+	THIRD_PARTY_ZLIB_GZ		\
 	THIRD_PARTY_REGEX
 
 COSMOCC_PKGS =				\
 	$(COSMOPOLITAN_H_PKGS)		\
 	THIRD_PARTY_AARCH64		\
 	THIRD_PARTY_LIBCXX		\
+	THIRD_PARTY_LIBCXXABI		\
 	THIRD_PARTY_INTEL
 
 o/$(MODE)/cosmopolitan.a:		\
@@ -539,18 +546,15 @@ o/cosmopolitan.h: o/cosmopolitan.h.txt					\
 		$(wildcard libc/integral/*)				\
 		$(foreach x,$(COSMOPOLITAN_H_PKGS),$($(x)_HDRS))	\
 		$(foreach x,$(COSMOPOLITAN_H_PKGS),$($(x)_INCS))
-	@$(ECHO) '#ifndef __STRICT_ANSI__' >$@
-	@$(ECHO) '#define _COSMO_SOURCE' >>$@
-	@$(ECHO) '#endif' >>$@
 	@$(COMPILE) -AROLLUP -T$@ build/bootstrap/rollup.com @$< >>$@
 
 o/cosmopolitan.html: private .UNSANDBOXED = 1
 o/cosmopolitan.html:							\
 		o/$(MODE)/third_party/chibicc/chibicc.com.dbg		\
 		$(filter-out %.s,$(foreach x,$(COSMOPOLITAN_OBJECTS),$($(x)_SRCS)))	\
-		$(SRCS)							\
+		$(filter-out %.cc,$(SRCS))				\
 		$(HDRS)
-	$(file >$(TMPDIR)/$(subst /,_,$@),$(filter-out %.s,$(foreach x,$(COSMOPOLITAN_OBJECTS),$($(x)_SRCS))))
+	$(file >$(TMPDIR)/$(subst /,_,$@),$(filter-out %.cc,$(filter-out %.s,$(foreach x,$(COSMOPOLITAN_OBJECTS),$($(x)_SRCS)))))
 	o/$(MODE)/third_party/chibicc/chibicc.com.dbg -J		\
 		-fno-common -include libc/integral/normalize.inc -o $@	\
 		-DCOSMO @$(TMPDIR)/$(subst /,_,$@)

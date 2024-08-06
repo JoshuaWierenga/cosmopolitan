@@ -18,6 +18,7 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
 #include "libc/atomic.h"
+#include "libc/calls/blockcancel.internal.h"
 #include "libc/calls/calls.h"
 #include "libc/calls/struct/sigset.internal.h"
 #include "libc/calls/struct/stat.h"
@@ -45,6 +46,7 @@
 #include "libc/nt/memory.h"
 #include "libc/nt/runtime.h"
 #include "libc/proc/posix_spawn.h"
+#include "libc/runtime/internal.h"
 #include "libc/runtime/runtime.h"
 #include "libc/runtime/syslib.internal.h"
 #include "libc/serialize.h"
@@ -494,6 +496,8 @@ static uint8_t *movimm(uint8_t p[static 16], int reg, uint64_t val) {
 static void *foreign_thunk_sysv(void *func) {
   uint8_t *code, *p;
 #ifdef __x86_64__
+  // it is no longer needed
+  if (1) return func;
   // movabs $func,%rax
   // movabs $foreign_tramp,%r10
   // jmp *%r10
@@ -615,7 +619,15 @@ static dontinline bool foreign_compile(char exe[hasatleast PATH_MAX]) {
   }
   int pid, ws;
   char *args[] = {
-      "cc", "-pie", "-fPIC", src, "-o", tmp, IsNetbsd() ? 0 : "-ldl", 0,
+      "cc",
+      "-pie",
+      "-fPIC",
+      src,
+      "-o",
+      tmp,
+      IsLinux() ? "-Wl,-z,execstack" : "-DIGNORE",
+      IsNetbsd() ? 0 : "-ldl",
+      0,
   };
   errno_t err = posix_spawnp(&pid, args[0], NULL, NULL, args, environ);
   if (err) {
@@ -719,14 +731,13 @@ static void *dlopen_nt(const char *path, int mode) {
 
 static void *dlsym_nt(void *handle, const char *name) {
   void *x64_abi_func;
-  void *sysv_abi_func = 0;
   if ((x64_abi_func = GetProcAddress((uintptr_t)handle, name))) {
-    sysv_abi_func = foreign_thunk_nt(x64_abi_func);
+    return x64_abi_func;
   } else {
     dlerror_set("symbol not found: ");
     strlcat(dlerror_buf, name, sizeof(dlerror_buf));
+    return 0;
   }
-  return sysv_abi_func;
 }
 
 static void *dlopen_silicon(const char *path, int mode) {
@@ -771,13 +782,10 @@ static void *dlopen_silicon(const char *path, int mode) {
  * WARNING: Our API uses a different naming because cosmo_dlopen() lacks
  * many of the features one would reasonably expect from a UNIX dlopen()
  * implementation; and we don't want to lead ./configure scripts astray.
- * You're limited to 5 integral function parameters maximum. Calling an
- * imported function currently goes much slower than a normal function
- * call. You can't pass callback function pointers to foreign libraries
- * safely. Foreign libraries also can't link symbols defined by your
- * executable; that means using this for high-level language plugins is
- * completely out of the question. What cosmo_dlopen() can do is help
- * you talk to GPU and GUI libraries like CUDA and SDL.
+ * Foreign libraries also can't link symbols defined by your executable,
+ * which means using this for high-level language plugins is completely
+ * out of the question. What cosmo_dlopen() can do is help you talk to
+ * GPU and GUI libraries like CUDA and SDL.
  *
  * @param mode is a bitmask that can contain:
  *     - `RTLD_LOCAL` (default)
@@ -791,6 +799,7 @@ static void *dlopen_silicon(const char *path, int mode) {
 void *cosmo_dlopen(const char *path, int mode) {
   void *res;
   BLOCK_SIGNALS;
+  BLOCK_CANCELATION;
   if (IsWindows()) {
     res = dlopen_nt(path, mode);
   } else if (IsXnuSilicon()) {
@@ -807,6 +816,7 @@ void *cosmo_dlopen(const char *path, int mode) {
   } else {
     res = 0;
   }
+  ALLOW_CANCELATION;
   ALLOW_SIGNALS;
   STRACE("dlopen(%#s, %d) → %p% m", path, mode, res);
   return res;
@@ -815,8 +825,26 @@ void *cosmo_dlopen(const char *path, int mode) {
 /**
  * Obtains address of symbol from dynamic shared object.
  *
- * On Windows you can only use this to lookup function addresses.
- * Returned functions are trampolined to conform to System V ABI.
+ * WARNING: You almost always want to say this:
+ *
+ *     pFunction = cosmo_dltramp(cosmo_dlsym(dso, "function"));
+ *
+ * That will generate code at runtime for automatically translating to
+ * Microsoft's x64 calling convention when appropriate. However the
+ * automated solution doesn't always work. For example, the prototype:
+ *
+ *     void func(int, float);
+ *
+ * Won't be translated correctly, due to the differences in ABI. We're
+ * able to smooth over most of them, but that's just one of several
+ * examples where we can't. A good rule of thumb is:
+ *
+ *   - More than four float/double args is problematic
+ *   - Having both integral and floating point parameters is bad
+ *
+ * For those kinds of functions, you need to translate the ABI by hand.
+ * This can be accomplished using the GCC `__ms_abi__` attribute, where
+ * you'd have two function pointer types branched upon `IsWindows()`.
  *
  * @param handle was opened by dlopen()
  * @return address of symbol, or NULL w/ dlerror()
@@ -826,16 +854,12 @@ void *cosmo_dlsym(void *handle, const char *name) {
   if (IsWindows()) {
     func = dlsym_nt(handle, name);
   } else if (IsXnuSilicon()) {
-    if ((func = __syslib->__dlsym(handle, name))) {
-      func = foreign_thunk_sysv(func);
-    }
+    func = __syslib->__dlsym(handle, name);
   } else if (IsXnu()) {
     dlerror_set("dlopen() isn't supported on x86-64 MacOS");
     func = 0;
   } else if (foreign_init()) {
-    if ((func = __foreign.dlsym(handle, name))) {
-      func = foreign_thunk_sysv(func);
-    }
+    func = __foreign.dlsym(handle, name);
   } else {
     func = 0;
   }
@@ -896,3 +920,17 @@ char *cosmo_dlerror(void) {
   STRACE("dlerror() → %#s", res);
   return res;
 }
+
+#ifdef __x86_64__
+static textstartup void dlopen_init() {
+  if (IsLinux() || IsFreebsd()) {
+    // switch from %fs to %gs for tls
+    struct CosmoTib *tib = __get_tls();
+    __morph_tls();
+    __set_tls(tib);
+  }
+}
+const void *const dlopen_ctor[] initarray = {
+    dlopen_init,
+};
+#endif
