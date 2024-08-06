@@ -109,6 +109,7 @@ imp	'GetConsoleTitle'					GetConsoleTitleW					kernel32	2
 imp	'GetConsoleWindow'					GetConsoleWindow					kernel32	0
 imp	'GetCurrentDirectory'					GetCurrentDirectoryW					kernel32	2
 imp	'GetCurrentProcessId'					GetCurrentProcessId					kernel32	0
+imp	'GetCurrentProcessorNumberEx'				GetCurrentProcessorNumberEx				kernel32	1
 imp	'GetCurrentThread'					GetCurrentThread					kernel32	0
 imp	'GetCurrentThreadId'					GetCurrentThreadId					kernel32	0
 imp	'GetEnvironmentStrings'					GetEnvironmentStringsW					kernel32	1
@@ -361,7 +362,6 @@ imp	'RegisterEventSource'					RegisterEventSourceW					advapi32	2
 imp	'ReportEvent'						ReportEventW						advapi32	9
 imp	'ReportEventA'						ReportEventA						advapi32	9
 imp	'RevertToSelf'						RevertToSelf						advapi32	0
-imp	'RtlGenRandom'						SystemFunction036					advapi32	2
 imp	'TraceSetInformation'					TraceSetInformation					advapi32 # Windows 7+
 
 # USER32.DLL
@@ -609,6 +609,11 @@ imp	'EnumProcesses'						EnumProcesses						psapi		3
 imp	'GetModuleBaseName'					GetModuleBaseNameW					psapi		4
 imp	'GetProcessImageFileName'				GetProcessImageFileNameW				psapi		3
 imp	'GetProcessMemoryInfo'					GetProcessMemoryInfo					psapi		3
+
+# BCryptPrimitives.dll
+#
+#	Name							Actual							DLL			Arity
+imp	'ProcessPrng'						ProcessPrng						BCryptPrimitives	2
 
 # API-MS-Win-Core-Synch-l1-2-0.dll (Windows 8+)
 #

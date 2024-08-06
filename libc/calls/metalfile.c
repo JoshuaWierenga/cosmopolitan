@@ -82,7 +82,9 @@ textstartup void InitializeMetalFile(void) {
     size = (size_t)__ape_com_sectors * 512;
     __ape_com_size = _MetalAllocate(size, &__ape_com_base);
     memcpy(__ape_com_base, (void *)(BANE + IMAGE_BASE_PHYSICAL), size);
-    KINFOF("%s @ %p,+%#zx", APE_COM_NAME, __ape_com_base, size);
+    // TODO(tkchia): LIBC_CALLS doesn't depend on LIBC_VGA so references
+    //               to its functions need to be weak
+    // KINFOF("%s @ %p,+%#zx", APE_COM_NAME, __ape_com_base, size);
   }
 
   size = kMetalDirCount * sizeof(*__metal_dirs) + sizeof("/") +

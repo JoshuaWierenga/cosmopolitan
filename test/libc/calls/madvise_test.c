@@ -20,6 +20,7 @@
 #include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/runtime/runtime.h"
+#include "libc/sysv/consts/auxv.h"
 #include "libc/sysv/consts/madv.h"
 #include "libc/sysv/consts/map.h"
 #include "libc/sysv/consts/o.h"
@@ -63,14 +64,16 @@ TEST(madvise, subPages) {
   char *p;
   ASSERT_NE(MAP_FAILED, (p = mmap(0, FRAMESIZE, PROT_READ | PROT_WRITE,
                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)));
-  ASSERT_SYS(0, 0, madvise(p + 4096, FRAMESIZE - 4096, MADV_WILLNEED));
+  ASSERT_SYS(0, 0,
+             madvise(p + getauxval(AT_PAGESZ), FRAMESIZE - getauxval(AT_PAGESZ),
+                     MADV_WILLNEED));
   ASSERT_SYS(0, 0, munmap(p, FRAMESIZE));
 }
 
 TEST(madvise, misalign) {
   char *p;
-  if (!IsLinux()) return;  // most platforms don't care
-  if (IsQemu()) return;    // qemu claims to be linux but doesn't care
+  if (!IsLinux()) return;    // most platforms don't care
+  if (IsQemuUser()) return;  // qemu claims to be linux but doesn't care
   ASSERT_NE(MAP_FAILED, (p = mmap(0, FRAMESIZE, PROT_READ | PROT_WRITE,
                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)));
   ASSERT_SYS(EINVAL, -1, madvise(p + 1, FRAMESIZE - 1, MADV_WILLNEED));
@@ -79,7 +82,7 @@ TEST(madvise, misalign) {
 
 TEST(madvise, badAdvice) {
   char *p;
-  if (IsAarch64() && IsQemu()) return;  // qemu doesn't validate advice
+  if (IsAarch64() && IsQemuUser()) return;  // qemu doesn't validate advice
   ASSERT_NE(MAP_FAILED, (p = mmap(0, FRAMESIZE, PROT_READ | PROT_WRITE,
                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)));
   ASSERT_SYS(EINVAL, -1, madvise(p, FRAMESIZE, 127));
@@ -87,8 +90,8 @@ TEST(madvise, badAdvice) {
 }
 
 TEST(madvise, missingMemory) {
-  if (!IsLinux()) return;  // most platforms don't care
-  if (IsQemu()) return;    // qemu claims to be linux but doesn't care
+  if (!IsLinux()) return;    // most platforms don't care
+  if (IsQemuUser()) return;  // qemu claims to be linux but doesn't care
   ASSERT_SYS(ENOMEM, -1,
              madvise((char *)0x83483838000, FRAMESIZE, MADV_WILLNEED));
 }

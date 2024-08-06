@@ -10,7 +10,11 @@
            "_Complex"))
 
         (cuda
-         '("__device__"
+         '("gridDim"
+           "blockIdx"
+           "blockDim"
+           "threadIdx"
+           "__device__"
            "__forceinline__"
            "__global__"
            "__shared__"
@@ -87,7 +91,7 @@
            "mayalias"
            "dontinstrument"
            "interruptfn"
-           "nocallback"
+           "dontcallback"
            "textstartup"
            "warnifused"
            "attributeallocsize"
@@ -202,6 +206,9 @@
            "__section__"
            "__sentinel__"
            "__simd__"
+           "__vex"
+           "__avx2"
+           "__target_clones"
            "__target_clones__"
            "__unused__"
            "__used__"

@@ -101,7 +101,6 @@ XARGS ?= xargs -P4 -rs8000
 DOT ?= dot
 CLANG = clang
 TMPDIR = o/tmp
-
 AR = build/bootstrap/ar.com
 CP = build/bootstrap/cp.com
 RM = build/bootstrap/rm.com -f
@@ -134,10 +133,10 @@ endif
 
 ifneq ($(findstring aarch64,$(MODE)),)
 ARCH = aarch64
-HOSTS ?= pi studio freebsdarm
+HOSTS ?= pi pi5 studio freebsdarm
 else
 ARCH = x86_64
-HOSTS ?= freebsd rhel7 xnu win10 openbsd netbsd
+HOSTS ?= freebsd rhel7 xnu win10 openbsd netbsd meatball nightmare
 endif
 
 ZIPOBJ_FLAGS += -a$(ARCH)
@@ -209,7 +208,7 @@ endif
 	libc/stdbool.h				\
 	libc/disclaimer.inc			\
 	rwc:/dev/shm				\
-	rx:cosmocc				\
+	rx:.cosmocc				\
 	rx:build/bootstrap			\
 	r:build/portcosmo.h			\
 	/proc/stat				\
@@ -286,6 +285,7 @@ include third_party/readline/BUILD.mk		# │
 include third_party/libunwind/BUILD.mk		# |
 include third_party/libcxxabi/BUILD.mk		# |
 include third_party/libcxx/BUILD.mk		# │
+include third_party/openmp/BUILD.mk		# │
 include third_party/double-conversion/BUILD.mk	# │
 include third_party/pcre/BUILD.mk		# │
 include third_party/less/BUILD.mk		# │
@@ -441,6 +441,7 @@ COSMOPOLITAN_OBJECTS =			\
 	THIRD_PARTY_GETOPT		\
 	LIBC_LOG			\
 	LIBC_TIME			\
+	THIRD_PARTY_OPENMP		\
 	THIRD_PARTY_MUSL		\
 	THIRD_PARTY_ZLIB_GZ		\
 	THIRD_PARTY_LIBCXXABI		\
@@ -479,6 +480,7 @@ COSMOPOLITAN_OBJECTS =			\
 	LIBC_STR			\
 	LIBC_SYSV			\
 	LIBC_INTRIN			\
+	LIBC_NT_BCRYPTPRIMITIVES	\
 	LIBC_NT_KERNEL32		\
 	LIBC_NEXGEN32E
 
@@ -522,6 +524,8 @@ COSMOCC_PKGS =				\
 	THIRD_PARTY_AARCH64		\
 	THIRD_PARTY_LIBCXX		\
 	THIRD_PARTY_LIBCXXABI		\
+	THIRD_PARTY_LIBUNWIND		\
+	THIRD_PARTY_OPENMP		\
 	THIRD_PARTY_INTEL
 
 o/$(MODE)/cosmopolitan.a:		\
