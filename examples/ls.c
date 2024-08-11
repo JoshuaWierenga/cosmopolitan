@@ -15,6 +15,7 @@
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/dt.h"
+#include "libc/sysv/consts/ok.h"
 #include "libc/sysv/consts/s.h"
 #include "libc/x/xasprintf.h"
 
@@ -70,10 +71,24 @@ void List(const char *path) {
   }
 }
 
+#include "libc/calls/struct/utsname.h"
+
+#define COSMOPOLITAN_VERSION_STR__(x, y, z) #x "." #y "." #z
+#define COSMOPOLITAN_VERSION_STR_(x, y, z)  COSMOPOLITAN_VERSION_STR__(x, y, z)
+#define COSMOPOLITAN_VERSION_STR                                            \
+  COSMOPOLITAN_VERSION_STR_(__COSMOPOLITAN_MAJOR__, __COSMOPOLITAN_MINOR__, \
+                            __COSMOPOLITAN_PATCH__)
+
 int main(int argc, char *argv[]) {
   int i;
   if (argc == 1) {
     if (IsMetal()) {
+      printf("Cosmopolitan " COSMOPOLITAN_VERSION_STR);
+      if (*MODE) {
+        printf(" MODE=" MODE);
+      }
+      puts("\n");
+
       List("/");
       putchar('\n');
       List("/proc");
@@ -96,7 +111,19 @@ int main(int argc, char *argv[]) {
       putchar('\n');
       List("/zip");
       putchar('\n');
-      List("/zip/.cosmo");
+
+      char file[] = "/zip/test.txt";
+      if (access(file, F_OK) == 0) {
+        List("/zip/test.txt");
+        FILE *file = fopen("/zip/test.txt", "rb");
+        char ch;
+        while ((ch = fgetc(file)) != EOF) {
+          putchar(ch);
+        }
+        fclose(file);
+      }
+
+      while(true) ;
     } else {
       List(".");
     }
