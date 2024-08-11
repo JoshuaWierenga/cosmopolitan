@@ -1,5 +1,5 @@
 // -*- mode:c++; indent-tabs-mode:nil; c-basic-offset:4; coding:utf-8 -*-
-// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8
+// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
 // Copyright 2024 Justine Alexandra Roberts Tunney
 //
@@ -23,180 +23,227 @@
 
 namespace ctl {
 
-string::~string() noexcept
+void
+string::destroy_big() noexcept
 {
-    if (n) {
-        if (n >= c)
+    auto* b = big();
+    if (b->n) {
+        if (b->n >= b->c)
             __builtin_trap();
-        if (p[n])
+        if (b->p[b->n])
             __builtin_trap();
     }
-    if (c && !p)
+    if (b->c && !b->p)
         __builtin_trap();
-    free(p);
+    free(b->p);
 }
 
-string::string(const char* s) noexcept
+void
+string::init_big(const string& s) noexcept
 {
-    append(s, strlen(s));
+    char* p2;
+#ifndef NDEBUG
+    if (!s.isbig())
+        __builtin_trap();
+#endif
+    if (s.size() >= s.capacity() >> 1) {
+        if (!(p2 = (char*)malloc(s.capacity())))
+            __builtin_trap();
+        set_big_string(p2, s.size(), s.capacity());
+    } else {
+        init_big(string_view(s));
+    }
 }
 
-string::string(const string& s) noexcept
+void
+string::init_big(const string_view s) noexcept
 {
-    append(s.p, s.n);
+    size_t need;
+    char* p2;
+    if (ckd_add(&need, s.n, 1 /* nul */ + 15))
+        __builtin_trap();
+    need &= -16;
+    if (!(p2 = (char*)malloc(need)))
+        __builtin_trap();
+    memcpy(p2, s.p, s.n);
+    p2[s.n] = 0;
+    set_big_string(p2, s.n, need);
 }
 
-string::string(const string_view s) noexcept
+void
+string::init_big(const size_t n, const char ch) noexcept
 {
-    append(s.p, s.n);
-}
-
-string::string(size_t size, char ch) noexcept
-{
-    resize(size, ch);
-}
-
-string::string(const char* s, size_t size) noexcept
-{
-    append(s, size);
+    size_t need;
+    char* p2;
+    if (ckd_add(&need, n, 1 /* nul */ + 15))
+        __builtin_trap();
+    need &= -16;
+    if (!(p2 = (char*)malloc(need)))
+        __builtin_trap();
+    memset(p2, ch, n);
+    p2[n] = 0;
+    set_big_string(p2, n, need);
 }
 
 const char*
 string::c_str() const noexcept
 {
-    if (!n)
+    if (!size())
         return "";
-    if (n >= c)
+    if (size() >= capacity())
         __builtin_trap();
-    if (p[n])
+    if (data()[size()])
         __builtin_trap();
-    return p;
+    return data();
 }
 
 void
 string::reserve(size_t c2) noexcept
 {
     char* p2;
-    if (c2 < n)
-        c2 = n;
+    size_t n = size();
+    if (c2 < n + 1)
+        c2 = n + 1;
+    if (c2 <= __::string_size)
+        return;
     if (ckd_add(&c2, c2, 15))
         __builtin_trap();
     c2 &= -16;
-    if (!(p2 = (char*)realloc(p, c2)))
-        __builtin_trap();
+    if (!isbig()) {
+        if (!(p2 = (char*)malloc(c2)))
+            __builtin_trap();
+        memcpy(p2, data(), __::string_size);
+    } else {
+        if (!(p2 = (char*)realloc(big()->p, c2)))
+            __builtin_trap();
+    }
     std::atomic_signal_fence(std::memory_order_seq_cst);
-    c = c2;
-    p = p2;
+    set_big_string(p2, n, c2);
 }
 
 void
-string::resize(size_t n2, char ch) noexcept
+string::resize(const size_t n2, const char ch) noexcept
 {
     size_t c2;
     if (ckd_add(&c2, n2, 1))
         __builtin_trap();
     reserve(c2);
-    if (n2 > n)
-        memset(p + n, ch, n2 - n);
-    p[n = n2] = 0;
+    if (n2 > size())
+        memset(data() + size(), ch, n2 - size());
+    if (isbig()) {
+        big()->p[big()->n = n2] = 0;
+    } else {
+        set_small_size(n2);
+        data()[size()] = 0;
+    }
 }
 
 void
-string::append(char ch) noexcept
+string::append(const char ch) noexcept
 {
-    if (n + 2 > c) {
-        size_t c2 = c + 2;
-        c2 += c2 >> 1;
+    size_t n2;
+    if (ckd_add(&n2, size(), 2))
+        __builtin_trap();
+    if (n2 > capacity()) {
+        size_t c2 = capacity();
+        if (ckd_add(&c2, c2, c2 >> 1))
+            __builtin_trap();
         reserve(c2);
     }
-    p[n++] = ch;
-    p[n] = 0;
+    data()[size()] = ch;
+    if (isbig()) {
+        ++big()->n;
+    } else {
+        --small()->rem;
+    }
+    data()[size()] = 0;
 }
 
 void
-string::grow(size_t size) noexcept
+string::grow(const size_t size) noexcept
 {
     size_t need;
-    if (ckd_add(&need, n, size))
+    if (ckd_add(&need, this->size(), size))
         __builtin_trap();
     if (ckd_add(&need, need, 1))
         __builtin_trap();
-    if (need <= c)
+    if (need <= capacity())
         return;
-    size_t c2 = c;
-    if (!c2) {
-        c2 = need;
-    } else {
-        while (c2 < need)
-            if (ckd_add(&c2, c2, c2 >> 1))
-                __builtin_trap();
-    }
+    size_t c2 = capacity();
+    if (!c2)
+        __builtin_trap();
+    while (c2 < need)
+        if (ckd_add(&c2, c2, c2 >> 1))
+            __builtin_trap();
     reserve(c2);
 }
 
 void
-string::append(char ch, size_t size) noexcept
+string::append(const char ch, const size_t size) noexcept
 {
     grow(size);
     if (size)
-        memset(p + n, ch, size);
-    p[n += size] = 0;
+        memset(data() + this->size(), ch, size);
+    if (isbig()) {
+        big()->n += size;
+    } else {
+        small()->rem -= size;
+    }
+    data()[this->size()] = 0;
 }
 
 void
-string::append(const void* data, size_t size) noexcept
+string::append(const void* data, const size_t size) noexcept
 {
     grow(size);
     if (size)
-        memcpy(p + n, data, size);
-    p[n += size] = 0;
+        memcpy(this->data() + this->size(), data, size);
+    if (isbig()) {
+        big()->n += size;
+    } else {
+        small()->rem -= size;
+    }
+    this->data()[this->size()] = 0;
 }
 
 void
 string::pop_back() noexcept
 {
-    if (!n)
+    if (!size())
         __builtin_trap();
-    p[--n] = 0;
+    if (isbig()) {
+        --big()->n;
+    } else {
+        ++small()->rem;
+    }
+    data()[size()] = 0;
 }
 
 string&
-string::operator=(string&& s) noexcept
+string::operator=(string s) noexcept
 {
-    if (p != s.p) {
-        if (p) {
-            clear();
-            append(s.p, s.n);
-        } else {
-            p = s.p;
-            n = s.n;
-            c = s.c;
-            s.p = nullptr;
-            s.n = 0;
-            s.c = 0;
-        }
-    }
+    swap(s);
     return *this;
 }
 
 bool
 string::operator==(const string_view s) const noexcept
 {
-    if (n != s.n)
+    if (size() != s.n)
         return false;
-    if (!n)
+    if (!s.n)
         return true;
-    return !memcmp(p, s.p, n);
+    return !memcmp(data(), s.p, s.n);
 }
 
 bool
 string::operator!=(const string_view s) const noexcept
 {
-    if (n != s.n)
+    if (size() != s.n)
         return true;
-    if (!n)
+    if (!s.n)
         return false;
-    return !!memcmp(p, s.p, n);
+    return !!memcmp(data(), s.p, s.n);
 }
 
 bool
@@ -204,76 +251,78 @@ string::contains(const string_view s) const noexcept
 {
     if (!s.n)
         return true;
-    return !!memmem(p, n, s.p, s.n);
+    return !!memmem(data(), size(), s.p, s.n);
 }
 
 bool
 string::ends_with(const string_view s) const noexcept
 {
-    if (n < s.n)
+    if (size() < s.n)
         return false;
     if (!s.n)
         return true;
-    return !memcmp(p + n - s.n, s.p, s.n);
+    return !memcmp(data() + size() - s.n, s.p, s.n);
 }
 
 bool
 string::starts_with(const string_view s) const noexcept
 {
-    if (n < s.n)
+    if (size() < s.n)
         return false;
     if (!s.n)
         return true;
-    return !memcmp(p, s.p, s.n);
+    return !memcmp(data(), s.p, s.n);
 }
 
 size_t
-string::find(char ch, size_t pos) const noexcept
+string::find(const char ch, const size_t pos) const noexcept
 {
     char* q;
-    if ((q = (char*)memchr(p, ch, n)))
-        return q - p;
+    if ((q = (char*)memchr(data(), ch, size())))
+        return q - data();
     return npos;
 }
 
 size_t
-string::find(const string_view s, size_t pos) const noexcept
+string::find(const string_view s, const size_t pos) const noexcept
 {
     char* q;
-    if (pos > n)
+    if (pos > size())
         __builtin_trap();
-    if ((q = (char*)memmem(p + pos, n - pos, s.p, s.n)))
-        return q - p;
+    if ((q = (char*)memmem(data() + pos, size() - pos, s.p, s.n)))
+        return q - data();
     return npos;
 }
 
 string
-string::substr(size_t pos, size_t count) const noexcept
+string::substr(const size_t pos, size_t count) const noexcept
 {
     size_t last;
-    if (pos > n)
+    if (pos > size())
         __builtin_trap();
-    if (count > n - pos)
-        count = n - pos;
+    if (count > size() - pos)
+        count = size() - pos;
     if (ckd_add(&last, pos, count))
-        last = n;
-    if (last > n)
+        last = size();
+    if (last > size())
         __builtin_trap();
-    return string(p + pos, count);
+    return string(data() + pos, count);
 }
 
 string&
-string::replace(size_t pos, size_t count, const string_view& s) noexcept
+string::replace(const size_t pos,
+                const size_t count,
+                const string_view s) noexcept
 {
     size_t last;
     if (ckd_add(&last, pos, count))
         __builtin_trap();
-    if (last > n)
+    if (last > size())
         __builtin_trap();
     size_t need;
     if (ckd_add(&need, pos, s.n))
         __builtin_trap();
-    size_t extra = n - last;
+    size_t extra = size() - last;
     if (ckd_add(&need, need, extra))
         __builtin_trap();
     size_t c2;
@@ -281,42 +330,57 @@ string::replace(size_t pos, size_t count, const string_view& s) noexcept
         __builtin_trap();
     reserve(c2);
     if (extra)
-        memmove(p + pos + s.n, p + last, extra);
-    memcpy(p + pos, s.p, s.n);
-    p[n = need] = 0;
+        memmove(data() + pos + s.n, data() + last, extra);
+    memcpy(data() + pos, s.p, s.n);
+    if (isbig()) {
+        big()->p[big()->n = need] = 0;
+    } else {
+        set_small_size(need);
+        data()[size()] = 0;
+    }
     return *this;
 }
 
 string&
-string::insert(size_t i, const string_view s) noexcept
+string::insert(const size_t i, const string_view s) noexcept
 {
-    if (i > n)
+    if (i > size())
         __builtin_trap();
-    size_t extra = n - i;
+    size_t extra = size() - i;
     size_t need;
-    if (ckd_add(&need, n, s.n))
+    if (ckd_add(&need, size(), s.n))
         __builtin_trap();
     if (ckd_add(&need, need, 1))
         __builtin_trap();
     reserve(need);
     if (extra)
-        memmove(p + i + s.n, p + i, extra);
-    memcpy(p + i, s.p, s.n);
-    p[n += s.n] = 0;
+        memmove(data() + i + s.n, data() + i, extra);
+    memcpy(data() + i, s.p, s.n);
+    if (isbig()) {
+        big()->n += s.n;
+    } else {
+        small()->rem -= s.n;
+    }
+    data()[size()] = 0;
     return *this;
 }
 
 string&
-string::erase(size_t pos, size_t count) noexcept
+string::erase(const size_t pos, size_t count) noexcept
 {
-    if (pos > n)
+    if (pos > size())
         __builtin_trap();
-    if (count > n - pos)
-        count = n - pos;
-    size_t extra = n - (pos + count);
+    if (count > size() - pos)
+        count = size() - pos;
+    size_t extra = size() - (pos + count);
     if (extra)
-        memmove(p + pos, p + pos + count, extra);
-    p[n = pos + extra] = 0;
+        memmove(data() + pos, data() + pos + count, extra);
+    if (isbig()) {
+        big()->n = pos + extra;
+    } else {
+        set_small_size(pos + extra);
+    }
+    data()[size()] = 0;
     return *this;
 }
 

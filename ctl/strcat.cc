@@ -1,5 +1,5 @@
 // -*- mode:c++; indent-tabs-mode:nil; c-basic-offset:4; coding:utf-8 -*-
-// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8
+// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
 // Copyright 2024 Justine Alexandra Roberts Tunney
 //
@@ -34,10 +34,15 @@ strcat(const string_view lhs, const string_view rhs) noexcept
         __builtin_trap();
     res.reserve(need);
     if (lhs.n)
-        memcpy(res.p, lhs.p, lhs.n);
+        memcpy(res.data(), lhs.p, lhs.n);
     if (rhs.n)
-        memcpy(res.p + lhs.n, rhs.p, rhs.n);
-    res.p[res.n = lhs.n + rhs.n] = 0;
+        memcpy(res.data() + lhs.n, rhs.p, rhs.n);
+    if (res.isbig()) {
+        res.big()->n = lhs.n + rhs.n;
+    } else {
+        res.small()->rem = __::sso_max - lhs.n - rhs.n;
+    }
+    res.data()[res.size()] = 0;
     return res;
 }
 

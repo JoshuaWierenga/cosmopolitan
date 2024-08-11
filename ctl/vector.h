@@ -1,10 +1,9 @@
 // -*-mode:c++;indent-tabs-mode:nil;c-basic-offset:4;tab-width:8;coding:utf-8-*-
-// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8 :vi
+// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 #ifndef COSMOPOLITAN_CTL_OPTIONAL_H_
 #define COSMOPOLITAN_CTL_OPTIONAL_H_
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
+#include "new.h"
+#include "utility.h"
 
 namespace ctl {
 
@@ -172,7 +171,7 @@ struct vector
             return;
         T* newP = new T[c2];
         for (size_t i = 0; i < n; ++i)
-            newP[i] = std::move(p[i]);
+            newP[i] = ctl::move(p[i]);
         delete[] p;
         p = newP;
         c = c2;
@@ -196,7 +195,7 @@ struct vector
             c2 += c2 >> 1;
             reserve(c2);
         }
-        new (&p[n]) T(std::forward<T>(e));
+        new (&p[n]) T(ctl::forward<T>(e));
         ++n;
     }
 
@@ -208,7 +207,7 @@ struct vector
             c2 += c2 >> 1;
             reserve(c2);
         }
-        new (&p[n]) T(std::forward<Args>(args)...);
+        new (&p[n]) T(ctl::forward<Args>(args)...);
         ++n;
     }
 
@@ -235,9 +234,9 @@ struct vector
 
     void swap(vector& other) noexcept
     {
-        std::swap(n, other.n);
-        std::swap(c, other.c);
-        std::swap(p, other.p);
+        ctl::swap(n, other.n);
+        ctl::swap(c, other.c);
+        ctl::swap(p, other.p);
     }
 };
 

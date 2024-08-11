@@ -1,5 +1,5 @@
 // -*- mode:c++; indent-tabs-mode:nil; c-basic-offset:4; coding:utf-8 -*-
-// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8
+// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
 // Copyright 2024 Justine Alexandra Roberts Tunney
 //
@@ -26,7 +26,7 @@
 namespace ctl {
 
 size_t
-string_view::find(char ch, size_t pos) const noexcept
+string_view::find(const char ch, const size_t pos) const noexcept
 {
     char* q;
     if (n && (q = (char*)memchr(p, ch, n)))
@@ -35,7 +35,7 @@ string_view::find(char ch, size_t pos) const noexcept
 }
 
 size_t
-string_view::find(const string_view s, size_t pos) const noexcept
+string_view::find(const string_view s, const size_t pos) const noexcept
 {
     char* q;
     if (pos > n)
@@ -46,7 +46,7 @@ string_view::find(const string_view s, size_t pos) const noexcept
 }
 
 string_view
-string_view::substr(size_t pos, size_t count) const noexcept
+string_view::substr(const size_t pos, size_t count) const noexcept
 {
     size_t last;
     if (pos > n)

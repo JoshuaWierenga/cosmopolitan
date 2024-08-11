@@ -1,5 +1,5 @@
 // -*- mode:c++; indent-tabs-mode:nil; c-basic-offset:4; coding:utf-8 -*-
-// vi: set et ft=c++ ts=4 sts=4 sw=4 fenc=utf-8
+// vi: set et ft=cpp ts=4 sts=4 sw=4 fenc=utf-8 :vi
 //
 // Copyright 2024 Justine Alexandra Roberts Tunney
 //
@@ -18,13 +18,15 @@
 
 #include "ctl/optional.h"
 
-#include <new>
-
 #include "ctl/string.h"
+
+#include "libc/runtime/runtime.h"
 
 // #include <optional>
 // #include <string>
 // #define ctl std
+
+static int g = 0;
 
 int
 main()
@@ -61,7 +63,7 @@ main()
 
     {
         ctl::optional<ctl::string> x("world");
-        ctl::optional<ctl::string> y(std::move(x));
+        ctl::optional<ctl::string> y(ctl::move(x));
         if (!y)
             return 9;
         if (!y.has_value())
@@ -85,7 +87,7 @@ main()
     {
         ctl::optional<ctl::string> x("hello");
         ctl::optional<ctl::string> y;
-        y = std::move(x);
+        y = ctl::move(x);
         if (!y)
             return 16;
         if (!y.has_value())
@@ -112,6 +114,20 @@ main()
             return 23;
         if (x.value() != "hello")
             return 24;
+    }
+
+    {
+        struct A
+        {
+            int* p = &g;
+            A()
+            {
+                ++*p;
+            }
+        };
+        ctl::optional<A> x;
+        if (g != 0)
+            return 25;
     }
 
     CheckForMemoryLeaks();
