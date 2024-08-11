@@ -29,7 +29,7 @@ int main(void) {
     perror("opendir failed");
     return 1;
   }
-  _defer(closedir, dir);
+  defer(closedir, dir);
   if (fchdir(dirfd(dir))) {
     perror("fchdir failed");
     return 1;

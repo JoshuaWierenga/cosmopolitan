@@ -704,7 +704,7 @@ apesh:	.ascii	"\n@\n#'\"\n"			// sixth edition shebang
 #endif /* APE_NO_MODIFY_SELF */
 	.ascii	  "exit $?\n"
 	.ascii	"fi\n"				// x86_64
-	.ascii	"echo error: this ape binary only supports x86_64 >&2\n"
+	.ascii	"echo \"error: this ape binary only supports x86_64\" >&2\n"
 	.ascii	"exit 1\n"
 	.endobj	apesh
 
