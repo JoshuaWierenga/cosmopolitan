@@ -118,7 +118,7 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
   int fd;
   // Not supported but required by posix
   if (flags & (O_APPEND|O_EXEC|O_TRUNC)) {
-  return enosys();
+    return enosys();
   }
   // Not supported and either OS or cosmo specific, or optional in posix
   if (flags & (O_COMPRESSED|O_DIRECT|O_DSYNC|O_INDEXED|O_NOATIME|O_RANDOM|

@@ -17,9 +17,9 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/paths.h"
-#include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
+#include "libc/unistd.h"
 
 size_t confstr(int name, char *buf, size_t len) {
   if (name == _CS_PATH) {

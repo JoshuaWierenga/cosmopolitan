@@ -61,8 +61,8 @@
 #include "libc/sysv/consts/w.h"
 #include "libc/sysv/consts/waitid.h"
 #include "libc/sysv/errfuns.h"
-#include "libc/time/struct/utimbuf.h"
-#include "libc/time/time.h"
+#include "libc/utime.h"
+#include "libc/time.h"
 #include "libc/x/x.h"
 #include "third_party/musl/lockf.h"
 #include "third_party/musl/passwd.h"
@@ -89,6 +89,7 @@
 #include "third_party/python/Include/warnings.h"
 #include "third_party/python/Include/yoink.h"
 #include "third_party/python/Modules/_multiprocessing/multiprocessing.h"
+#include "libc/unistd.h"
 #include "third_party/python/pyconfig.h"
 
 PYTHON_PROVIDE("posix");

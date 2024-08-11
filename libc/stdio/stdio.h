@@ -1,12 +1,11 @@
 #ifndef COSMOPOLITAN_LIBC_STDIO_H_
 #define COSMOPOLITAN_LIBC_STDIO_H_
 
-#define EOF      -1  /* end of file */
-#define WEOF     -1u /* end of file (multibyte) */
-#define _IOFBF   0   /* fully buffered */
-#define _IOLBF   1   /* line buffered */
-#define _IONBF   2   /* no buffering */
-#define _CS_PATH 0
+#define EOF    -1  /* end of file */
+#define WEOF   -1u /* end of file (multibyte) */
+#define _IOFBF 0   /* fully buffered */
+#define _IOLBF 1   /* line buffered */
+#define _IONBF 2   /* no buffering */
 
 #define L_tmpnam     20
 #define L_ctermid    20
@@ -80,7 +79,6 @@ int setvbuf(FILE *, char *, int, size_t) libcesque;
 int pclose(FILE *) libcesque;
 char *ctermid(char *) libcesque;
 void perror(const char *) libcesque relegated;
-size_t confstr(int, char *, size_t) libcesque;
 
 typedef uint64_t fpos_t;
 char *gets(char *) libcesque paramsnonnull();

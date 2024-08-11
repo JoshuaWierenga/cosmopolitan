@@ -208,6 +208,7 @@ int execvpe(const char *, char *const[], char *const[]) libcesque;
 int euidaccess(const char *, int) libcesque;
 int eaccess(const char *, int) libcesque;
 int madvise(void *, uint64_t, int) libcesque;
+int getcpu(unsigned *, unsigned *) libcesque;
 #endif
 
 #ifdef _COSMO_SOURCE
@@ -236,7 +237,9 @@ int sys_munlock(const void *, size_t) libcesque;
 int sys_munlockall(void) libcesque;
 int sys_personality(uint64_t) libcesque;
 int sys_ptrace(int, ...) libcesque;
-int sys_sysctl(const int *, unsigned, void *, size_t *, void *, size_t);
+int sysctl(int *, unsigned, void *, size_t *, void *, size_t) libcesque;
+int sysctlbyname(const char *, void *, size_t *, void *, size_t) libcesque;
+int sysctlnametomib(const char *, int *, size_t *) libcesque;
 int tmpfd(void) libcesque;
 int touch(const char *, unsigned) libcesque;
 int unveil(const char *, const char *) libcesque;

@@ -42,7 +42,8 @@ ssize_t sys_read_metal(int fd, const struct iovec *iov, int iovlen, int64_t offs
        */
       if (_weaken(sys_readv_vga)) {
         ssize_t res = _weaken(sys_readv_vga)(g_fds.p + fd, iov, iovlen);
-        if (res > 0) return res;
+        if (res > 0)
+          return res;
       }
       /* fall through */
     case kFdSerial:
@@ -55,7 +56,8 @@ ssize_t sys_read_metal(int fd, const struct iovec *iov, int iovlen, int64_t offs
       if (offset != -1) file->pos = offset;
       for (i = 0; i < iovlen && file->pos < file->size; ++i) {
         got = MIN(iov[i].iov_len, file->size - file->pos);
-        if (got) memcpy(iov[i].iov_base, file->base + file->pos, got);
+        if (got)
+          memcpy(iov[i].iov_base, file->base + file->pos, got);
         file->pos += got;
       }
       if (offset != -1) {

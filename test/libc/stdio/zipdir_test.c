@@ -38,7 +38,7 @@ __static_yoink("libc/testlib/hyperion.txt");
 __static_yoink("libc/testlib/moby.txt");
 __static_yoink("libc/testlib-test.txt");
 __static_yoink("usr/share/zoneinfo/");
-__static_yoink("usr/share/zoneinfo/New_York");
+__static_yoink("usr/share/zoneinfo/America/New_York");
 
 DIR *dir;
 struct dirent *ent;
@@ -101,7 +101,7 @@ TEST(zipdir, testListZip) {
   ASSERT_STREQ("..", ent->d_name);
   ASSERT_EQ(DT_DIR, ent->d_type);
   ASSERT_NE(NULL, (ent = readdir(dir)));
-  ASSERT_STREQ("echo.com", ent->d_name);
+  ASSERT_STREQ("echo", ent->d_name);
   ASSERT_EQ(DT_REG, ent->d_type);
   ASSERT_NE(NULL, (ent = readdir(dir)));
   ASSERT_STREQ("libc", ent->d_name);

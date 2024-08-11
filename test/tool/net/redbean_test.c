@@ -42,7 +42,7 @@
 #ifdef __x86_64__
 
 __static_yoink("zipos");
-__static_yoink("o/" MODE "/test/tool/net/redbean-tester.com");
+__static_yoink("o/" MODE "/test/tool/net/redbean-tester");
 
 int port;
 
@@ -50,15 +50,17 @@ void SetUpOnce(void) {
   ssize_t n;
   char buf[1024];
   int fdin, fdout;
-  if (IsWindows()) return;
+  if (IsWindows())
+    return;
   testlib_enable_tmp_setup_teardown_once();
   ASSERT_NE(-1, mkdir("bin", 0755));
-  ASSERT_NE(-1, (fdin = open("/zip/o/" MODE "/test/tool/net/redbean-tester.com",
+  ASSERT_NE(-1, (fdin = open("/zip/o/" MODE "/test/tool/net/redbean-tester",
                              O_RDONLY)));
-  ASSERT_NE(-1, (fdout = creat("bin/redbean-tester.com", 0755)));
+  ASSERT_NE(-1, (fdout = creat("bin/redbean-tester", 0755)));
   for (;;) {
     ASSERT_NE(-1, (n = read(fdin, buf, sizeof(buf))));
-    if (!n) break;
+    if (!n)
+      break;
     ASSERT_EQ(n, write(fdout, buf, n));
   }
   close(fdout);
@@ -83,7 +85,8 @@ char *SendHttpRequest(const char *s) {
   for (p = 0, n = 0;; n += rc) {
     p = xrealloc(p, n + 512);
     EXPECT_NE(-1, (rc = read(fd, p + n, 512)));
-    if (rc <= 0) break;
+    if (rc <= 0)
+      break;
   }
   p = xrealloc(p, n + 1);
   p[n] = 0;
@@ -102,7 +105,8 @@ bool Matches(const char *regex, const char *str) {
 }
 
 TEST(redbean, testOptions) {
-  if (IsWindows()) return;
+  if (IsWindows())
+    return;
   char portbuf[16];
   int pid, pipefds[2];
   sigset_t chldmask, savemask;
@@ -118,8 +122,8 @@ TEST(redbean, testOptions) {
     close(pipefds[0]);
     dup2(pipefds[1], 1);
     sigprocmask(SIG_SETMASK, &savemask, NULL);
-    execv("bin/redbean-tester.com",
-          (char *const[]){"bin/redbean-tester.com", "-vvszXp0", "-l127.0.0.1",
+    execv("bin/redbean-tester",
+          (char *const[]){"bin/redbean-tester", "-vvszXp0", "-l127.0.0.1",
                           __strace > 0 ? "--strace" : 0, 0});
     _exit(127);
   }
@@ -142,7 +146,8 @@ TEST(redbean, testOptions) {
 }
 
 TEST(redbean, testPipeline) {
-  if (IsWindows()) return;
+  if (IsWindows())
+    return;
   char portbuf[16];
   int pid, pipefds[2];
   sigset_t chldmask, savemask;
@@ -157,8 +162,8 @@ TEST(redbean, testPipeline) {
     close(pipefds[0]);
     dup2(pipefds[1], 1);
     sigprocmask(SIG_SETMASK, &savemask, NULL);
-    execv("bin/redbean-tester.com",
-          (char *const[]){"bin/redbean-tester.com", "-vvszXp0", "-l127.0.0.1",
+    execv("bin/redbean-tester",
+          (char *const[]){"bin/redbean-tester", "-vvszXp0", "-l127.0.0.1",
                           __strace > 0 ? "--strace" : 0, 0});
     _exit(127);
   }
@@ -190,7 +195,8 @@ TEST(redbean, testPipeline) {
 }
 
 TEST(redbean, testContentRange) {
-  if (IsWindows()) return;
+  if (IsWindows())
+    return;
   char portbuf[16];
   int pid, pipefds[2];
   sigset_t chldmask, savemask;
@@ -205,8 +211,8 @@ TEST(redbean, testContentRange) {
     close(pipefds[0]);
     dup2(pipefds[1], 1);
     sigprocmask(SIG_SETMASK, &savemask, NULL);
-    execv("bin/redbean-tester.com",
-          (char *const[]){"bin/redbean-tester.com", "-vvszXp0", "-l127.0.0.1",
+    execv("bin/redbean-tester",
+          (char *const[]){"bin/redbean-tester", "-vvszXp0", "-l127.0.0.1",
                           __strace > 0 ? "--strace" : 0, 0});
     _exit(127);
   }

@@ -53,8 +53,10 @@ void testlib_error_enter(const char *file, const char *func) {
   ftrace_enabled(-1);
   strace_enabled(-1);
   pthread_mutex_lock(&testlib_error_lock);
-  if (!IsWindows()) sys_getpid(); /* make strace easier to read */
-  if (!IsWindows()) sys_getpid();
+  if (!IsWindows())
+    sys_getpid(); /* make strace easier to read */
+  if (!IsWindows())
+    sys_getpid();
   if (g_testlib_shoulddebugbreak) {
     DebugBreak();
   }
@@ -81,10 +83,10 @@ void testlib_runtestcases(const testfn_t *start, const testfn_t *end,
   // getpid() calls are inserted to help visually see tests in traces
   // which can be performed on Linux, FreeBSD, OpenBSD, and XNU:
   //
-  //     strace -f o/default/test.com |& less
-  //     truss o/default/test.com |& less
-  //     ktrace -f trace o/default/test.com </dev/null; kdump -f trace | less
-  //     dtruss o/default/test.com |& less
+  //     strace -f o/default/test |& less
+  //     truss o/default/test |& less
+  //     ktrace -f trace o/default/test </dev/null; kdump -f trace | less
+  //     dtruss o/default/test |& less
   //
   // Test cases are iterable via a decentralized section. Your TEST()
   // macro inserts .testcase.SUITENAME sections into the binary which
@@ -106,18 +108,23 @@ void testlib_runtestcases(const testfn_t *start, const testfn_t *end,
         a->setup(fn);
       }
     }
-    if (_weaken(SetUp)) _weaken(SetUp)();
+    if (_weaken(SetUp))
+      _weaken(SetUp)();
     errno = 0;
-    if (IsWindows()) SetLastError(0);
-    if (!IsWindows()) sys_getpid();
-    if (warmup) warmup();
+    if (IsWindows())
+      SetLastError(0);
+    if (!IsWindows())
+      sys_getpid();
+    if (warmup)
+      warmup();
     testlib_clearxmmregisters();
     STRACE("");
     STRACE("# running test %t on %s@%s", fn, user, host);
     (*fn)();
     STRACE("");
     STRACE("# tearing down %t", fn);
-    if (!IsWindows()) sys_getpid();
+    if (!IsWindows())
+      sys_getpid();
     if (_weaken(TearDown)) {
       _weaken(TearDown)();
     }

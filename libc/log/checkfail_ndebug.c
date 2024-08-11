@@ -28,8 +28,8 @@
  *
  * This handler (1) makes binaries smaller by not embedding source code;
  * and therefore (2) less likely to leak sensitive information. This can
- * still print backtraces with function names if the .com.dbg file is in
- * the same folder.
+ * still print backtraces with function names if the .dbg file is in the
+ * same folder.
  *
  * @see libc/log/thunks/__check_fail_ndebug.S
  */
@@ -48,7 +48,8 @@ static relegated wontreturn void __check_fail_ndebug(uint64_t want,       //
     kvprintf(fmt, va);
   }
   kprintf("\n");
-  if (_weaken(__die)) _weaken(__die)();
+  if (_weaken(__die))
+    _weaken(__die)();
   _Exit(68);
 }
 

@@ -18,10 +18,10 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
 #include "libc/dce.h"
-#include "libc/serialize.h"
 #include "libc/intrin/bsr.h"
 #include "libc/macros.internal.h"
 #include "libc/mem/mem.h"
+#include "libc/serialize.h"
 #include "libc/stdio/append.h"
 
 #define W sizeof(size_t)
@@ -59,11 +59,13 @@ ssize_t appendw(char **b, uint64_t w) {
   char *p, *q;
   struct appendz z;
   z = appendz((p = *b));
-  l = w ? (_bsrl(w) >> 3) + 1 : 1;
+  l = w ? (bsrl(w) >> 3) + 1 : 1;
   n = ROUNDUP(z.i + 8 + 1, 8) + W;
   if (n > z.n) {
-    if (!z.n) z.n = W * 2;
-    while (n > z.n) z.n += z.n >> 1;
+    if (!z.n)
+      z.n = W * 2;
+    while (n > z.n)
+      z.n += z.n >> 1;
     z.n = ROUNDUP(z.n, W);
     if ((p = realloc(p, z.n))) {
       z.n = malloc_usable_size(p);
@@ -77,7 +79,8 @@ ssize_t appendw(char **b, uint64_t w) {
   WRITE64LE(q, w);
   q[8] = 0;
   z.i += l;
-  if (!IsTiny() && W == 8) z.i |= (size_t)APPEND_COOKIE << 48;
+  if (!IsTiny() && W == 8)
+    z.i |= (size_t)APPEND_COOKIE << 48;
   *(size_t *)(p + z.n - W) = z.i;
   return l;
 }

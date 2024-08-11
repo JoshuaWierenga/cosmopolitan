@@ -24,12 +24,12 @@ TOOL_CURL_DIRECTDEPS =				\
 	LIBC_STDIO				\
 	LIBC_STR				\
 	LIBC_SYSV				\
-	LIBC_TIME				\
 	NET_HTTP				\
 	NET_HTTPS				\
 	THIRD_PARTY_GETOPT			\
 	THIRD_PARTY_MBEDTLS			\
-	THIRD_PARTY_MUSL
+	THIRD_PARTY_MUSL			\
+	THIRD_PARTY_TZ
 
 TOOL_CURL_DEPS :=				\
 	$(call uniq,$(foreach x,$(TOOL_CURL_DIRECTDEPS),$($(x))))
@@ -47,7 +47,7 @@ $(TOOL_CURL_A).pkg:				\
 		$(TOOL_CURL_OBJS)		\
 		$(foreach x,$(TOOL_CURL_DIRECTDEPS),$($(x)_A).pkg)
 
-o/$(MODE)/tool/curl/curl.com.dbg:		\
+o/$(MODE)/tool/curl/curl.dbg:			\
 		$(TOOL_CURL)			\
 		o/$(MODE)/tool/curl/cmd.o	\
 		o/$(MODE)/tool/curl/curl.o	\
@@ -57,7 +57,7 @@ o/$(MODE)/tool/curl/curl.com.dbg:		\
 
 TOOL_CURL_LIBS = $(TOOL_CURL_A)
 TOOL_CURL_BINS = $(TOOL_CURL_COMS) $(TOOL_CURL_COMS:%=%.dbg)
-TOOL_CURL_COMS = o/$(MODE)/tool/curl/curl.com
+TOOL_CURL_COMS = o/$(MODE)/tool/curl/curl
 $(TOOL_CURL_OBJS): $(BUILD_FILES) tool/curl/BUILD.mk
 
 .PHONY: o/$(MODE)/tool/curl

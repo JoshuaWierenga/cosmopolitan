@@ -26,7 +26,8 @@
 // TODO(joshua): Support tmp files
 int sys_fstat_metal(int fd, struct stat *st) {
   struct MetalFile *file;
-  if (fd < 0 || fd >= g_fds.n) return einval();
+  if (fd < 0 || fd >= g_fds.n)
+    return einval();
   switch (g_fds.p[fd].kind) {
     case kFdSerial:
       bzero(st, sizeof(*st));

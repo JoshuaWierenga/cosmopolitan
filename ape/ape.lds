@@ -527,6 +527,7 @@ SECTIONS {
     *(.piro.data.sort.iat.*)
 #endif
     *(__patchable_function_entries)
+    *(.note.gnu.property)
     *(__mcount_loc)
     *(.rela.dyn)
     *(.discard)
@@ -551,7 +552,9 @@ _tdata_size = _tdata_end - _tdata_start;
 _tbss_size = _tbss_end - _tbss_start;
 _tbss_offset = _tbss_start - _tdata_start;
 _tls_content = (_tdata_end - _tdata_start) + (_tbss_end - _tbss_start);
-_tls_align = 1;
+_tdata_align = ALIGNOF(.tdata);
+_tbss_align = ALIGNOF(.tbss);
+_tls_align = MAX(TLS_ALIGNMENT, MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)));
 
 ape_cod_offset = 0;
 ape_cod_vaddr = ADDR(.head);
@@ -709,7 +712,6 @@ ape_idataz = LINK_WINDOWS ? RVA(ape_idata_iat) : 0;
 ape_idata_iatsize = LINK_WINDOWS ? ape_idata_iatend - ape_idata_iat : 0;
 ape_idata = LINK_WINDOWS ? RVA(ape_idata_idt) : 0;
 ape_idata_idtsize = LINK_WINDOWS ? ape_idata_idtend - ape_idata_idt : 0;
-v_ntversion = LINK_WINDOWS ? 6 : 1;
 v_ntdllchar = LINK_WINDOWS ? 288 : 0;
 v_ntsubversion = LINK_WINDOWS ? 6 : 5;
 v_ntsubsystem = (LINK_WINDOWS

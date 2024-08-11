@@ -29,7 +29,7 @@
 
 void SetUp(void) {
   if (getpriority(PRIO_PROCESS, getpid()) != 0) {
-    kprintf("getpriority_test.com must be launched at priority zero\n");
+    kprintf("getpriority_test must be launched at priority zero\n");
     exit(0);
   }
 }
@@ -60,7 +60,8 @@ TEST(getpriority, higherPriorityOfSelf) {
 }
 
 TEST(getpriority, lowerAndRaiseItAgain_notAllowed) {
-  if (1) return;  // this behavior seems limited to modern linux
+  if (1)
+    return;  // this behavior seems limited to modern linux
   SPAWN(fork);
   ASSERT_SYS(0, 0, setpriority(PRIO_PROCESS, 0, 5));
   ASSERT_SYS(EACCES, -1, setpriority(PRIO_PROCESS, 0, 4));

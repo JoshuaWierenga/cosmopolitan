@@ -32,7 +32,7 @@
 #include <unistd.h>
 
 // clang-format off
-// sh -c 'build/bootstrap/make.com -j8 V=1 o//test/posix/sigchld_test.com.runs'
+// sh -c 'build/bootstrap/make -j8 V=1 o//test/posix/sigchld_test.runs'
 // clang-format on
 
 void Assert(const char *file, int line, bool ok) {
@@ -83,7 +83,8 @@ void OnSigchld(int sig, siginfo_t *si, void *arg) {
 
 int main(int argc, char *argv[]) {
   const char *startup = getenv("EXITCODE");
-  if (startup) exit(atoi(startup));
+  if (startup)
+    exit(atoi(startup));
   struct sigaction newsa, oldsa;
   sigset_t oldmask, blocksigchld, unblockall;
   char *prog = argv[0];

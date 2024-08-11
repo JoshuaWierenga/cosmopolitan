@@ -37,12 +37,12 @@
  * The purpose of this library is to be able to have build commands with
  * huge argument lists. The way we do that is by replacing commands like
  *
- *     foo.com lots of args
+ *     foo lots of args
  *
  * with this
  *
  *     echo of args >args
- *     foo.com lots @args
+ *     foo lots @args
  *
  * This iterator abstracts the process of reading the special `@`
  * prefixed args. In order to do that quickly and easily, we make the
@@ -57,7 +57,7 @@
  *     # don't do this
  *     target: thousands of args
  *         $(file >$@.args) $(foreach x,$^,$(file >>$@.args,$(x)))
- *         tool.com -o $@ @$@.args
+ *         tool -o $@ @$@.args
  *
  * That is slow because it needs to open and close the args file
  * thousands of times. If we trade away filenames with spaces then the
@@ -66,7 +66,7 @@
  *     # do this
  *     target: thousands of args
  *         $(file >$@.args,$^)
- *         tool.com -o $@ @$@.args
+ *         tool -o $@ @$@.args
  *
  * We need (2) because it make the code in this file simpler and avoids
  * a malloc() dependency. Having that trailing character means argument
@@ -77,7 +77,8 @@
 
 static wontreturn void getargs_fail(const char *path, const char *reason) {
   const char *errstr;
-  if (!(errstr = _strerdoc(errno))) errstr = "Unknown error";
+  if (!(errstr = _strerdoc(errno)))
+    errstr = "Unknown error";
   tinyprint(2, path, ": ", reason, ": ", errstr, "\n", NULL);
   exit(1);
 }
@@ -97,7 +98,8 @@ void getargs_init(struct GetArgs *ga, char **args) {
  */
 void getargs_destroy(struct GetArgs *ga) {
   if (ga->map) {
-    if (munmap(ga->map, ga->mapsize)) notpossible;
+    if (munmap(ga->map, ga->mapsize))
+      notpossible;
   }
   bzero(ga, sizeof(*ga));
 }
@@ -152,7 +154,8 @@ const char *getargs_next(struct GetArgs *ga) {
         ga->j += ++k;
         return p;
       }
-      if (munmap(ga->map, ga->mapsize)) notpossible;
+      if (munmap(ga->map, ga->mapsize))
+        notpossible;
       ga->map = 0;
       ga->mapsize = 0;
       ga->j = 0;

@@ -124,7 +124,6 @@ THIRD_PARTY_ZSTD_A_DIRECTDEPS =					\
 	LIBC_STDIO						\
 	LIBC_STR						\
 	LIBC_THREAD						\
-	LIBC_TIME						\
 	LIBC_SYSV
 
 THIRD_PARTY_ZSTD_A_DEPS :=					\
@@ -154,7 +153,7 @@ $(THIRD_PARTY_ZSTD_A_OBJS): private				\
 		CPPFLAGS +=					\
 			-DZSTD_MULTITHREAD
 
-o/$(MODE)/third_party/zstd/zstd.com.dbg:			\
+o/$(MODE)/third_party/zstd/zstd.dbg:				\
 		$(THIRD_PARTY_ZSTD)				\
 		o/$(MODE)/third_party/zstd/programs/zstdcli.o	\
 		$(CRT)						\
@@ -169,7 +168,7 @@ o/$(MODE)/third_party/zstd/lib/compress/zstd_lazy.o:		\
 		QUOTA += -C64
 
 THIRD_PARTY_ZSTD_BINS = $(THIRD_PARTY_ZSTD_COMS) $(THIRD_PARTY_ZSTD_COMS:%=%.dbg)
-THIRD_PARTY_ZSTD_COMS = o/$(MODE)/third_party/zstd/zstd.com
+THIRD_PARTY_ZSTD_COMS = o/$(MODE)/third_party/zstd/zstd
 THIRD_PARTY_ZSTD_LIBS = $(THIRD_PARTY_ZSTD_A)
 THIRD_PARTY_ZSTD_SRCS = $(foreach x,$(THIRD_PARTY_ZSTD_ARTIFACTS),$($(x)_SRCS))
 THIRD_PARTY_ZSTD_INCS = $(foreach x,$(THIRD_PARTY_ZSTD_ARTIFACTS),$($(x)_INCS))

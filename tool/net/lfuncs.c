@@ -52,7 +52,7 @@
 #include "libc/sysv/consts/rusage.h"
 #include "libc/sysv/consts/sock.h"
 #include "libc/thread/thread.h"
-#include "libc/time/time.h"
+#include "libc/time.h"
 #include "libc/x/x.h"
 #include "net/http/escape.h"
 #include "net/http/http.h"
@@ -342,7 +342,7 @@ int LuaPopcnt(lua_State *L) {
 int LuaBsr(lua_State *L) {
   long x;
   if ((x = luaL_checkinteger(L, 1))) {
-    lua_pushinteger(L, _bsrl(x));
+    lua_pushinteger(L, bsrl(x));
     return 1;
   } else {
     luaL_argerror(L, 1, "zero");
@@ -353,7 +353,7 @@ int LuaBsr(lua_State *L) {
 int LuaBsf(lua_State *L) {
   long x;
   if ((x = luaL_checkinteger(L, 1))) {
-    lua_pushinteger(L, _bsfl(x));
+    lua_pushinteger(L, bsfl(x));
     return 1;
   } else {
     luaL_argerror(L, 1, "zero");
@@ -475,7 +475,8 @@ int LuaSlurp(lua_State *L) {
     }
     if (rc != -1) {
       got = rc;
-      if (!got) break;
+      if (!got)
+        break;
       luaL_addlstring(&b, tb, got);
     } else if (errno == EINTR) {
       errno = olderr;
@@ -617,7 +618,8 @@ dontinline int LuaBase32Impl(lua_State *L,
   const char *a = luaL_optlstring(L, 2, "", &al);
   if (!IS2POW(al) || al > 128 || al == 1)
     return luaL_error(L, "alphabet length is not a power of 2 in range 2..128");
-  if (!(p = B32(s, sl, a, al, &sl))) return luaL_error(L, "out of memory");
+  if (!(p = B32(s, sl, a, al, &sl)))
+    return luaL_error(L, "out of memory");
   lua_pushlstring(L, p, sl);
   free(p);
   return 1;
@@ -693,10 +695,12 @@ int LuaGetCryptoHash(lua_State *L) {
   const void *p = luaL_checklstring(L, 2, &pl);
   const void *k = luaL_optlstring(L, 3, "", &kl);
   const mbedtls_md_info_t *digest = mbedtls_md_info_from_string(h);
-  if (!digest) return luaL_argerror(L, 1, "unknown hash type");
+  if (!digest)
+    return luaL_argerror(L, 1, "unknown hash type");
   if (kl == 0) {
     // no key provided, run generic hash function
-    if ((digest->f_md)(p, pl, d)) return luaL_error(L, "bad input data");
+    if ((digest->f_md)(p, pl, d))
+      return luaL_error(L, "bad input data");
   } else if (mbedtls_md_hmac(digest, k, kl, p, pl, d)) {
     return luaL_error(L, "bad input data");
   }
@@ -827,6 +831,31 @@ int LuaEscapeLiteral(lua_State *L) {
 
 int LuaVisualizeControlCodes(lua_State *L) {
   return LuaCoder(L, VisualizeControlCodes);
+}
+
+int LuaUuidV4(lua_State *L) {
+  static const char v[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                           '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  char uuid_str[37] = {0};
+  uint64_t r = _rand64();
+  int j = 0;
+  for (int i = 0; i < 36; ++i, ++j) {
+    if (j == 16) {
+      r = _rand64();
+      j = 0;
+    }
+    uuid_str[i] = v[(r & (0xfull << (j * 4ull))) >> (j * 4ull)];
+  }
+
+  uuid_str[8] = '-';
+  uuid_str[13] = '-';
+  uuid_str[14] = '4';
+  uuid_str[18] = '-';
+  uuid_str[19] = v[8 | (r & (0x3ull << (j * 4ull))) >> (j * 4ull)];
+  uuid_str[23] = '-';
+  uuid_str[36] = '\0';
+  lua_pushfstring(L, uuid_str);
+  return 1;
 }
 
 static dontinline int LuaHasherImpl(lua_State *L, size_t k,

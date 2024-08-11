@@ -24,11 +24,13 @@
 #include "libc/calls/syscall-sysv.internal.h"
 #include "libc/dce.h"
 #include "libc/errno.h"
-#include "libc/intrin/kprintf.h"
 #include "libc/intrin/promises.internal.h"
 #include "libc/intrin/strace.internal.h"
+#include "libc/intrin/weaken.h"
 #include "libc/nexgen32e/vendor.internal.h"
 #include "libc/runtime/runtime.h"
+#include "libc/runtime/symbols.internal.h"
+#include "libc/runtime/zipos.internal.h"
 #include "libc/sysv/consts/pr.h"
 #include "libc/sysv/errfuns.h"
 
@@ -163,7 +165,7 @@
  *   interpreted, and ape binaries, you'll usually want `rpath` and
  *   `prot_exec` too. With APE it's possible to work around this
  *   requirement, by "assimilating" your binaries beforehand. See the
- *   assimilate.com program and `--assimilate` flag which can be used to
+ *   assimilate program and `--assimilate` flag which can be used to
  *   turn APE binaries into static native binaries.
  *
  * - "prot_exec" allows mmap(PROT_EXEC) and mprotect(PROT_EXEC). This is
@@ -176,13 +178,13 @@
  *   calls on Linux.
  *
  * - "vminfo" OpenBSD defines this for programs like `top`. On Linux,
- *   this is a placeholder group that lets tools like pledge.com check
+ *   this is a placeholder group that lets tools like pledge check
  *   `__promises` and automatically unveil() a subset of files top would
  *   need, e.g. /proc/stat, /proc/meminfo.
  *
  * - "tmppath" allows unlink, unlinkat, and lstat. This is mostly a
- *   placeholder group for pledge.com, which reads the `__promises`
- *   global to determine if /tmp and $TMPPATH should be unveiled.
+ *   placeholder group for pledge, which reads the `__promises` global
+ *   to determine if /tmp and $TMPPATH should be unveiled.
  *
  * `execpromises` only matters if "exec" is specified in `promises`. In
  * that case, this specifies the promises that'll apply once execve()
@@ -199,21 +201,21 @@
  * `__pledge_mode` is available to improve the experience of pledge() on
  * Linux. It should specify one of the following penalties:
  *
+ * - `PLEDGE_PENALTY_RETURN_EPERM` causes system calls to just return an
+ *   `EPERM` error instead of killing. This is the default on Linux.
+ *   This is a gentler solution that allows code to display a friendly
+ *   warning. Please note this may lead to weird behaviors if the
+ *   software being sandboxed is lazy about checking error results.
+ *
  * - `PLEDGE_PENALTY_KILL_THREAD` causes the violating thread to be
- *   killed. This is the default on Linux. It's effectively the same as
- *   killing the process, since redbean has no threads. The termination
- *   signal can't be caught and will be either `SIGSYS` or `SIGABRT`.
- *   Consider enabling stderr logging below so you'll know why your
- *   program failed. Otherwise check the system log.
+ *   killed. It's effectively the same as killing the process, since
+ *   redbean has no threads. The termination signal can't be caught and
+ *   will be either `SIGSYS` or `SIGABRT`. Consider enabling stderr
+ *   logging below so you'll know why your program failed. Otherwise
+ *   check the system log.
  *
  * - `PLEDGE_PENALTY_KILL_PROCESS` causes the process and all its
  *   threads to be killed. This is always the case on OpenBSD.
- *
- * - `PLEDGE_PENALTY_RETURN_EPERM` causes system calls to just return an
- *   `EPERM` error instead of killing. This is a gentler solution that
- *   allows code to display a friendly warning. Please note this may
- *   lead to weird behaviors if the software being sandboxed is lazy
- *   about checking error results.
  *
  * `mode` may optionally bitwise or the following flags:
  *
@@ -240,6 +242,8 @@
 int pledge(const char *promises, const char *execpromises) {
   int e, rc;
   unsigned long ipromises, iexecpromises;
+  if (_weaken(GetSymbolTable))
+    _weaken(GetSymbolTable)();
   if (!promises) {
     // OpenBSD says NULL argument means it doesn't change, i.e.
     // pledge(0,0) on OpenBSD does nothing. The Cosmopolitan Libc
@@ -249,12 +253,17 @@ int pledge(const char *promises, const char *execpromises) {
     // may use pledge(0,0) to perform a support check, to determine if
     // pledge() will be able to impose the restrictions it advertises
     // within the host environment.
-    if (execpromises) return einval();
-    if (IsGenuineBlink()) return enosys();
-    if (IsOpenbsd()) return sys_pledge(0, 0);
-    if (!IsLinux()) return enosys();
+    if (execpromises)
+      return einval();
+    if (IsGenuineBlink())
+      return enosys();
+    if (IsOpenbsd())
+      return sys_pledge(0, 0);
+    if (!IsLinux())
+      return enosys();
     rc = sys_prctl(PR_GET_SECCOMP, 0, 0, 0, 0);
-    if (rc == 0 || rc == 2) return 0;  // 2 means we're already filtered
+    if (rc == 0 || rc == 2)
+      return 0;  // 2 means we're already filtered
     unassert(rc < 0);
     errno = -rc;
     return -1;
@@ -274,9 +283,11 @@ int pledge(const char *promises, const char *execpromises) {
         STRACE("execpromises must be a subset of promises");
         rc = einval();
       } else {
-        if (notsubset) iexecpromises = ipromises;
+        if (notsubset)
+          iexecpromises = ipromises;
         rc = sys_pledge_linux(ipromises, __pledge_mode);
-        if (rc > -4096u) errno = -rc, rc = -1;
+        if (rc > -4096u)
+          errno = -rc, rc = -1;
       }
     } else {
       e = errno;

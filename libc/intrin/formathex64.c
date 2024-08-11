@@ -23,10 +23,12 @@
 static inline int PickGoodWidth(unsigned x, char z) {
   if (z) {
     if (x < 16) {
-      if (x < 8) return 8;
+      if (x < 8)
+        return 8;
       return 16;
     } else {
-      if (x < 32) return 32;
+      if (x < 32)
+        return 32;
       return 64;
     }
   } else {
@@ -48,7 +50,7 @@ char *FormatHex64(char p[hasatleast 19], uint64_t x, char z) {
       *p++ = '0';
       *p++ = 'x';
     }
-    i = PickGoodWidth(_bsrl(x), z);
+    i = PickGoodWidth(bsrl(x), z);
     do {
       *p++ = "0123456789abcdef"[(x >> (i -= 4)) & 15];
     } while (i);

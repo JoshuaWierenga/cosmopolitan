@@ -9,7 +9,7 @@ THIRD_PARTY_BASH_HDRS = $(filter %.h,$(THIRD_PARTY_BASH_FILES))
 THIRD_PARTY_BASH_INCS = $(filter %.inc,$(THIRD_PARTY_BASH_FILES))
 THIRD_PARTY_BASH_SRCS = $(filter %.c,$(THIRD_PARTY_BASH_FILES))
 THIRD_PARTY_BASH_OBJS = $(THIRD_PARTY_BASH_SRCS:%.c=o/$(MODE)/%.o)
-THIRD_PARTY_BASH_COMS = o/$(MODE)/third_party/bash/bash.com
+THIRD_PARTY_BASH_COMS = o/$(MODE)/third_party/bash/bash
 THIRD_PARTY_BASH_CHECKS = $(THIRD_PARTY_BASH_A).pkg
 
 THIRD_PARTY_BASH_BINS =							\
@@ -29,14 +29,14 @@ THIRD_PARTY_BASH_DIRECTDEPS =						\
 	LIBC_STR							\
 	LIBC_SYSV							\
 	LIBC_THREAD							\
-	LIBC_TIME							\
 	THIRD_PARTY_COMPILER_RT						\
 	THIRD_PARTY_GDTOA						\
 	THIRD_PARTY_GETOPT						\
 	THIRD_PARTY_MUSL						\
 	THIRD_PARTY_NCURSES						\
 	THIRD_PARTY_READLINE						\
-	THIRD_PARTY_REGEX
+	THIRD_PARTY_REGEX						\
+	THIRD_PARTY_TZ
 
 THIRD_PARTY_BASH_DEPS :=						\
 	$(call uniq,$(foreach x,$(THIRD_PARTY_BASH_DIRECTDEPS),$($(x))))
@@ -50,7 +50,7 @@ $(THIRD_PARTY_BASH_A):							\
 	$(THIRD_PARTY_BASH_A).pkg					\
 	$(filter-out %main.o,$(THIRD_PARTY_BASH_OBJS))
 
-o/$(MODE)/third_party/bash/bash.com.dbg:				\
+o/$(MODE)/third_party/bash/bash.dbg:					\
 		$(THIRD_PARTY_BASH_DEPS)				\
 		$(THIRD_PARTY_BASH_A)					\
 		$(THIRD_PARTY_BASH_A).pkg				\

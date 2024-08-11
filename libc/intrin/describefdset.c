@@ -30,7 +30,8 @@
 const char *(DescribeFdSet)(char buf[N], ssize_t rc, int nfds, fd_set *fds) {
   int o = 0;
 
-  if (!fds) return "NULL";
+  if (!fds)
+    return "NULL";
   if ((!IsAsan() && kisdangerous(fds)) ||
       (IsAsan() && !__asan_is_valid(fds, sizeof(*fds) * nfds))) {
     ksnprintf(buf, N, "%p", fds);
@@ -43,7 +44,7 @@ const char *(DescribeFdSet)(char buf[N], ssize_t rc, int nfds, fd_set *fds) {
   for (int fd = 0; fd < nfds; fd += 64) {
     uint64_t w = fds->fds_bits[fd >> 6];
     while (w) {
-      unsigned m = _bsr(w);
+      unsigned m = bsr(w);
       w &= ~((uint64_t)1 << m);
       if (fd + m < nfds) {
         if (!gotsome) {

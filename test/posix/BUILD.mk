@@ -13,17 +13,17 @@ TEST_POSIX_OBJS =				\
 	$(TEST_POSIX_SRCS:%.c=o/$(MODE)/%.o)
 
 TEST_POSIX_COMS =				\
-	$(TEST_POSIX_SRCS_TEST:%.c=o/$(MODE)/%.com)
+	$(TEST_POSIX_SRCS_TEST:%.c=o/$(MODE)/%)
 
 TEST_POSIX_BINS =				\
 	$(TEST_POSIX_COMS)			\
 	$(TEST_POSIX_COMS:%=%.dbg)
 
 TEST_POSIX_TESTS =				\
-	$(TEST_POSIX_SRCS_TEST:%.c=o/$(MODE)/%.com.ok)
+	$(TEST_POSIX_SRCS_TEST:%.c=o/$(MODE)/%.ok)
 
 TEST_POSIX_CHECKS =				\
-	$(TEST_POSIX_SRCS_TEST:%.c=o/$(MODE)/%.com.runs)
+	$(TEST_POSIX_SRCS_TEST:%.c=o/$(MODE)/%.runs)
 
 TEST_POSIX_DIRECTDEPS =				\
 	LIBC_CALLS				\
@@ -33,6 +33,7 @@ TEST_POSIX_DIRECTDEPS =				\
 	LIBC_PROC				\
 	LIBC_RUNTIME				\
 	LIBC_STDIO				\
+	LIBC_STR				\
 	LIBC_SYSV				\
 	LIBC_THREAD
 
@@ -43,7 +44,7 @@ o/$(MODE)/test/posix/posix.pkg:			\
 		$(TEST_POSIX_OBJS)		\
 		$(foreach x,$(TEST_POSIX_DIRECTDEPS),$($(x)_A).pkg)
 
-o/$(MODE)/test/posix/%.com.dbg:			\
+o/$(MODE)/test/posix/%.dbg:			\
 		$(TEST_POSIX_DEPS)		\
 		o/$(MODE)/test/posix/%.o	\
 		o/$(MODE)/test/posix/posix.pkg	\
@@ -51,7 +52,8 @@ o/$(MODE)/test/posix/%.com.dbg:			\
 		$(APE_NO_MODIFY_SELF)
 	@$(APELINK)
 
-$(TEST_POSIX_OBJS): private CFLAGS += -isystem isystem/
+o/$(MODE)/test/posix/fread3gb_test.runs:	\
+		private QUOTA += -F5gb -M5gb
 
 .PHONY: o/$(MODE)/test/posix
 o/$(MODE)/test/posix:				\

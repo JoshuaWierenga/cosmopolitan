@@ -70,16 +70,28 @@
            "__GCC_IEC_559"
            "__SUPPORT_SNAN__"
            "__GCC_IEC_559_COMPLEX"
-           "__NO_MATH_ERRNO__"
            "__gnu__"
            "_OPENMP"))
+
+        (cuda
+         '("__NVCC__"
+           "__CUDA_ARCH__"))
+
+        (hip
+         '("__HIP__"
+           "__HIPCC__"
+           "__HIP_PLATFORM_AMD__"
+           "__HIP_DEVICE_COMPILE__"
+           "__AMD__"
+           "__AMDGCN__"
+           "__AMDGPU__"))
 
         (cosmo
          '("__LINKER__"))
 
         )
     (concat "\\_<"
-            (regexp-opt (append cpp92 gcc412 cosmo))
+            (regexp-opt (append cpp92 gcc412 cuda hip cosmo))
             "\\_>")))
 
 (provide 'cosmo-platform-constants)

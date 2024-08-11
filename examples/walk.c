@@ -10,11 +10,11 @@
 #include "libc/dce.h"
 #include "libc/errno.h"
 #include "libc/runtime/runtime.h"
+#include "libc/stdio/ftw.h"
 #include "libc/stdio/stdio.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/exit.h"
 #include "libc/sysv/consts/s.h"
-#include "libc/stdio/ftw.h"
 
 /**
  * @fileoverview Directory walker example.
@@ -45,8 +45,10 @@ static int display_info(const char *fpath, const struct stat *sb, int tflag,
 int main(int argc, char *argv[]) {
   int flags = 0;
   const char *dir;
-  if (argc > 2 && strchr(argv[2], 'd') != NULL) flags |= FTW_DEPTH;
-  if (argc > 2 && strchr(argv[2], 'p') != NULL) flags |= FTW_PHYS;
+  if (argc > 2 && strchr(argv[2], 'd') != NULL)
+    flags |= FTW_DEPTH;
+  if (argc > 2 && strchr(argv[2], 'p') != NULL)
+    flags |= FTW_PHYS;
   if (IsMetal()) {
     dir = "/";
   } else {

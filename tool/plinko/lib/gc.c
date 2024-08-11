@@ -48,7 +48,8 @@ struct Gc *NewGc(int A) {
   struct Gc *G;
   DCHECK_LE(B, A);
   DCHECK_LE(A, 0);
-  if (B < cHeap) cHeap = B;
+  if (B < cHeap)
+    cHeap = B;
   n = ROUNDUP(A - B, DWBITS) / DWBITS;
   G = Addr(BANE);
   bzero(G->M, n * sizeof(G->M[0]));
@@ -65,7 +66,8 @@ void Marker(const dword M[], int A, int x) {
   dword t;
   do {
     i = ~(x - A);
-    if (HasBit(M, i)) return;
+    if (HasBit(M, i))
+      return;
     SetBit((void *)M, i);
     if (HI(GetShadow(x)) < A) {
       Marker(M, A, HI(GetShadow(x)));
@@ -93,7 +95,7 @@ int Census(struct Gc *G) {
     if (!~G->M[j]) {
       l += DWBITS;
     } else {
-      l += _bsfl(~G->M[j]);
+      l += bsfl(~G->M[j]);
       break;
     }
   }
@@ -118,13 +120,14 @@ int Relocater(const dword M[], const unsigned P[], int A, int x) {
 void Sweep(struct Gc *G) {
   dword m;
   int a, b, d, i, j;
-  if (G->noop) return;
+  if (G->noop)
+    return;
   i = 0;
   b = d = G->A;
   for (; i < G->n; ++i) {
     m = G->M[i];
     if (~m) {
-      j = _bsfl(~m);
+      j = bsfl(~m);
       m >>= j;
       m <<= j;
       d -= j;
@@ -136,7 +139,7 @@ void Sweep(struct Gc *G) {
   }
   for (; i < G->n; b -= DWBITS, m = G->M[++i]) {
     for (; m; m &= ~((dword)1 << j)) {
-      a = b + ~(j = _bsfl(m));
+      a = b + ~(j = bsfl(m));
       Set(--d, MAKE(Relocate(G, LO(Get(a))), Relocate(G, HI(Get(a)))));
       SetShadow(d, MAKE(LO(GetShadow(a)), Relocate(G, HI(GetShadow(a)))));
     }
@@ -146,7 +149,8 @@ void Sweep(struct Gc *G) {
 
 int MarkSweep(int A, int x) {
   struct Gc *G;
-  if (x >= A) return cx = A, x;
+  if (x >= A)
+    return cx = A, x;
   G = NewGc(A);
   Mark(G, x);
   Census(G);

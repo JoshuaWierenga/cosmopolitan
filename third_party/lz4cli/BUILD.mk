@@ -18,7 +18,7 @@ THIRD_PARTY_LZ4CLI_SRCS = $(filter %.c,$(THIRD_PARTY_LZ4CLI_FILES))
 THIRD_PARTY_LZ4CLI_HDRS = $(filter %.h,$(THIRD_PARTY_LZ4CLI_FILES))
 
 THIRD_PARTY_LZ4CLI =					\
-	o/$(MODE)/third_party/lz4cli/lz4cli.com
+	o/$(MODE)/third_party/lz4cli/lz4cli
 
 THIRD_PARTY_LZ4CLI_OBJS =				\
 	o/$(MODE)/third_party/lz4cli/bench.o		\
@@ -41,8 +41,7 @@ o/$(MODE)/third_party/lz4cli/datagen.o: private		\
 THIRD_PARTY_LZ4CLI_DIRECTDEPS =				\
 	LIBC_INTRIN					\
 	LIBC_STDIO					\
-	LIBC_LOG					\
-	LIBC_TIME
+	LIBC_LOG
 
 THIRD_PARTY_LZ4CLI_DEPS :=				\
 	$(call uniq,$(foreach x,$(THIRD_PARTY_LZ4CLI_DIRECTDEPS),$($(x))))
@@ -51,7 +50,7 @@ $(THIRD_PARTY_LZ4CLI_OBJS): private			\
 	DEFAULT_CPPFLAGS +=				\
 		-isystem third_party/lz4cli
 
-o/$(MODE)/third_party/lz4cli/lz4cli.com.dbg:		\
+o/$(MODE)/third_party/lz4cli/lz4cli.dbg:		\
 		$(THIRD_PARTY_LZ4CLI_DEPS)		\
 		$(THIRD_PARTY_LZ4CLI_OBJS)		\
 		$(CRT)					\

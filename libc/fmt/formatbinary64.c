@@ -21,11 +21,14 @@
 
 static inline int PickGoodWidth(unsigned x) {
   if (x < 16) {
-    if (x < 2) return 0;
-    if (x < 8) return 7;
+    if (x < 2)
+      return 1;
+    if (x < 8)
+      return 7;
     return 15;
   } else {
-    if (x < 32) return 31;
+    if (x < 32)
+      return 31;
     return 63;
   }
 }
@@ -45,7 +48,7 @@ char *FormatBinary64(char p[hasatleast 67], uint64_t x, char z) {
       *p++ = '0';
       *p++ = 'b';
     }
-    i = PickGoodWidth(_bsrl(x));
+    i = PickGoodWidth(bsrl(x));
     do {
       b = 1;
       b <<= i;

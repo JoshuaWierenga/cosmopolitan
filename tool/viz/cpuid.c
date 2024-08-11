@@ -26,7 +26,7 @@
 #include "libc/nexgen32e/x86info.h"
 #include "libc/runtime/runtime.h"
 #include "libc/stdio/stdio.h"
-#include "libc/time/time.h"
+#include "libc/time.h"
 #include "libc/x/xasprintf.h"
 #include "tool/decode/lib/idname.h"
 #include "tool/decode/lib/x86idnames.h"
@@ -102,9 +102,12 @@ int main(int argc, char *argv[]) {
 
   if (KCPUIDS(16H, EAX)) {
     printf("\n");
-    if ((x = KCPUIDS(16H, EAX) & 0x7fff)) decimal("frequency", x, "mhz");
-    if ((x = KCPUIDS(16H, EBX) & 0x7fff)) decimal("turbo", x, "mhz");
-    if ((x = KCPUIDS(16H, ECX) & 0x7fff)) decimal("bus", x, "mhz");
+    if ((x = KCPUIDS(16H, EAX) & 0x7fff))
+      decimal("frequency", x, "mhz");
+    if ((x = KCPUIDS(16H, EBX) & 0x7fff))
+      decimal("turbo", x, "mhz");
+    if ((x = KCPUIDS(16H, ECX) & 0x7fff))
+      decimal("bus", x, "mhz");
   }
 
   if (X86_HAVE(HYPERVISOR)) {
@@ -188,6 +191,7 @@ int main(int argc, char *argv[]) {
   CANIUSE(AVX512VL);
   CANIUSE(AVX512_4FMAPS);
   CANIUSE(AVX512_4VNNIW);
+  CANIUSE(AVX512_FP16);
   CANIUSE(AVX512_BF16);
   CANIUSE(AVX512_BITALG);
   CANIUSE(AVX512_VBMI2);

@@ -220,10 +220,10 @@ o/$(MODE)/ape/loader-xnu-clang.asm: ape/loader.c
 	@$(COMPILE) -AOBJECTIFY.c $(CLANG) -DSUPPORT_VECTOR=8 -S -g0 $(APE_LOADER_FLAGS)
 
 o/$(MODE)/ape/ape.elf: o/$(MODE)/ape/ape.elf.dbg
-	@$(COMPILE) -AOBJBINCOPY -w build/bootstrap/objbincopy.com -f -o $@ $<
+	@$(COMPILE) -AOBJBINCOPY -w build/bootstrap/objbincopy -f -o $@ $<
 
 o/$(MODE)/ape/ape.macho: o/$(MODE)/ape/ape.elf.dbg
-	@$(COMPILE) -AOBJBINCOPY -w build/bootstrap/objbincopy.com -fm -o $@ $<
+	@$(COMPILE) -AOBJBINCOPY -w build/bootstrap/objbincopy -fm -o $@ $<
 
 APE_LOADER_LDFLAGS =				\
 	-static					\
@@ -254,7 +254,24 @@ o/$(MODE)/ape:	$(APE_CHECKS)			\
 endif
 
 # these assembly files are safe to build on aarch64
-o/$(MODE)/ape/ape.o: ape/ape.S
+o/$(MODE)/ape/ape.o:				\
+		ape/ape.S			\
+		ape/ape.h			\
+		libc/dce.h			\
+		libc/elf/def.h			\
+		ape/relocations.h		\
+		libc/thread/tls.h		\
+		ape/ape.internal.h		\
+		ape/macros.internal.h		\
+		libc/macho.internal.h		\
+		libc/macros.internal.h		\
+		libc/sysv/consts/prot.h		\
+		libc/nt/pedef.internal.h	\
+		libc/runtime/pc.internal.h	\
+		libc/runtime/e820.internal.h	\
+		libc/runtime/mman.internal.h	\
+		libc/nexgen32e/uart.internal.h	\
+		libc/calls/metalfile.internal.h
 	@$(COMPILE) -AOBJECTIFY.S $(OBJECTIFY.S) $(OUTPUT_OPTION) -c $<
 
 o/$(MODE)/ape/ape.lds:				\

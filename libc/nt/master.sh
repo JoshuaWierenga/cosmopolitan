@@ -63,6 +63,7 @@ imp	'ConnectNamedPipe'					ConnectNamedPipe					kernel32	2
 imp	'ContinueDebugEvent'					ContinueDebugEvent					kernel32	3
 imp	'CopyFile'						CopyFileW						kernel32	3
 imp	'CreateEvent'						CreateEventW						kernel32	4
+imp	'CreateEventA'						CreateEventA						kernel32	4
 imp	'CreateEventEx'						CreateEventExW						kernel32	4
 imp	'CreateHardLink'					CreateHardLinkW						kernel32	3
 imp	'CreateIoCompletionPort'				CreateIoCompletionPort					kernel32	4
@@ -134,6 +135,7 @@ imp	'GetModuleHandle'					GetModuleHandleA					kernel32	1
 imp	'GetModuleHandleEx'					GetModuleHandleExW					kernel32	3
 imp	'GetModuleHandleW'					GetModuleHandleW					kernel32	1
 imp	'GetNamedPipeInfo'					GetNamedPipeInfo					kernel32	5
+imp	'GetNumaProcessorNodeEx'				GetNumaProcessorNodeEx					kernel32	2
 imp	'GetNumberOfConsoleInputEvents'				GetNumberOfConsoleInputEvents				kernel32	2
 imp	'GetNumberOfConsoleMouseButtons'			GetNumberOfConsoleMouseButtons				kernel32	1
 imp	'GetOverlappedResult'					GetOverlappedResult					kernel32	4
@@ -166,6 +168,8 @@ imp	'GetSystemTimePreciseAsFileTime'			GetSystemTimePreciseAsFileTime				kernel3
 imp	'GetSystemTimes'					GetSystemTimes						kernel32	3
 imp	'GetTempPath'						GetTempPathW						kernel32	2
 imp	'GetTempPathA'						GetTempPathA						kernel32	2
+imp	'GetDynamicTimeZoneInformation'				GetDynamicTimeZoneInformation				kernel32	1
+imp	'GetTimeZoneInformation'				GetTimeZoneInformation					kernel32	1
 imp	'GetThreadContext'					GetThreadContext					kernel32	2
 imp	'GetThreadDescription'					GetThreadDescription					kernel32	2
 imp	'GetThreadIOPendingFlag'				GetThreadIOPendingFlag					kernel32	2
@@ -195,11 +199,13 @@ imp	'InitializeProcThreadAttributeList'			InitializeProcThreadAttributeList			ke
 imp	'InitializeSRWLock'					InitializeSRWLock					kernel32	1
 imp	'LeaveCriticalSection'					LeaveCriticalSection					kernel32	1
 imp	'LoadLibrary'						LoadLibraryW						kernel32	1
+imp	'LoadLibraryA'						LoadLibraryA						kernel32	1
 imp	'LoadLibraryEx'						LoadLibraryExW						kernel32	3
 imp	'LoadResource'						LoadResource						kernel32	2
 imp	'LocalFree'						LocalFree						kernel32	1
 imp	'LockFile'						LockFile						kernel32	5
 imp	'LockResource'						LockResource						kernel32	1
+imp	'MapViewOfFile3'					MapViewOfFile3						kernel32	9
 imp	'MoveFile'						MoveFileW						kernel32	2
 imp	'MultiByteToWideChar'					MultiByteToWideChar					kernel32	6
 imp	'OfferVirtualMemory'					OfferVirtualMemory					kernel32	3
@@ -290,6 +296,7 @@ imp	'UnmapViewOfFile2'					UnmapViewOfFile2					kernel32	2
 imp	'UnmapViewOfFileEx'					UnmapViewOfFileEx					kernel32	3
 imp	'UpdateProcThreadAttribute'				UpdateProcThreadAttribute				kernel32	7
 imp	'VirtualAlloc'						VirtualAlloc						kernel32	4
+imp	'VirtualAlloc2'						VirtualAlloc2						kernel32	7
 imp	'VirtualAllocEx'					VirtualAllocEx						kernel32	5
 imp	'VirtualFree'						VirtualFree						kernel32	3
 imp	'VirtualLock'						VirtualLock						kernel32	2

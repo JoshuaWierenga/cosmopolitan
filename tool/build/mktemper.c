@@ -28,7 +28,7 @@
 /**
  * @fileoverview stronger mktemp for shell scripts, e.g.
  *
- *     o//tool/build/mktemper.com ${TMPDIR:-/tmp}/fooXXXXXXXXXXXXX.o
+ *     o//tool/build/mktemper ${TMPDIR:-/tmp}/fooXXXXXXXXXXXXX.o
  *
  * Is a good way to name an intermediate object file.
  */
@@ -45,13 +45,17 @@ static wontreturn void DieSys(const char *thing) {
 
 int main(int argc, char *argv[]) {
   const char *prog = program_invocation_short_name;
-  if (argc == 1) Die(prog, "missing argument");
-  if (argc != 2) Die(prog, "too many arguments");
+  if (argc == 1)
+    Die(prog, "missing argument");
+  if (argc != 2)
+    Die(prog, "too many arguments");
   char *template = argv[1];
   char *substring = strstr(template, "XXXXXXXXXXXXX");
-  if (!substring) Die(prog, "template missing XXXXXXXXXXXXX substring");
+  if (!substring)
+    Die(prog, "template missing XXXXXXXXXXXXX substring");
   uint64_t w;
-  if (getrandom(&w, 8, 0) != 8) DieSys("getrandom");
+  if (getrandom(&w, 8, 0) != 8)
+    DieSys("getrandom");
   for (int i = 0; i < 13; ++i) {
     substring[i] = "0123456789abcdefghijklmnopqrstuvwxyz"[w % 36];
     w /= 36;

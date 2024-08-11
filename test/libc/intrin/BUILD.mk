@@ -3,24 +3,26 @@
 
 PKGS += TEST_LIBC_INTRIN
 
-TEST_LIBC_INTRIN_SRCS := $(wildcard test/libc/intrin/*.c)
+TEST_LIBC_INTRIN_FILES := $(wildcard test/libc/intrin/*)
+TEST_LIBC_INTRIN_SRCS = $(filter %.c,$(TEST_LIBC_INTRIN_FILES))
+TEST_LIBC_INTRIN_INCS = $(filter %.inc,$(TEST_LIBC_INTRIN_FILES))
 TEST_LIBC_INTRIN_SRCS_TEST = $(filter %_test.c,$(TEST_LIBC_INTRIN_SRCS))
 
 TEST_LIBC_INTRIN_OBJS =					\
 	$(TEST_LIBC_INTRIN_SRCS:%.c=o/$(MODE)/%.o)
 
 TEST_LIBC_INTRIN_COMS =					\
-	$(TEST_LIBC_INTRIN_SRCS:%.c=o/$(MODE)/%.com)
+	$(TEST_LIBC_INTRIN_SRCS:%.c=o/$(MODE)/%)
 
 TEST_LIBC_INTRIN_BINS =					\
 	$(TEST_LIBC_INTRIN_COMS)			\
 	$(TEST_LIBC_INTRIN_COMS:%=%.dbg)
 
 TEST_LIBC_INTRIN_TESTS =				\
-	$(TEST_LIBC_INTRIN_SRCS_TEST:%.c=o/$(MODE)/%.com.ok)
+	$(TEST_LIBC_INTRIN_SRCS_TEST:%.c=o/$(MODE)/%.ok)
 
 TEST_LIBC_INTRIN_CHECKS =				\
-	$(TEST_LIBC_INTRIN_SRCS_TEST:%.c=o/$(MODE)/%.com.runs)
+	$(TEST_LIBC_INTRIN_SRCS_TEST:%.c=o/$(MODE)/%.runs)
 
 TEST_LIBC_INTRIN_DIRECTDEPS =				\
 	LIBC_CALLS					\
@@ -50,7 +52,7 @@ o/$(MODE)/test/libc/intrin/intrin.pkg:			\
 		$(TEST_LIBC_INTRIN_OBJS)		\
 		$(foreach x,$(TEST_LIBC_INTRIN_DIRECTDEPS),$($(x)_A).pkg)
 
-o/$(MODE)/test/libc/intrin/%.com.dbg:			\
+o/$(MODE)/test/libc/intrin/%.dbg:			\
 		$(TEST_LIBC_INTRIN_DEPS)		\
 		o/$(MODE)/test/libc/intrin/%.o		\
 		o/$(MODE)/test/libc/intrin/intrin.pkg	\
@@ -60,7 +62,7 @@ o/$(MODE)/test/libc/intrin/%.com.dbg:			\
 	@$(APELINK)
 
 # Test what happens when *NSYNC isn't linked.
-o/$(MODE)/test/libc/intrin/lock_test.com.dbg:		\
+o/$(MODE)/test/libc/intrin/lock_test.dbg:		\
 		$(TEST_LIBC_INTRIN_DEPS)		\
 		o/$(MODE)/test/libc/intrin/lock_test.o	\
 		o/$(MODE)/test/libc/intrin/intrin.pkg	\

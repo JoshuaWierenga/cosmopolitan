@@ -29,6 +29,7 @@
 #include "libc/intrin/getenv.internal.h"
 #include "libc/intrin/safemacros.internal.h"
 #include "libc/intrin/strace.internal.h"
+#include "libc/intrin/ubsan.h"
 #include "libc/intrin/weaken.h"
 #include "libc/log/log.h"
 #include "libc/macros.internal.h"
@@ -93,6 +94,13 @@ dontasan int main(int argc, char *argv[]) {
   struct Dll *e;
   struct TestAspect *a;
 
+  if (errno) {
+    tinyprint(2, "error: the errno variable was contaminated by constructors\n",
+              NULL);
+    return 1;
+  }
+
+  __ubsan_strict = true;
   __log_level = kLogInfo;
   GetOpts(argc, argv);
 
@@ -110,7 +118,8 @@ dontasan int main(int argc, char *argv[]) {
   errno = 0;
   STRACE("");
   STRACE("# setting up once");
-  if (!IsWindows()) sys_getpid();
+  if (!IsWindows())
+    sys_getpid();
   testlib_clearxmmregisters();
   if (_weaken(SetUpOnce)) {
     _weaken(SetUpOnce)();
@@ -162,7 +171,7 @@ dontasan int main(int argc, char *argv[]) {
   // we're done!
   int status = MIN(255, g_testlib_failed);
   if (!status && IsRunningUnderMake()) {
-    return 254;  // compile.com considers this 0 and propagates output
+    return 254;  // compile considers this 0 and propagates output
   } else if (!status && _weaken(pthread_exit)) {
     _weaken(pthread_exit)(0);
   } else {

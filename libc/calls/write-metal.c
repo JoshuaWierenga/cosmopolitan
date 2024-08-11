@@ -35,7 +35,8 @@ ssize_t sys_write_metal(int fd, const struct iovec *iov, int iovlen, int64_t off
   struct MetalFile *file;
   switch (g_fds.p[fd].kind) {
     case kFdConsole:
-      if (_weaken(sys_writev_vga)) _weaken(sys_writev_vga)(g_fds.p + fd, iov, iovlen);
+      if (_weaken(sys_writev_vga))
+        _weaken(sys_writev_vga)(g_fds.p + fd, iov, iovlen);
       /* fallthrough */
     case kFdSerial:
       return sys_writev_serial(g_fds.p + fd, iov, iovlen);

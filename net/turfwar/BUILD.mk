@@ -30,7 +30,6 @@ NET_TURFWAR_DIRECTDEPS =				\
 	LIBC_STR					\
 	LIBC_SYSV					\
 	LIBC_THREAD					\
-	LIBC_TIME					\
 	LIBC_X						\
 	NET_HTTP					\
 	THIRD_PARTY_GETOPT				\
@@ -39,6 +38,7 @@ NET_TURFWAR_DIRECTDEPS =				\
 	THIRD_PARTY_NSYNC_MEM				\
 	THIRD_PARTY_SQLITE3				\
 	THIRD_PARTY_STB					\
+	THIRD_PARTY_TZ					\
 	THIRD_PARTY_ZLIB
 
 NET_TURFWAR_DEPS :=					\
@@ -67,14 +67,6 @@ o/$(MODE)/net/turfwar/turfbean.com.dbg:			\
 		$(CRT)					\
 		$(APE_NO_MODIFY_SELF)
 	@$(APELINK)
-
-o/$(MODE)/net/turfwar/turfbean.com:			\
-		o/$(MODE)/net/turfwar/turfbean.com.dbg	\
-		o/$(MODE)/third_party/zip/zip.com	\
-		o/$(MODE)/tool/build/symtab.com
-	@$(MAKE_OBJCOPY)
-	@$(MAKE_SYMTAB_CREATE)
-	@$(MAKE_SYMTAB_ZIP)
 
 o/$(MODE)/net/turfwar/.init.lua.zip.o: private		\
 		ZIPOBJ_FLAGS +=				\

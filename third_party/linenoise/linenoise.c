@@ -149,7 +149,6 @@
 #include "libc/mem/alg.h"
 #include "libc/mem/mem.h"
 #include "libc/nexgen32e/rdtsc.h"
-#include "libc/nt/version.h"
 #include "libc/runtime/runtime.h"
 #include "libc/sock/sock.h"
 #include "libc/sock/struct/pollfd.h"
@@ -369,7 +368,7 @@ static wint_t Capitalize(wint_t c) {
 static struct rune DecodeUtf8(int c) {
   struct rune r;
   if (c < 252) {
-    r.n = _bsr(255 & ~c);
+    r.n = bsr(255 & ~c);
     r.c = c & (((1 << r.n) - 1) | 3);
     r.n = 6 - r.n;
   } else {
@@ -409,7 +408,7 @@ static int linenoiseIsUnsupportedTerm(void) {
   char *term;
   static char once, res;
   if (!once) {
-    if (IsWindows() && !IsAtLeastWindows10()) {
+    if (IsWindows()) {
       res = 1;
     } else if ((term = getenv("TERM"))) {
       for (i = 0; i < sizeof(kUnsupported) / sizeof(*kUnsupported); i++) {
@@ -645,7 +644,7 @@ static void abAppendw(struct abuf *a, unsigned long long w) {
   p[5] = (0x0000ff0000000000 & w) >> 050;
   p[6] = (0x00ff000000000000 & w) >> 060;
   p[7] = (0xff00000000000000 & w) >> 070;
-  a->len += w ? (_bsrll(w) >> 3) + 1 : 1;
+  a->len += w ? (bsrll(w) >> 3) + 1 : 1;
   p[8] = 0;
 }
 
@@ -1634,7 +1633,7 @@ static size_t linenoiseEscape(char *d, const char *s, size_t n) {
         break;
     }
     WRITE32LE(p, w);
-    p += (_bsr(w) >> 3) + 1;
+    p += (bsr(w) >> 3) + 1;
     l = w;
   }
   return p - d;

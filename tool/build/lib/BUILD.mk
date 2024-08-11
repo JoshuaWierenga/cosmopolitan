@@ -22,14 +22,14 @@ TOOL_BUILD_LIB_A_SRCS =					\
 	$(TOOL_BUILD_LIB_A_SRCS_C)
 
 TOOL_BUILD_LIB_COMS =					\
-	o/$(MODE)/tool/build/lib/apetest.com		\
-	o/$(MODE)/tool/build/lib/apetest2.com
+	o/$(MODE)/tool/build/lib/apetest		\
+	o/$(MODE)/tool/build/lib/apetest2
 
 TOOL_BUILD_LIB_A_OBJS =					\
 	$(TOOL_BUILD_LIB_A_SRCS_S:%.S=o/$(MODE)/%.o)	\
 	$(TOOL_BUILD_LIB_A_SRCS_C:%.c=o/$(MODE)/%.o)	\
-	o/$(MODE)/tool/build/lib/apetest.com.zip.o	\
-	o/$(MODE)/tool/build/lib/apetest2.com.zip.o
+	o/$(MODE)/tool/build/lib/apetest.zip.o	\
+	o/$(MODE)/tool/build/lib/apetest2.zip.o
 
 TOOL_BUILD_LIB_A_DIRECTDEPS =				\
 	LIBC_CALLS					\
@@ -46,7 +46,6 @@ TOOL_BUILD_LIB_A_DIRECTDEPS =				\
 	LIBC_SYSV_CALLS					\
 	LIBC_PROC					\
 	LIBC_THREAD					\
-	LIBC_TIME					\
 	LIBC_TINYMATH					\
 	LIBC_X						\
 	NET_HTTP					\
@@ -54,7 +53,8 @@ TOOL_BUILD_LIB_A_DIRECTDEPS =				\
 	THIRD_PARTY_COMPILER_RT				\
 	THIRD_PARTY_MBEDTLS				\
 	THIRD_PARTY_XED					\
-	THIRD_PARTY_ZLIB
+	THIRD_PARTY_ZLIB				\
+	THIRD_PARTY_TZ
 
 TOOL_BUILD_LIB_A_DEPS :=				\
 	$(call uniq,$(foreach x,$(TOOL_BUILD_LIB_A_DIRECTDEPS),$($(x))))
@@ -74,22 +74,22 @@ o/$(MODE)/tool/build/lib/ssefloat.o: private		\
 			-msse3
 endif
 
-o/$(MODE)/tool/build/lib/apetest.com.dbg:		\
+o/$(MODE)/tool/build/lib/apetest.dbg:			\
 		$(TOOL_BUILD_LIB_A_DEPS)		\
 		o/$(MODE)/tool/build/lib/apetest.o	\
 		$(CRT)					\
 		$(APE_NO_MODIFY_SELF)
 	@$(APELINK)
 
-o/$(MODE)/tool/build/lib/apetest2.com.dbg:		\
+o/$(MODE)/tool/build/lib/apetest2.dbg:			\
 		$(TOOL_BUILD_LIB_A_DEPS)		\
 		o/$(MODE)/tool/build/lib/apetest.o	\
 		$(CRT)					\
 		$(APE_COPY_SELF)
 	@$(APELINK)
 
-o/$(MODE)/tool/build/lib/apetest.com.zip.o		\
-o/$(MODE)/tool/build/lib/apetest2.com.zip.o: private	\
+o/$(MODE)/tool/build/lib/apetest.zip.o			\
+o/$(MODE)/tool/build/lib/apetest2.zip.o: private	\
 		ZIPOBJ_FLAGS +=				\
 			-B
 
