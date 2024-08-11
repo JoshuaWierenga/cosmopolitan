@@ -25,6 +25,8 @@
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 
+#ifdef __x86_64__
+
 // TODO(joshua): Support tmp files
 int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
   if (!file) return efault();
@@ -56,3 +58,5 @@ int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
   }
   return enoent();
 }
+
+#endif /* __x86_64__ */

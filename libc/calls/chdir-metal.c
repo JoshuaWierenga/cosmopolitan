@@ -23,6 +23,8 @@
 #include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
 
+#ifdef __x86_64__
+
 int sys_chdir_metal(const char *file) {
   char path[PATH_MAX];
   if (!_MetalPath(file, path)) {
@@ -50,3 +52,5 @@ int sys_chdir_metal(const char *file) {
   }
   return enoent();
 }
+
+#endif /* __x86_64__ */

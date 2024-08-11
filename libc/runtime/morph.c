@@ -36,6 +36,9 @@ __funline void __morph_mprotect(void *addr, size_t size, int prot, int ntprot) {
   bool cf;
   int ax, dx;
   uint32_t op;
+  if (IsMetal()) {
+    return;
+  }
   if (!IsWindows()) {
     asm volatile(CFLAG_ASM("clc\n\t"
                            "syscall")

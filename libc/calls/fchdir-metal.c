@@ -20,6 +20,8 @@
 #include "libc/calls/metalfile.internal.h"
 #include "libc/sysv/errfuns.h"
 
+#ifdef __x86_64__
+
 int sys_fchdir_metal(int dirfd) {
   struct Fd *f;
   struct MetalFile *m;
@@ -41,3 +43,5 @@ int sys_fchdir_metal(int dirfd) {
   __metal_cwd_ino = m->idx;
   return 0;
 }
+
+#endif /* __x86_64__ */

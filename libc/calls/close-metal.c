@@ -20,6 +20,8 @@
 #include "libc/calls/metalfile.internal.h"
 #include "libc/sysv/errfuns.h"
 
+#ifdef __x86_64__
+
 // TODO(joshua): Support !O_UNLINK
 int sys_close_metal(int fd) {
   if (fd < 0 || fd >= g_fds.n) return ebadf();
@@ -30,3 +32,5 @@ int sys_close_metal(int fd) {
   if (!_CloseMetalTmpFile(file)) return ebadf();
   return 0;
 }
+
+#endif /* __x86_64__ */

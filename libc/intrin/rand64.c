@@ -32,12 +32,10 @@ static struct {
 } g_rand64;
 
 
-void bios_rand_setup(void) {
+__attribute__((__constructor__)) static void bios_rand_setup(void) {
   if (!IsMetal()) return;
   g_rand64.thepool = kStartTsc;
 }
-
-const void *const __rand_ctor[] initarray = {bios_rand_setup};
 
 /**
  * Returns nondeterministic random data.

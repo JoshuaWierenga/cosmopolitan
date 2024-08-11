@@ -27,16 +27,13 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
 #include "libc/calls/calls.h"
-#include "libc/serialize.h"
 #include "libc/intrin/safemacros.internal.h"
 #include "libc/limits.h"
+#include "libc/serialize.h"
 #include "libc/str/str.h"
 #include "libc/sysv/errfuns.h"
+__static_yoink("musl_libc_notice");
 
-asm(".ident\t\"\\n\\n\
-Musl libc (MIT License)\\n\
-Copyright 2005-2014 Rich Felker, et. al.\"");
-asm(".include \"libc/disclaimer.inc\"");
 // clang-format off
 
 static size_t GetSlashLen(const char *s) {
