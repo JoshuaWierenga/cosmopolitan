@@ -33,7 +33,7 @@
  *     allocation would likely cause a stack overflow
  */
 privileged long __get_safe_size(long want, long extraspace) {
-  if (!__tls_enabled)
+  if (!__threaded || !__tls_enabled)
     return want;
   struct PosixThread *pt;
   struct CosmoTib *tib = __get_tls_privileged();
