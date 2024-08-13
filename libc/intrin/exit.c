@@ -17,6 +17,7 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/dce.h"
+#include "libc/intrin/kprintf.h"
 #include "libc/intrin/promises.internal.h"
 #include "libc/intrin/strace.internal.h"
 #include "libc/intrin/weaken.h"
@@ -105,12 +106,8 @@ wontreturn void _Exit(int exitcode) {
     TerminateThisProcess(waitstatus);
   }
 #ifdef __x86_64__
-  asm("push\t$0\n\t"
-      "push\t$0\n\t"
-      "cli\n\t"
-      "lidt\t(%rsp)");
-  for (;;)
-    asm("ud2");
+  uprintf("\n\e[35mProgram has finished, return code was %d\e[0m\n", exitcode);
+  for (;;) ;
 #else
   __builtin_unreachable();
 #endif

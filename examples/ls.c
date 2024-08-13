@@ -122,8 +122,6 @@ int main(int argc, char *argv[]) {
         }
         fclose(file);
       }
-
-      while(true) ;
     } else {
       List(".");
     }
