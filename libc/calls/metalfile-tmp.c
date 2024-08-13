@@ -26,7 +26,7 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
 #include "libc/calls/metalfile.internal.h"
-#include "libc/intrin/directmap.internal.h"
+#include "libc/intrin/directmap.h"
 #include "libc/macros.internal.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/prot.h"

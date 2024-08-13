@@ -32,7 +32,7 @@ pthread_mutex_t _rand64_lock_obj = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
 __attribute__((__constructor__)) static void bios_rand_setup(void) {
   if (!IsMetal()) return;
-  g_rand64.thepool = kStartTsc;
+  _rand64_pool = kStartTsc;
 }
 
 /**

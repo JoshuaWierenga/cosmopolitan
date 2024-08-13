@@ -19,7 +19,7 @@
 #include "libc/calls/calls.h"
 #include "libc/calls/internal.h"
 #include "libc/calls/metalfile.internal.h"
-#include "libc/calls/struct/fd.internal.h"
+#include "libc/intrin/fds.h"
 #include "libc/sysv/errfuns.h"
 
 int64_t sys_lseek_metal(struct Fd *fd, int64_t offset, int whence) {
