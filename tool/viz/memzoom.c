@@ -32,7 +32,7 @@
 #include "libc/intrin/bsf.h"
 #include "libc/intrin/bsr.h"
 #include "libc/intrin/hilbert.h"
-#include "libc/intrin/safemacros.internal.h"
+#include "libc/intrin/safemacros.h"
 #include "libc/limits.h"
 #include "libc/log/log.h"
 #include "libc/macros.internal.h"
@@ -281,8 +281,8 @@ static void SetupCanvas(void) {
     munmap(buffer, buffersize);
   }
   displaysize = ROUNDUP(ROUNDUP((tyn * txn) << zoom, 16), 1ul << zoom);
-  canvassize = ROUNDUP(displaysize, __granularity());
-  buffersize = ROUNDUP(tyn * txn * 16 + 4096, __granularity());
+  canvassize = ROUNDUP(displaysize, getgransize());
+  buffersize = ROUNDUP(tyn * txn * 16 + 4096, getgransize());
   canvas = Allocate(canvassize);
   buffer = Allocate(buffersize);
 }

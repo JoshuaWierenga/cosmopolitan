@@ -1,7 +1,7 @@
 /*-*- mode:unix-assembly; indent-tabs-mode:t; tab-width:8; coding:utf-8     -*-│
-│ vi: set noet ft=asm ts=8 sw=8 fenc=utf-8                                 :vi │
+│ vi: set et ft=asm ts=8 tw=8 fenc=utf-8                                   :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2020 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2024 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -18,13 +18,11 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/macros.internal.h"
 
-	.init.start 305,_init_g_fds
+	.init.start 251,_init_pagesize
 	push	%rdi
 	push	%rsi
-	mov	%r12d,%edi			// argc
-	mov	%r13,%rsi			// argv
-	mov	%r14,%rdx			// environ
-	call	__init_fds
+	mov	%r15,%rdi
+	call	__pagesize_init
 	pop	%rsi
 	pop	%rdi
-	.init.end 305,_init_g_fds
+	.init.end 251,_init_pagesize

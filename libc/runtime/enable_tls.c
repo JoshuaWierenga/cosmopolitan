@@ -22,7 +22,7 @@
 #include "libc/errno.h"
 #include "libc/intrin/atomic.h"
 #include "libc/intrin/dll.h"
-#include "libc/intrin/getenv.internal.h"
+#include "libc/intrin/getenv.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/maps.h"
 #include "libc/intrin/weaken.h"
@@ -148,8 +148,8 @@ textstartup void __enable_tls(void) {
     // if a binary needs this much thread_local storage, then it
     // surely must have linked the mmap() function at some point
     // we can't call mmap() because it's too early for sig block
-    mem = _weaken(__mmap)(0, siz, PROT_READ | PROT_WRITE,
-                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    mem = _weaken(mmap)(0, siz, PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   }
 
   struct CosmoTib *tib = (struct CosmoTib *)(mem + siz - sizeof(*tib));
@@ -176,8 +176,8 @@ textstartup void __enable_tls(void) {
     // if a binary needs this much thread_local storage, then it
     // surely must have linked the mmap() function at some point
     // we can't call mmap() because it's too early for sig block
-    mem = _weaken(__mmap)(0, size, PROT_READ | PROT_WRITE,
-                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    mem = _weaken(mmap)(0, size, PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   }
 
   struct CosmoTib *tib =

@@ -40,8 +40,8 @@
 #include "libc/intrin/atomic.h"
 #include "libc/intrin/bsr.h"
 #include "libc/intrin/likely.h"
-#include "libc/intrin/nomultics.internal.h"
-#include "libc/intrin/safemacros.internal.h"
+#include "libc/intrin/nomultics.h"
+#include "libc/intrin/safemacros.h"
 #include "libc/log/appendresourcereport.internal.h"
 #include "libc/log/check.h"
 #include "libc/log/log.h"
@@ -5019,7 +5019,7 @@ static int LuaProgramTokenBucket(lua_State *L) {
       VERBOSEF("(token) please run the blackholed program; see our website!");
     }
   }
-  tokenbucket.b = _mapshared(ROUNDUP(1ul << cidr, __granularity()));
+  tokenbucket.b = _mapshared(ROUNDUP(1ul << cidr, getgransize()));
   memset(tokenbucket.b, 127, 1ul << cidr);
   tokenbucket.cidr = cidr;
   tokenbucket.reject = reject;
@@ -7339,7 +7339,7 @@ void RedBean(int argc, char *argv[]) {
   heartbeatinterval.tv_sec = 5;
   CHECK_GT(CLK_TCK, 0);
   CHECK_NE(MAP_FAILED,
-           (shared = mmap(NULL, ROUNDUP(sizeof(struct Shared), __granularity()),
+           (shared = mmap(NULL, ROUNDUP(sizeof(struct Shared), getgransize()),
                           PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
                           -1, 0)));
   if (daemonize) {

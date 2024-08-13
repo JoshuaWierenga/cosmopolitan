@@ -20,6 +20,7 @@
 #include "ape/sections.internal.h"
 #include "libc/dce.h"
 #include "libc/intrin/dll.h"
+#include "libc/intrin/maps.h"
 #include "libc/runtime/runtime.h"
 #include "libc/runtime/stack.h"
 #include "libc/sysv/consts/auxv.h"
@@ -32,10 +33,7 @@ __static_yoink("_init_maps");
 struct Maps __maps;
 
 void __maps_add(struct Map *map) {
-  dll_init(&map->elem);
-  dll_make_first(&__maps.used, &map->elem);
-  map->next = __maps.maps;
-  __maps.maps = map;
+  tree_insert(&__maps.maps, &map->tree, __maps_compare);
   ++__maps.count;
 }
 
@@ -44,23 +42,31 @@ static void __maps_adder(struct Map *map, int pagesz) {
   __maps_add(map);
 }
 
-void __maps_stack(void *stackaddr, int pagesz, size_t stacksize, int stackprot,
-                  intptr_t stackhand) {
-  __maps.stack.addr = stackaddr;
-  __maps.stack.size = stacksize;
+void __maps_stack(char *stackaddr, int pagesz, int guardsize, size_t stacksize,
+                  int stackprot, intptr_t stackhand) {
+  __maps.stack.addr = stackaddr + guardsize;
+  __maps.stack.size = stacksize - guardsize;
   __maps.stack.prot = stackprot;
-  __maps.stack.h = stackhand;
+  __maps.stack.hand = -1;
   __maps_adder(&__maps.stack, pagesz);
+  if (guardsize) {
+    __maps.guard.addr = stackaddr;
+    __maps.guard.size = guardsize;
+    __maps.guard.prot = PROT_NONE;
+    __maps.guard.hand = stackhand;
+    __maps_adder(&__maps.guard, pagesz);
+  }
 }
 
 void __maps_init(void) {
-  int pagesz = getauxval(AT_PAGESZ);
+  int pagesz = __pagesize;
 
   // record _start() stack mapping
   if (!IsWindows()) {
     struct AddrSize stack;
     stack = __get_main_stack();
-    __maps_stack(stack.addr, pagesz, stack.size, (uintptr_t)ape_stack_prot, 0);
+    __maps_stack(stack.addr, pagesz, 0, stack.size, (uintptr_t)ape_stack_prot,
+                 0);
   }
 
   // record .text and .data mappings
@@ -78,15 +84,13 @@ void __maps_init(void) {
   __maps_adder(&text, pagesz);
 }
 
-privileged void __maps_lock(void) {
+privileged bool __maps_lock(void) {
   struct CosmoTib *tib;
-  if (!__threaded)
-    return;
   if (!__tls_enabled)
-    return;
+    return false;
   tib = __get_tls_privileged();
-  if (tib->tib_relock_maps++)
-    return;
+  if (atomic_fetch_add_explicit(&tib->tib_relock_maps, 1, memory_order_relaxed))
+    return true;
   while (atomic_exchange_explicit(&__maps.lock, 1, memory_order_acquire)) {
 #if defined(__GNUC__) && defined(__aarch64__)
     __asm__ volatile("yield");
@@ -94,15 +98,15 @@ privileged void __maps_lock(void) {
     __asm__ volatile("pause");
 #endif
   }
+  return false;
 }
 
 privileged void __maps_unlock(void) {
   struct CosmoTib *tib;
-  if (!__threaded)
-    return;
   if (!__tls_enabled)
     return;
   tib = __get_tls_privileged();
-  if (!--tib->tib_relock_maps)
+  if (atomic_fetch_sub_explicit(&tib->tib_relock_maps, 1,
+                                memory_order_relaxed) == 1)
     atomic_store_explicit(&__maps.lock, 0, memory_order_release);
 }

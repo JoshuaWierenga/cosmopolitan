@@ -17,7 +17,7 @@
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
-#include "libc/intrin/safemacros.internal.h"
+#include "libc/intrin/safemacros.h"
 #include "libc/log/check.h"
 #include "libc/mem/gc.h"
 #include "libc/mem/mem.h"
@@ -85,7 +85,7 @@ TEST(lz4, zoneFileGmt) {
                 (mapsize = roundup(
                      LZ4_FRAME_BLOCKCONTENTSIZE(lz4check(dict)) +
                          (gmtsize = LZ4_FRAME_BLOCKCONTENTSIZE(lz4check(gmt))),
-                     __granularity())))),
+                     getpagesize())))),
            dict)),
       gmt);
   ASSERT_BINEQ(

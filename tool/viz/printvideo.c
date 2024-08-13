@@ -42,8 +42,8 @@
 #include "libc/fmt/conv.h"
 #include "libc/fmt/itoa.h"
 #include "libc/intrin/kprintf.h"
-#include "libc/intrin/safemacros.internal.h"
-#include "libc/intrin/xchg.internal.h"
+#include "libc/intrin/safemacros.h"
+#include "libc/intrin/xchg.h"
 #include "libc/log/check.h"
 #include "libc/log/log.h"
 #include "libc/macros.internal.h"
@@ -785,7 +785,7 @@ static void RasterIt(void) {
   static bool once;
   static void *buf;
   if (!once) {
-    buf = _mapanon(ROUNDUP(fb0_.size, __granularity()));
+    buf = _mapanon(ROUNDUP(fb0_.size, getgransize()));
     once = true;
   }
   WriteToFrameBuffer(fb0_.vscreen.yres_virtual, fb0_.vscreen.xres_virtual, buf,

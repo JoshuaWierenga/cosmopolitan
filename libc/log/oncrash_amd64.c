@@ -32,10 +32,10 @@
 #include "libc/errno.h"
 #include "libc/fmt/itoa.h"
 #include "libc/intrin/atomic.h"
-#include "libc/intrin/describebacktrace.internal.h"
-#include "libc/intrin/describeflags.internal.h"
+#include "libc/intrin/describebacktrace.h"
+#include "libc/intrin/describeflags.h"
 #include "libc/intrin/kprintf.h"
-#include "libc/intrin/strace.internal.h"
+#include "libc/intrin/strace.h"
 #include "libc/intrin/weaken.h"
 #include "libc/log/backtrace.internal.h"
 #include "libc/log/gdb.h"
@@ -241,14 +241,10 @@ static relegated void ShowCrashReport(int err, int sig, siginfo_t *si,
     klog(buf, p - buf);
   }
   kprintf("\n");
-  if (!IsWindows()) {
-    __print_maps();
-  }
-  if (__argv) {
-    for (i = 0; i < __argc; ++i) {
+  __print_maps(15);
+  if (__argv)
+    for (i = 0; i < __argc; ++i)
       kprintf("%s ", __argv[i]);
-    }
-  }
   kprintf("\n");
 }
 

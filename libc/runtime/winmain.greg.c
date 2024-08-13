@@ -22,7 +22,7 @@
 #include "libc/calls/syscall_support-nt.internal.h"
 #include "libc/intrin/dll.h"
 #include "libc/intrin/maps.h"
-#include "libc/intrin/nomultics.internal.h"
+#include "libc/intrin/nomultics.h"
 #include "libc/intrin/weaken.h"
 #include "libc/limits.h"
 #include "libc/macros.internal.h"
@@ -38,6 +38,8 @@
 #include "libc/nt/process.h"
 #include "libc/nt/runtime.h"
 #include "libc/nt/signals.h"
+#include "libc/nt/struct/systeminfo.h"
+#include "libc/nt/systeminfo.h"
 #include "libc/nt/thunk/msabi.h"
 #include "libc/runtime/internal.h"
 #include "libc/runtime/memtrack.internal.h"
@@ -57,6 +59,7 @@ __msabi extern typeof(AddVectoredExceptionHandler) *const __imp_AddVectoredExcep
 __msabi extern typeof(CreateFileMapping) *const __imp_CreateFileMappingW;
 __msabi extern typeof(DuplicateHandle) *const __imp_DuplicateHandle;
 __msabi extern typeof(FreeEnvironmentStrings) *const __imp_FreeEnvironmentStringsW;
+__msabi extern typeof(GetCommandLine) *const __imp_GetCommandLineW;
 __msabi extern typeof(GetConsoleMode) *const __imp_GetConsoleMode;
 __msabi extern typeof(GetCurrentDirectory) *const __imp_GetCurrentDirectoryW;
 __msabi extern typeof(GetCurrentProcessId) *const __imp_GetCurrentProcessId;
@@ -64,6 +67,8 @@ __msabi extern typeof(GetEnvironmentStrings) *const __imp_GetEnvironmentStringsW
 __msabi extern typeof(GetEnvironmentVariable) *const __imp_GetEnvironmentVariableW;
 __msabi extern typeof(GetFileAttributes) *const __imp_GetFileAttributesW;
 __msabi extern typeof(GetStdHandle) *const __imp_GetStdHandle;
+__msabi extern typeof(GetSystemInfo) *const __imp_GetSystemInfo;
+__msabi extern typeof(GetSystemInfo) *const __imp_GetSystemInfo;
 __msabi extern typeof(GetUserName) *const __imp_GetUserNameW;
 __msabi extern typeof(MapViewOfFileEx) *const __imp_MapViewOfFileEx;
 __msabi extern typeof(SetConsoleCP) *const __imp_SetConsoleCP;
@@ -82,16 +87,6 @@ void __stack_call(int, char **, char **, long (*)[2],
 
 __funline int IsAlpha(int c) {
   return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
-}
-
-// https://nullprogram.com/blog/2022/02/18/
-__funline char16_t *MyCommandLine(void) {
-  void *cmd;
-  asm("mov\t%%gs:(0x60),%0\n"
-      "mov\t0x20(%0),%0\n"
-      "mov\t0x78(%0),%0\n"
-      : "=r"(cmd));
-  return cmd;
 }
 
 static abi char16_t *StrStr(const char16_t *haystack, const char16_t *needle) {
@@ -209,8 +204,12 @@ static abi wontreturn void WinInit(const char16_t *cmdline) {
   uint32_t oldattr;
   __imp_VirtualProtect(stackaddr, GetGuardSize(),
                        kNtPageReadwrite | kNtPageGuard, &oldattr);
-  if (_weaken(__maps_stack))
-    _weaken(__maps_stack)(stackaddr, 4096, stacksize, stackprot, stackhand);
+  if (_weaken(__maps_stack)) {
+    struct NtSystemInfo si;
+    __imp_GetSystemInfo(&si);
+    _weaken(__maps_stack)(stackaddr, si.dwPageSize, GetGuardSize(), stacksize,
+                          stackprot, stackhand);
+  }
   struct WinArgs *wa =
       (struct WinArgs *)(stackaddr + (stacksize - sizeof(struct WinArgs)));
 
@@ -311,9 +310,13 @@ abi int64_t WinMain(int64_t hInstance, int64_t hPrevInstance,
                "sudo sh -c 'echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop'\n");
     return 77 << 8;  // exit(77)
   }
+  struct NtSystemInfo si;
+  __imp_GetSystemInfo(&si);
+  __pagesize = si.dwPageSize;
+  __gransize = si.dwAllocationGranularity;
   __umask = 077;
   __pid = __imp_GetCurrentProcessId();
-  cmdline = MyCommandLine();
+  cmdline = __imp_GetCommandLineW();
 #if SYSDEBUG
   // sloppy flag-only check for early initialization
   if (StrStr(cmdline, u"--strace"))

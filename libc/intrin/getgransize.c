@@ -16,15 +16,11 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/dce.h"
 #include "libc/runtime/runtime.h"
-#include "libc/sysv/consts/auxv.h"
 
-int __granularity(void) {
-  if (IsWindows())
-    return 65536;
-  static int res;
-  if (!res)
-    res = getauxval(AT_PAGESZ);
-  return res;
+/**
+ * Returns granularity of mmap() allocations.
+ */
+int getgransize(void) {
+  return __gransize;
 }
