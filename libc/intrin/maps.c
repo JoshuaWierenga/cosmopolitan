@@ -88,7 +88,7 @@ privileged void __maps_lock(void) {
 privileged void __maps_unlock(void) {
   struct CosmoTib *tib;
   atomic_store_explicit(&__maps.lock, 0, memory_order_release);
-  if (__tls_enabled) {
+  if (__threaded && __tls_enabled) {
     tib = __get_tls_privileged();
     tib->tib_flags &= ~TIB_FLAG_MAPLOCK;
   }
