@@ -36,35 +36,6 @@
 #include "third_party/nsync/futex.internal.h"
 #include "third_party/nsync/wait_s.internal.h"
 
-void _pthread_unwind(struct PosixThread *pt) {
-  struct _pthread_cleanup_buffer *cb;
-  while ((cb = pt->pt_cleanup)) {
-    pt->pt_cleanup = cb->__prev;
-    cb->__routine(cb->__arg);
-  }
-}
-
-void _pthread_unkey(struct CosmoTib *tib) {
-  void *val;
-  int i, j, gotsome;
-  pthread_key_dtor dtor;
-  for (j = 0; j < PTHREAD_DESTRUCTOR_ITERATIONS; ++j) {
-    for (gotsome = i = 0; i < PTHREAD_KEYS_MAX; ++i) {
-      if ((val = tib->tib_keys[i]) &&
-          (dtor = atomic_load_explicit(_pthread_key_dtor + i,
-                                       memory_order_relaxed)) &&
-          dtor != (pthread_key_dtor)-1) {
-        gotsome = 1;
-        tib->tib_keys[i] = 0;
-        dtor(val);
-      }
-    }
-    if (!gotsome) {
-      break;
-    }
-  }
-}
-
 /**
  * Terminates current POSIX thread.
  *
@@ -110,15 +81,7 @@ wontreturn void pthread_exit(void *rc) {
   STRACE("pthread_exit(%p)", rc);
 
   // free resources
-  _pthread_unwind(pt);
-  if (_weaken(__cxa_thread_finalize)) {
-    _weaken(__cxa_thread_finalize)();
-  }
-  _pthread_unkey(tib);
-  if (tib->tib_nsync) {
-    nsync_waiter_destroy(tib->tib_nsync);
-  }
-  _pthread_ungarbage();
+  __cxa_thread_finalize();
   _pthread_decimate();
 
   // run atexit handlers if orphaned thread

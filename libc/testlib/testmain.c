@@ -33,6 +33,7 @@
 #include "libc/intrin/weaken.h"
 #include "libc/log/log.h"
 #include "libc/macros.internal.h"
+#include "libc/mem/leaks.h"
 #include "libc/mem/mem.h"
 #include "libc/nexgen32e/nexgen32e.h"
 #include "libc/runtime/runtime.h"
@@ -89,7 +90,7 @@ static void GetOpts(int argc, char *argv[]) {
 /**
  * Generic test program main function.
  */
-dontasan int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   int fd;
   struct Dll *e;
   struct TestAspect *a;
@@ -164,7 +165,7 @@ dontasan int main(int argc, char *argv[]) {
   }
 
   // check for memory leaks
-  if (IsAsan() && !g_testlib_failed) {
+  if (!g_testlib_failed) {
     CheckForMemoryLeaks();
   }
 

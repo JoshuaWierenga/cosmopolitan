@@ -131,8 +131,8 @@ TEST(setrlimit, testMemoryLimit) {
   int i, wstatus;
   if (IsXnu())
     return;
-  if (IsAsan())
-    return; /* b/c we use sys_mmap */
+  if (IsOpenbsd())
+    return;  // simply too slow until mmap() becomes O(logn)
   ASSERT_NE(-1, (wstatus = xspawn(0)));
   if (wstatus == -2) {
     ASSERT_EQ(0, SetKernelEnforcedMemoryLimit(MEM));
@@ -162,8 +162,6 @@ TEST(setrlimit, testMemoryLimit) {
 TEST(setrlimit, testVirtualMemoryLimit) {
   char *p;
   int i, wstatus;
-  if (IsAsan())
-    return;
   if (IsXnu())
     return; /* doesn't work on darwin */
   if (IsOpenbsd())
@@ -194,8 +192,6 @@ TEST(setrlimit, testVirtualMemoryLimit) {
 TEST(setrlimit, testDataMemoryLimit) {
   char *p;
   int i, wstatus;
-  if (IsAsan())
-    return;
   if (IsXnu())
     return; /* doesn't work on darwin */
   if (IsNetbsd())

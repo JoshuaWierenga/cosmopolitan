@@ -3,24 +3,40 @@
 #ifndef COSMOPOLITAN_CTL_NEW_H_
 #define COSMOPOLITAN_CTL_NEW_H_
 
+#ifndef TINY
+__static_yoink("__demangle");
+#endif
+
 namespace ctl {
 
 enum class align_val_t : size_t
 {
 };
 
-} // namespace ctl
+struct nothrow_t
+{
+    explicit nothrow_t() = default;
+};
 
-void* operator new(size_t);
-void* operator new[](size_t);
-void* operator new(size_t, ctl::align_val_t);
-void* operator new[](size_t, ctl::align_val_t);
+inline constexpr nothrow_t nothrow{};
+
+} // namespace ctl
 
 // XXX clang-format currently mutilates these for some reason.
 // clang-format off
 
-void* operator new(size_t, void*);
-void* operator new[](size_t, void*);
+void* operator new(size_t);
+void* operator new(size_t, const ctl::nothrow_t&) noexcept;
+void* operator new(size_t, ctl::align_val_t);
+void* operator new(size_t, ctl::align_val_t, const ctl::nothrow_t&) noexcept;
+
+void* operator new[](size_t);
+void* operator new[](size_t, const ctl::nothrow_t&) noexcept;
+void* operator new[](size_t, ctl::align_val_t);
+void* operator new[](size_t, ctl::align_val_t, const ctl::nothrow_t&) noexcept;
+
+void* operator new(size_t, void*) noexcept;
+void* operator new[](size_t, void*) noexcept;
 
 void operator delete(void*) noexcept;
 void operator delete[](void*) noexcept;

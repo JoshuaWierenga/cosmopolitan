@@ -49,6 +49,7 @@
 #include "libc/math.h"
 #include "libc/mem/alloca.h"
 #include "libc/mem/gc.h"
+#include "libc/mem/leaks.h"
 #include "libc/mem/mem.h"
 #include "libc/nexgen32e/crc32.h"
 #include "libc/nexgen32e/rdtsc.h"
@@ -137,8 +138,6 @@
 #include "tool/net/sandbox.h"
 
 #pragma GCC diagnostic ignored "-Wunused-variable"
-
-STATIC_STACK_ALIGN(GetStackSize());
 
 __static_yoink("zipos");
 

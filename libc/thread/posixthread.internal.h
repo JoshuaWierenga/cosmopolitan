@@ -110,11 +110,8 @@ void _pthread_lock(void) libcesque;
 void _pthread_onfork_child(void) libcesque;
 void _pthread_onfork_parent(void) libcesque;
 void _pthread_onfork_prepare(void) libcesque;
-void _pthread_ungarbage(void) libcesque;
-void _pthread_unkey(struct CosmoTib *) libcesque;
 void _pthread_unlock(void) libcesque;
 void _pthread_unref(struct PosixThread *) libcesque;
-void _pthread_unwind(struct PosixThread *) libcesque;
 void _pthread_zombify(struct PosixThread *) libcesque;
 
 forceinline pureconst struct PosixThread *_pthread_self(void) {

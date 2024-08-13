@@ -765,7 +765,7 @@ ape_phdrs:
 	.quad	0
 	.quad	0
 	.quad	0
-	.stub	ape_stack_align,quad
+	.quad	16
 
 #if SupportsOpenbsd() || SupportsNetbsd()
 	.long	PT_NOTE
