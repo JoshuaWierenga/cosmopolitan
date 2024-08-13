@@ -255,7 +255,7 @@ textstartup void __enable_tls(void) {
 
 #ifdef __x86_64__
   // rewrite the executable tls opcodes in memory
-  if (IsWindows() || IsOpenbsd() || IsNetbsd() || IsMetal())
+  if (IsWindows() || IsOpenbsd() || IsNetbsd())
     __morph_tls();
 #endif
 
