@@ -30,7 +30,7 @@
 #include "libc/intrin/strace.h"
 #include "libc/intrin/weaken.h"
 #include "libc/limits.h"
-#include "libc/macros.internal.h"
+#include "libc/macros.h"
 #include "libc/mem/critbit0.h"
 #include "libc/mem/mem.h"
 #include "libc/nt/createfile.h"
@@ -52,7 +52,7 @@
 #include "libc/sysv/errfuns.h"
 #include "libc/thread/thread.h"
 #include "libc/thread/tls.h"
-#include "libc/zip.internal.h"
+#include "libc/zip.h"
 
 /**
  * @fileoverview Directory Streams for Linux+Mac+Windows+FreeBSD+OpenBSD.

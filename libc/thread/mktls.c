@@ -19,7 +19,7 @@
 #include "ape/sections.internal.h"
 #include "libc/dce.h"
 #include "libc/intrin/atomic.h"
-#include "libc/macros.internal.h"
+#include "libc/macros.h"
 #include "libc/mem/mem.h"
 #include "libc/runtime/internal.h"
 #include "libc/runtime/runtime.h"
@@ -40,7 +40,6 @@ static char *_mktls_finish(struct CosmoTib **out_tib, char *mem,
   tib->tib_ftrace = old->tib_ftrace;
   tib->tib_strace = old->tib_strace;
   tib->tib_sigmask = old->tib_sigmask;
-  tib->tib_locale = (intptr_t)&__c_dot_utf8_locale;
   atomic_store_explicit(&tib->tib_tid, -1, memory_order_relaxed);
   if (out_tib) {
     *out_tib = tib;

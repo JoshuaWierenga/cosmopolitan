@@ -32,7 +32,7 @@
 #include "libc/intrin/strace.h"
 #include "libc/intrin/weaken.h"
 #include "libc/log/internal.h"
-#include "libc/macros.internal.h"
+#include "libc/macros.h"
 #include "libc/mem/alloca.h"
 #include "libc/mem/mem.h"
 #include "libc/nexgen32e/crc32.h"
@@ -44,6 +44,7 @@
 #include "libc/runtime/runtime.h"
 #include "libc/runtime/stack.h"
 #include "libc/runtime/syslib.internal.h"
+#include "libc/str/locale.internal.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/auxv.h"
 #include "libc/sysv/consts/clone.h"
@@ -235,6 +236,7 @@ static errno_t pthread_create_impl(pthread_t *thread,
     return EAGAIN;
   }
   dll_init(&pt->list);
+  pt->pt_locale = &__global_locale;
   pt->pt_start = start_routine;
   pt->pt_arg = arg;
 

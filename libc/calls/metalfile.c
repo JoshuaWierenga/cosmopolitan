@@ -33,7 +33,7 @@
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/weaken.h"
 #include "libc/limits.h"
-#include "libc/macros.internal.h"
+#include "libc/macros.h"
 #include "libc/runtime/pc.internal.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/at.h"
