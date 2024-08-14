@@ -373,7 +373,11 @@ int SetLimit(int r, long lo, long hi) {
 }
 
 static int GetBaseCpuFreqMhz(void) {
+#ifdef __x86_64__
   return KCPUIDS(16H, EAX) & 0x7fff;
+#else
+  return 0;
+#endif
 }
 
 int SetCpuLimit(int secs) {
@@ -653,8 +657,8 @@ int main(int argc, char *argv[]) {
   bool hasfunbits;
   int useruid, usergid;
   int owneruid, ownergid;
-  int oldfsuid, oldfsgid;
   unsigned long ipromises;
+  int oldfsuid = 0, oldfsgid = 0;
 
   // parse flags
   GetOpts(argc, argv);
