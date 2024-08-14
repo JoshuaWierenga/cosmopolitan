@@ -117,12 +117,9 @@ fetch() {
 OLD=$PWD
 cd "$OUTDIR/"
 if [ ! -x bin/x86_64-linux-cosmo-gcc ]; then
-  fetch https://github.com/ahgamut/superconfigure/releases/download/z0.0.45/aarch64-gcc.zip
-  unzip aarch64-gcc.zip
-  rm -f aarch64-gcc.zip
-  fetch https://github.com/ahgamut/superconfigure/releases/download/z0.0.45/x86_64-gcc.zip
-  unzip x86_64-gcc.zip
-  rm -f x86_64-gcc.zip
+  fetch https://github.com/JoshuaWierenga/superconfigure/releases/download/z0.0.45-2.41/apegcc-z0.0.45-binutils2.41.zip
+  unzip apegcc-z0.0.45-binutils2.41.zip
+  rm -f apegcc-z0.0.45-binutils2.41.zip
 fi
 rm -f bin/*-cpp
 rm -f bin/*-gcc-*
