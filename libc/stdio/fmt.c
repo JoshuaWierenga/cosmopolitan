@@ -39,6 +39,7 @@
 │ THIS SOFTWARE.                                                               │
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/assert.h"
+#include "libc/ctype.h"
 #include "libc/errno.h"
 #include "libc/fmt/conv.h"
 #include "libc/fmt/divmod10.internal.h"
@@ -448,7 +449,10 @@ static int __fmt_stoa(int out(const char *, void *, size_t), void *arg,
     } else if (signbit == 15) {
       precision = strnlen16((const char16_t *)p, precision);
     } else {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overread"
       precision = strnlen(p, precision);
+#pragma GCC diagnostic pop
     }
   }
 

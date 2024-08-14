@@ -150,10 +150,10 @@ export MODE
 export SOURCE_DATE_EPOCH
 export TMPDIR
 
-COSMOCC = .cosmocc/z0.0.45-2.41
+COSMOCC = .cosmocc/z0.0.47-2.41
 BOOTSTRAP = $(COSMOCC)/bin
 TOOLCHAIN = $(COSMOCC)/bin/$(ARCH)-linux-cosmo-
-DOWNLOAD := $(shell build/download-cosmocc.sh $(COSMOCC) z0.0.45-2.41 c4e0b0bb592f5e6096234fc0ec9a3edaa3e9b9083abdc41b46f50f2d3ac2d00c)
+DOWNLOAD := $(shell build/download-cosmocc.sh $(COSMOCC) z0.0.47-2.41 77a79016437e839f10bf304dcb4295121cb545c3885e00cfc5345e65e8167c84)
 
 AS = $(TOOLCHAIN)as
 CC = $(TOOLCHAIN)gcc
@@ -293,8 +293,7 @@ include third_party/openmp/BUILD.mk		# │
 include third_party/pcre/BUILD.mk		# │
 include third_party/less/BUILD.mk		# │
 include net/https/BUILD.mk			# │
-include third_party/regex/BUILD.mk		# │
-include third_party/bash/BUILD.mk		#─┘
+include third_party/regex/BUILD.mk		#─┘
 include third_party/tidy/BUILD.mk
 include third_party/BUILD.mk
 include third_party/nsync/testing/BUILD.mk
@@ -436,6 +435,9 @@ loc: o/$(MODE)/tool/build/summy
 # PLEASE: MAINTAIN TOPOLOGICAL ORDER
 # FROM HIGHEST LEVEL TO LOWEST LEVEL
 COSMOPOLITAN_OBJECTS =			\
+	CTL				\
+	THIRD_PARTY_DOUBLECONVERSION	\
+	THIRD_PARTY_OPENMP		\
 	TOOL_ARGS			\
 	NET_HTTP			\
 	LIBC_SOCK			\
@@ -445,7 +447,6 @@ COSMOPOLITAN_OBJECTS =			\
 	THIRD_PARTY_GETOPT		\
 	LIBC_LOG			\
 	THIRD_PARTY_TZ			\
-	THIRD_PARTY_OPENMP		\
 	THIRD_PARTY_MUSL		\
 	THIRD_PARTY_ZLIB_GZ		\
 	THIRD_PARTY_LIBCXXABI		\
@@ -456,7 +457,6 @@ COSMOPOLITAN_OBJECTS =			\
 	LIBC_THREAD			\
 	LIBC_PROC			\
 	THIRD_PARTY_NSYNC_MEM		\
-	CTL				\
 	LIBC_MEM			\
 	THIRD_PARTY_DLMALLOC		\
 	LIBC_DLOPEN			\

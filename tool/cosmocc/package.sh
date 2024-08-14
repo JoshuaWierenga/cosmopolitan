@@ -19,7 +19,7 @@ OUTDIR=${1:-cosmocc}
 APELINK=o/$(mode)/tool/build/apelink
 AMD64=${2:-x86_64}
 ARM64=${3:-aarch64}
-GCCVER=12.3.0
+GCCVER=14.1.0
 
 make -j64 m= \
   $APELINK
@@ -48,6 +48,7 @@ make -j64 m=$AMD64 \
   o/$AMD64/tool/build/chmod.dbg \
   o/$AMD64/tool/build/cocmd.dbg \
   o/$AMD64/tool/build/compile.dbg \
+  o/$AMD64/tool/build/mkdir.dbg \
   o/$AMD64/tool/build/cp.dbg \
   o/$AMD64/tool/build/echo.dbg \
   o/$AMD64/tool/build/gzip.dbg \
@@ -117,9 +118,9 @@ fetch() {
 OLD=$PWD
 cd "$OUTDIR/"
 if [ ! -x bin/x86_64-linux-cosmo-gcc ]; then
-  fetch https://github.com/JoshuaWierenga/superconfigure/releases/download/z0.0.45-2.41/apegcc-z0.0.45-binutils2.41.zip
-  unzip apegcc-z0.0.45-binutils2.41.zip
-  rm -f apegcc-z0.0.45-binutils2.41.zip
+  fetch https://github.com/JoshuaWierenga/superconfigure/releases/download/z0.0.47-2.41/apegcc-z0.0.47-binutils2.41.zip
+  unzip apegcc-z0.0.47-binutils2.41.zip
+  rm -f apegcc-z0.0.47-binutils2.41.zip
 fi
 rm -f bin/*-cpp
 rm -f bin/*-gcc-*
