@@ -25,7 +25,7 @@
 #include "libc/fmt/magnumstrs.internal.h"
 #include "libc/intrin/newbie.h"
 #include "libc/limits.h"
-#include "libc/macros.internal.h"
+#include "libc/macros.h"
 #include "libc/nt/struct/imagedosheader.internal.h"
 #include "libc/runtime/pc.internal.h"
 #include "libc/runtime/runtime.h"
