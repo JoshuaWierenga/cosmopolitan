@@ -35,6 +35,7 @@
 #include "libc/limits.h"
 #include "libc/macros.h"
 #include "libc/runtime/pc.internal.h"
+#include "libc/runtime/stack.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/dt.h"
@@ -136,11 +137,17 @@ textstartup void InitializeMetalFile(void) {
   strs[28] = 0;
 
   // / -> /proc, /tmp, /zip
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wframe-larger-than="
   __metal_dirs[ROOT_INO] = (struct MetalDir){root_path, 3, 3, {
       {PROC_INO,        2, sizeof(*__metal_dirs), DT_DIR},
       {kMetalTmpDirIno, 3, sizeof(*__metal_dirs), DT_DIR},
       {ZIP_INO,         4, sizeof(*__metal_dirs), DT_DIR},
   }};
+  CheckLargeStackAllocation(__metal_dirs + ROOT_INO, sizeof(__metal_dirs[ROOT_INO]));
+  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 0, sizeof(__metal_dirs[ROOT_INO].ents[0]));
+  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 1, sizeof(__metal_dirs[ROOT_INO].ents[1]));
+  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 2, sizeof(__metal_dirs[ROOT_INO].ents[2]));
   memcpy(__metal_dirs[ROOT_INO].ents[0].d_name, proc_name, sizeof("proc"));
   memcpy(__metal_dirs[ROOT_INO].ents[1].d_name, tmp_name, sizeof("tmp"));
   memcpy(__metal_dirs[ROOT_INO].ents[2].d_name, zip_name, sizeof("zip"));
@@ -149,12 +156,16 @@ textstartup void InitializeMetalFile(void) {
   __metal_dirs[PROC_INO] = (struct MetalDir){proc_path, 1, 1, {
       {PROC_SELF_INO, 2, sizeof(*__metal_dirs), DT_DIR}
   }};
+  CheckLargeStackAllocation(__metal_dirs + PROC_INO, sizeof(__metal_dirs[PROC_INO]));
+  CheckLargeStackAllocation(__metal_dirs[PROC_INO].ents + 0, sizeof(__metal_dirs[PROC_INO].ents[0]));
   memcpy(__metal_dirs[PROC_INO].ents[0].d_name, self_name, sizeof("self"));
 
   // /proc/self -> /proc/self/exec
   __metal_dirs[PROC_SELF_INO] = (struct MetalDir){proc_self_path, 1, 1, {
       {PROC_SELF_EXE_INO, 2, sizeof(*__metal_dirs), DT_CHR}
   }};
+  CheckLargeStackAllocation(__metal_dirs + PROC_SELF_INO, sizeof(__metal_dirs[PROC_SELF_INO]));
+  CheckLargeStackAllocation(__metal_dirs[PROC_SELF_INO].ents + 0, sizeof(__metal_dirs[PROC_SELF_INO].ents[0]));
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[0] = 'e';
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[1] = 'x';
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[2] = 'e';
@@ -162,9 +173,12 @@ textstartup void InitializeMetalFile(void) {
 
   // /tmp
   __metal_dirs[kMetalTmpDirIno] = (struct MetalDir){tmp_path, 0, 0};
+  CheckLargeStackAllocation(__metal_dirs + kMetalTmpDirIno, sizeof(__metal_dirs[kMetalTmpDirIno]));
 
   // /zip, managed seperately
   __metal_dirs[ZIP_INO] = (struct MetalDir){zip_path, 0, 0};
+  CheckLargeStackAllocation(__metal_dirs + ZIP_INO, sizeof(__metal_dirs[ZIP_INO]));
+#pragma GCC pop_options
 }
 
 size_t _MetalAllocate(size_t size, void **addr) {

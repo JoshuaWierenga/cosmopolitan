@@ -522,6 +522,8 @@ static struct dirent *bad_readdir(void) {
   return 0;
 }
 
+#ifdef __x86_64__
+
 static struct dirent *readdir_metal(DIR *dir) {
   struct Fd *sfd;
   struct MetalFile *file;
@@ -569,6 +571,8 @@ static struct dirent *readdir_metal(DIR *dir) {
   return ent;
 }
 
+#endif
+
 static struct dirent *readdir_impl(DIR *dir) {
   if (dir->iszip) {
     return readdir_zipos(dir);
@@ -576,8 +580,10 @@ static struct dirent *readdir_impl(DIR *dir) {
     return readdir_nt(dir);
   } else if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     return readdir_unix(dir);
+#ifdef __x86_64__
   } else if (IsMetal()) {
     return readdir_metal(dir);
+#endif
   } else {
     return bad_readdir();
   }

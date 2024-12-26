@@ -65,6 +65,8 @@ static int sys_getcwd_xnu(char *res, size_t size) {
   return rc;
 }
 
+#ifdef __x86_64__
+
 static int sys_getcwd_metal(char *buf, size_t size) {
   size_t len;
   if (__metal_cwd_ino >= kMetalDirCount ||
@@ -82,6 +84,8 @@ static int sys_getcwd_metal(char *buf, size_t size) {
   strcpy(buf, __metal_dirs[__metal_cwd_ino].path);
   return len;
 }
+
+#endif
 
 static inline int IsAlpha(int c) {
   return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
