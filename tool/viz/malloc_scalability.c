@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2024 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,49 +16,40 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/calls.h"
-#include "libc/dce.h"
-#include "libc/errno.h"
-#include "libc/fmt/itoa.h"
+#include "libc/calls/struct/timespec.h"
+#include "libc/mem/mem.h"
 #include "libc/runtime/runtime.h"
-#include "libc/stdio/stdio.h"
-#include "libc/str/str.h"
-#include "libc/sysv/consts/f.h"
+#include "libc/thread/thread.h"
 
-#define MIN_CLANDESTINE_FD 100  // e.g. kprintf's dup'd handle
+#define ALLOCATIONS 1000
 
-void CheckForFileLeaks(void) {
-  char msg[512];
-  char *p = msg;
-  char *pe = msg + 256;
-  bool gotsome = false;
-  if (IsQemuUser())
-    usleep(1);  // weird qemu mt flake
-  for (int fd = 3; fd < MIN_CLANDESTINE_FD; ++fd) {
-    if (fcntl(fd, F_GETFL) != -1) {
-      if (!gotsome) {
-        p = stpcpy(p, program_invocation_short_name);
-        p = stpcpy(p, ": FILE DESCRIPTOR LEAKS:");
-        gotsome = true;
-      }
-      if (p + 1 + 12 + 1 < pe) {
-        *p++ = ' ';
-        p = FormatInt32(p, fd);
-      } else {
-        break;
-      }
-    }
-  }
-  if (gotsome) {
-    *p++ = '\n';
-    *p = 0;
-    write(2, msg, p - msg);
-    char proc[64];
-    p = proc;
-    p = stpcpy(p, "ls -hal /proc/");
-    p = FormatInt32(p, getpid());
-    p = stpcpy(p, "/fd");
-    system(proc);
-    exit(1);
-  }
+void *worker(void *arg) {
+  void **ptrs = malloc(ALLOCATIONS * sizeof(void *));
+  for (int i = 0; i < ALLOCATIONS; ++i)
+    ptrs[i] = malloc(1);
+  for (int i = 0; i < ALLOCATIONS; ++i)
+    free(ptrs[i]);
+  free(ptrs);
+  return 0;
+}
+
+void test(int n) {
+  struct timespec start = timespec_real();
+  pthread_t *th = malloc(sizeof(pthread_t) * n);
+  for (int i = 0; i < n; ++i)
+    pthread_create(th + i, 0, worker, 0);
+  for (int i = 0; i < n; ++i)
+    pthread_join(th[i], 0);
+  free(th);
+  struct timespec end = timespec_real();
+  printf("%2d threads * %d allocs = %ld us\n", n, ALLOCATIONS,
+         timespec_tomicros(timespec_sub(end, start)));
+}
+
+int main(int argc, char *argv[]) {
+  int n = __get_cpu_count();
+  if (n < 8)
+    n = 8;
+  for (int i = 1; i <= n; ++i)
+    test(i);
 }

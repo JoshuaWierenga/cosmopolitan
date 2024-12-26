@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2023 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2024 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,49 +16,17 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/calls/calls.h"
-#include "libc/dce.h"
-#include "libc/errno.h"
-#include "libc/fmt/itoa.h"
+#include "libc/intrin/getauxval.h"
 #include "libc/runtime/runtime.h"
-#include "libc/stdio/stdio.h"
-#include "libc/str/str.h"
-#include "libc/sysv/consts/f.h"
+#include "libc/sysv/consts/auxv.h"
+#include "libc/sysv/consts/hwcap.h"
+#ifdef __aarch64__
 
-#define MIN_CLANDESTINE_FD 100  // e.g. kprintf's dup'd handle
+bool __aarch64_have_lse_atomics;
 
-void CheckForFileLeaks(void) {
-  char msg[512];
-  char *p = msg;
-  char *pe = msg + 256;
-  bool gotsome = false;
-  if (IsQemuUser())
-    usleep(1);  // weird qemu mt flake
-  for (int fd = 3; fd < MIN_CLANDESTINE_FD; ++fd) {
-    if (fcntl(fd, F_GETFL) != -1) {
-      if (!gotsome) {
-        p = stpcpy(p, program_invocation_short_name);
-        p = stpcpy(p, ": FILE DESCRIPTOR LEAKS:");
-        gotsome = true;
-      }
-      if (p + 1 + 12 + 1 < pe) {
-        *p++ = ' ';
-        p = FormatInt32(p, fd);
-      } else {
-        break;
-      }
-    }
-  }
-  if (gotsome) {
-    *p++ = '\n';
-    *p = 0;
-    write(2, msg, p - msg);
-    char proc[64];
-    p = proc;
-    p = stpcpy(p, "ls -hal /proc/");
-    p = FormatInt32(p, getpid());
-    p = stpcpy(p, "/fd");
-    system(proc);
-    exit(1);
-  }
+static __attribute__((__constructor__(1))) void __aarch64_atomics_init(void) {
+  struct AuxiliaryValue x = __getauxval(AT_HWCAP);
+  __aarch64_have_lse_atomics = !!(x.value & HWCAP_ATOMICS);
 }
+
+#endif /* __aarch64__ */
