@@ -260,8 +260,6 @@ static Elf64_Xword notesize;
 
 static char *r_off32_e_lfanew;
 
-#include "libc/mem/tinymalloc.inc"
-
 static wontreturn void Die(const char *thing, const char *reason) {
   tinyprint(2, thing, ": ", reason, "\n", NULL);
   exit(1);
@@ -679,6 +677,8 @@ static void LoadSymbols(Elf64_Ehdr *e, Elf64_Off size, const char *path) {
   struct SymbolTable *st = OpenSymbolTable(path);
   if (!st)
     Die(path, "could not load elf symbol table");
+  st->names = 0;      // make this deterministic
+  st->name_base = 0;  // ready for serialization
   size_t data_size;
   void *data = Deflate(st, st->size, &data_size);
   uint32_t crc = crc32_z(0, st, st->size);

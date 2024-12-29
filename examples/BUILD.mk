@@ -40,6 +40,7 @@ EXAMPLES_BINS =							\
 
 EXAMPLES_DIRECTDEPS =						\
 	CTL							\
+	DSP_AUDIO						\
 	DSP_CORE						\
 	DSP_SCALE						\
 	DSP_TTY							\
@@ -94,6 +95,7 @@ EXAMPLES_DIRECTDEPS =						\
 	THIRD_PARTY_VQSORT					\
 	THIRD_PARTY_XED						\
 	THIRD_PARTY_LIBCXXABI					\
+	THIRD_PARTY_LIBUNWIND					\
 	THIRD_PARTY_ZLIB					\
 	TOOL_ARGS						\
 	TOOL_BUILD_LIB						\

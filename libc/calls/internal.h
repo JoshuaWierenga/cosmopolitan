@@ -1,9 +1,10 @@
 #ifndef COSMOPOLITAN_LIBC_CALLS_INTERNAL_H_
 #define COSMOPOLITAN_LIBC_CALLS_INTERNAL_H_
 #include "libc/atomic.h"
-#include "libc/intrin/fds.h"
+#include "libc/calls/struct/sigset.h"
 #include "libc/calls/struct/sigval.h"
 #include "libc/dce.h"
+#include "libc/intrin/fds.h"
 #include "libc/macros.h"
 #include "libc/stdbool.h"
 
@@ -24,6 +25,7 @@ int __ensurefds(int);
 uint32_t sys_getuid_nt(void);
 int __ensurefds_unlocked(int);
 void __printfds(struct Fd *, size_t);
+int __sigcheck(sigset_t, bool);
 int CountConsoleInputBytes(void);
 int FlushConsoleInputBytes(void);
 int64_t GetConsoleInputHandle(void);
@@ -41,6 +43,7 @@ forceinline bool __isfdkind(int fd, int kind) {
 
 int _check_signal(bool);
 int _check_cancel(void);
+bool _is_canceled(void);
 int sys_close_metal(int);
 int sys_close_nt(int, int);
 int _park_norestart(uint32_t, uint64_t);

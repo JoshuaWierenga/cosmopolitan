@@ -50,6 +50,7 @@ LIBC_TESTLIB_A_SRCS_C =						\
 	libc/testlib/clearxmmregisters.c			\
 	libc/testlib/contains.c					\
 	libc/testlib/endswith.c					\
+	libc/testlib/exactlyequallongdouble.c		 	\
 	libc/testlib/extract.c					\
 	libc/testlib/ezbenchcontrol.c				\
 	libc/testlib/ezbenchreport.c				\
@@ -112,8 +113,9 @@ LIBC_TESTLIB_A_DIRECTDEPS =					\
 	THIRD_PARTY_COMPILER_RT					\
 	THIRD_PARTY_DLMALLOC					\
 	THIRD_PARTY_GDTOA					\
+	THIRD_PARTY_MUSL					\
+	THIRD_PARTY_TZ						\
 	THIRD_PARTY_XED						\
-	THIRD_PARTY_TZ
 
 LIBC_TESTLIB_A_DEPS :=						\
 	$(call uniq,$(foreach x,$(LIBC_TESTLIB_A_DIRECTDEPS),$($(x))))

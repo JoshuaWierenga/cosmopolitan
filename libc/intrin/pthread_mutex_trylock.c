@@ -74,6 +74,38 @@ static errno_t pthread_mutex_trylock_recursive(pthread_mutex_t *mutex,
   }
 }
 
+static errno_t pthread_mutex_trylock_recursive_nsync(pthread_mutex_t *mutex,
+                                                     uint64_t word) {
+  int me = gettid();
+  for (;;) {
+    if (MUTEX_OWNER(word) == me) {
+      if (MUTEX_TYPE(word) != PTHREAD_MUTEX_ERRORCHECK) {
+        if (MUTEX_DEPTH(word) < MUTEX_DEPTH_MAX) {
+          if (atomic_compare_exchange_weak_explicit(
+                  &mutex->_word, &word, MUTEX_INC_DEPTH(word),
+                  memory_order_relaxed, memory_order_relaxed))
+            return 0;
+          continue;
+        } else {
+          return EAGAIN;
+        }
+      } else {
+        return EDEADLK;
+      }
+    }
+    if (_weaken(nsync_mu_trylock)((nsync_mu *)mutex->_nsyncx)) {
+      word = MUTEX_UNLOCK(word);
+      word = MUTEX_LOCK(word);
+      word = MUTEX_SET_OWNER(word, me);
+      mutex->_word = word;
+      mutex->_pid = __pid;
+      return 0;
+    } else {
+      return EBUSY;
+    }
+  }
+}
+
 /**
  * Attempts acquiring lock.
  *
@@ -97,10 +129,14 @@ errno_t pthread_mutex_trylock(pthread_mutex_t *mutex) {
   if (MUTEX_TYPE(word) == PTHREAD_MUTEX_NORMAL &&
       MUTEX_PSHARED(word) == PTHREAD_PROCESS_PRIVATE &&  //
       _weaken(nsync_mu_trylock)) {
-    if (_weaken(nsync_mu_trylock)((nsync_mu *)mutex)) {
-      return 0;
-    } else {
-      return EBUSY;
+    // on apple silicon we should just put our faith in ulock
+    // otherwise *nsync gets struck down by the eye of sauron
+    if (!IsXnuSilicon()) {
+      if (_weaken(nsync_mu_trylock)((nsync_mu *)mutex)) {
+        return 0;
+      } else {
+        return EBUSY;
+      }
     }
   }
 #endif
@@ -115,5 +151,14 @@ errno_t pthread_mutex_trylock(pthread_mutex_t *mutex) {
   }
 
   // handle recursive and error checking mutexes
+#if PTHREAD_USE_NSYNC
+  if (_weaken(nsync_mu_trylock) &&
+      MUTEX_PSHARED(word) == PTHREAD_PROCESS_PRIVATE) {
+    return pthread_mutex_trylock_recursive_nsync(mutex, word);
+  } else {
+    return pthread_mutex_trylock_recursive(mutex, word);
+  }
+#else
   return pthread_mutex_trylock_recursive(mutex, word);
+#endif
 }
