@@ -178,8 +178,10 @@ int __getcwd(char *buf, size_t size) {
     } else {
       rc = -1;
     }
+#ifdef __x86_64__
   } else if (IsMetal()) {
     rc = sys_getcwd_metal(buf, size);
+#endif
   } else {
     rc = enosys();
   }
