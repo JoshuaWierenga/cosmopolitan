@@ -27,7 +27,7 @@
  *
  * @return null always
  */
-void *dlopen(const char *, int) { 
+void *dlopen(const char *, int) {
   return 0;
 }
 
@@ -40,9 +40,5 @@ void *dlsym(void *, const char *) {
 }
 
 int dlclose(void *) {
-  return -1;
-}
-
-int dl_iterate_phdr(int (*)(void *, size_t, void *), void *) {
   return -1;
 }
