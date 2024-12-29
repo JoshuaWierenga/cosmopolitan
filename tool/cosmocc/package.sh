@@ -102,8 +102,6 @@ make -j$NPROC m=$ARM64 \
   o/$ARM64/ape/ape.elf \
   o/$ARM64/ape/aarch64.lds \
   o/$ARM64/libc/crt/crt.o \
-  o/$ARM64/ape/ape-copy-self.o \
-  o/$ARM64/ape/ape-no-modify-self.o \
   o/$ARM64/cosmopolitan.a \
   o/$ARM64/third_party/libcxx/libcxx.a \
   o/$ARM64/tool/build/assimilate.dbg \
@@ -136,8 +134,6 @@ make -j$NPROC m=$ARM64-tiny \
   o/$ARM64-tiny/ape/ape.elf \
   o/$ARM64-tiny/ape/aarch64.lds \
   o/$ARM64-tiny/libc/crt/crt.o \
-  o/$ARM64-tiny/ape/ape-copy-self.o \
-  o/$ARM64-tiny/ape/ape-no-modify-self.o \
   o/$ARM64-tiny/cosmopolitan.a \
   o/$ARM64-tiny/third_party/libcxx/libcxx.a \
 
@@ -145,8 +141,6 @@ make -j$NPROC m=$ARM64-dbg \
   o/$ARM64-dbg/ape/ape.elf \
   o/$ARM64-dbg/ape/aarch64.lds \
   o/$ARM64-dbg/libc/crt/crt.o \
-  o/$ARM64-dbg/ape/ape-copy-self.o \
-  o/$ARM64-dbg/ape/ape-no-modify-self.o \
   o/$ARM64-dbg/cosmopolitan.a \
   o/$ARM64-dbg/third_party/libcxx/libcxx.a \
 
@@ -154,8 +148,6 @@ make -j$NPROC m=$ARM64-optlinux \
   o/$ARM64-optlinux/ape/ape.elf \
   o/$ARM64-optlinux/ape/aarch64.lds \
   o/$ARM64-optlinux/libc/crt/crt.o \
-  o/$ARM64-optlinux/ape/ape-copy-self.o \
-  o/$ARM64-optlinux/ape/ape-no-modify-self.o \
   o/$ARM64-optlinux/cosmopolitan.a \
   o/$ARM64-optlinux/third_party/libcxx/libcxx.a \
 

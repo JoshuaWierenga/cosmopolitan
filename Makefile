@@ -278,6 +278,7 @@ include libc/x/BUILD.mk				# │
 include dsp/scale/BUILD.mk			# │
 include dsp/mpeg/BUILD.mk			# │
 include dsp/tty/BUILD.mk			# │
+include dsp/audio/BUILD.mk			# │
 include dsp/BUILD.mk				# │
 include third_party/stb/BUILD.mk		# │
 include third_party/mbedtls/BUILD.mk		# │
@@ -428,7 +429,7 @@ HTAGS:	o/$(MODE)/hdrs-old.txt $(filter-out third_party/libcxx/%,$(HDRS)) #o/$(MO
 
 loc: private .UNSANDBOXED = 1
 loc: o/$(MODE)/tool/build/summy
-	find -name \*.h -or -name \*.c -or -name \*.S | \
+	find -name \*.h -or -name \*.hpp -or -name \*.c -or -name \*.cc -or -name \*.cpp -or -name \*.S -or -name \*.mk | \
 	$(XARGS) wc -l | grep total | awk '{print $$1}' | $<
 
 # PLEASE: MAINTAIN TOPOLOGICAL ORDER
@@ -439,6 +440,7 @@ COSMOPOLITAN_OBJECTS =			\
 	THIRD_PARTY_OPENMP		\
 	TOOL_ARGS			\
 	NET_HTTP			\
+	DSP_AUDIO			\
 	LIBC_SOCK			\
 	LIBC_NT_WS2_32			\
 	LIBC_NT_IPHLPAPI		\
@@ -466,6 +468,7 @@ COSMOPOLITAN_OBJECTS =			\
 	LIBC_CALLS			\
 	LIBC_SYSV_CALLS			\
 	LIBC_VGA			\
+	LIBC_NT_REALTIME		\
 	LIBC_NT_PSAPI			\
 	LIBC_NT_POWRPROF		\
 	LIBC_NT_PDH			\
@@ -490,6 +493,7 @@ COSMOPOLITAN_OBJECTS =			\
 
 COSMOPOLITAN_H_PKGS =			\
 	APE				\
+	DSP_AUDIO			\
 	LIBC				\
 	LIBC_CALLS			\
 	LIBC_ELF			\
