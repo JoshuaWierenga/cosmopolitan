@@ -147,10 +147,10 @@ export MODE
 export SOURCE_DATE_EPOCH
 export TMPDIR
 
-COSMOCC = .cosmocc/z0.0.54-2.41
+COSMOCC = .cosmocc/z0.0.55-2.41-2
 BOOTSTRAP = $(COSMOCC)/bin
 TOOLCHAIN = $(COSMOCC)/bin/$(ARCH)-linux-cosmo-
-DOWNLOAD := $(shell build/download-cosmocc.sh $(COSMOCC) z0.0.54-2.41 bc0542ffdb28e03770b12f3053a83d1fdee622507d7cb2897c509033867e087c)
+DOWNLOAD := $(shell build/download-cosmocc.sh $(COSMOCC) z0.0.55-2.41-2 f0806c680c3aa3e8d8e765ff616ec6b28a98c7b2ad553b8df6b266846687aab5)
 
 IGNORE := $(shell $(MKDIR) $(TMPDIR))
 
