@@ -88,16 +88,18 @@ static textwindows int __proc_wait(int pid, int *wstatus, int options,
     __proc_lock();
   CheckForZombies:
     int rc = __proc_check(pid, wstatus, rusage);
+
+    // if there's no zombies left
+    // check if there's any living processes
+    if (!rc && dll_is_empty(__proc.list)) {
+      __proc_unlock();
+      return echild();
+    }
+
+    // otherwise return zombie or zero
     if (rc || (options & WNOHANG)) {
       __proc_unlock();
       return rc;
-    }
-
-    // there's no zombies left
-    // check if there's any living processes
-    if (dll_is_empty(__proc.list)) {
-      __proc_unlock();
-      return echild();
     }
 
     // get appropriate wait object
@@ -165,7 +167,7 @@ static textwindows int __proc_wait(int pid, int *wstatus, int options,
       }
       __proc_unlock();
       if (wi == 1) {
-        // __sig_cancel() woke our semaphore
+        // __sig_wake() woke our semaphore
         continue;
       } else {
         // neither posix or win32 define i/o error conditions for

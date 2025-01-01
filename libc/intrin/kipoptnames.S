@@ -32,9 +32,18 @@
 	.underrun
 kIpOptnames:
 	.e	IP_TOS,"TOS"			// int
-	.e	IP_MTU,"MTU"			// int
 	.e	IP_TTL,"TTL"			// int
+	.e	IP_MTU,"MTU"			// int
 	.e	IP_HDRINCL,"HDRINCL"		// bool32
+	.e	IP_OPTIONS,"OPTIONS"
+	.e	IP_RECVTTL,"RECVTTL"
+	.e	IP_ADD_MEMBERSHIP,"ADD_MEMBERSHIP"
+	.e	IP_DROP_MEMBERSHIP,"DROP_MEMBERSHIP"
+	.e	IP_MULTICAST_IF,"MULTICAST_IF"
+	.e	IP_MULTICAST_LOOP,"MULTICAST_LOOP"
+	.e	IP_MULTICAST_TTL,"MULTICAST_TTL"
+	.e	IP_PKTINFO,"PKTINFO"
+	.e	IP_RECVTOS,"RECVTOS"
 	.long	MAGNUM_TERMINATOR
 	.endobj	kIpOptnames,globl,hidden
 	.overrun
