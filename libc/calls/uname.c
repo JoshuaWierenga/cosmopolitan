@@ -165,6 +165,18 @@ int uname(struct utsname *uts) {
     GetNtName(uts->nodename, kNtComputerNamePhysicalDnsHostname);
     GetNtName(uts->domainname, kNtComputerNamePhysicalDnsDomain);
     rc = 0;
+  } else if (IsMetal()) {
+    stpcpy(uts->sysname, "Metal");
+    stpcpy(uts->release, "");
+    stpcpy(uts->version, "metalfile");
+#if __x86_64__
+    stpcpy(uts->machine, "x86_64");
+#elif __aarch64__
+    stpcpy(uts->machine, "aarch64");
+#endif
+    stpcpy(uts->nodename, "");
+    stpcpy(uts->domainname, "");
+    rc = 0;
   } else {
     rc = enosys();
   }

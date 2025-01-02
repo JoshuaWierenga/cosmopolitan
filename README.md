@@ -1,7 +1,7 @@
 Cosmo bare metal improvements, mostly around supporting temporary files
 
-Known working examples: cwd, env, hello, hello2, life, ls, parsefloat, setcontext, stackexplorer, stat, sysconf, vga, vga2, walk
-Known broken examples: asteroids, crashreport(?), crashreport2, date, hangman, hellolua, nproc, picol, printargs, setitimer, statfs, sysinfo, trapping, ttyinfo, ucontext-sigfpe-recovery, uname
+Known working examples: cwd, env, hello, hello2, life, ls, parsefloat, setcontext, stackexplorer, stat, sysconf, vga, vga2, walk, uname
+Known broken examples: asteroids, crashreport(?), crashreport2, date, hangman, hellolua, nproc, picol, printargs, setitimer, statfs, sysinfo, trapping, ttyinfo, ucontext-sigfpe-recovery
 
 ![Cosmopolitan Honeybadger](usr/share/img/honeybadger.png)
 
