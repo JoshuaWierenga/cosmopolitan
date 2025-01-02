@@ -444,6 +444,7 @@ SECTIONS {
 /*END: NT FORK COPYING */
     _edata = .;
     PROVIDE(edata = .);
+    _ezip = .; /* <-- very deprecated */
   } :Ram
 
   . = ALIGN(CONSTANT(COMMONPAGESIZE));

@@ -54,7 +54,7 @@ static char *ResolvePath(char *d, const char *s, size_t n) {
 /**
  * Returns absolute pathname.
  *
- * This is a cut down version of readpath to support path resolution on
+ * This is a cut down version of realpath to support path resolution on
  * metal platforms which removes the lone malloc use to allow moving it
  * from mem to calls and readlink for simplicity because of the lack of
  * symlink support in metalfile. Like the original it removes `/./` and
