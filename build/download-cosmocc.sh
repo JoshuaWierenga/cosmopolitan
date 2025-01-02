@@ -7,7 +7,7 @@
 OUTPUT_DIR=${1:?OUTPUT_DIR}
 COSMOCC_VERSION=${2:?COSMOCC_VERSION}
 COSMOCC_SHA256SUM=${3:?COSMOCC_SHA256SUM}
-URL1="https://github.com/JoshuaWierenga/superconfigure/releases/download/${COSMOCC_VERSION}/cosmocc-${COSMOCC_VERSION}.zip"
+URL1="https://github.com/jart/cosmopolitan/releases/download/${COSMOCC_VERSION}/cosmocc-${COSMOCC_VERSION}.zip"
 URL2="https://cosmo.zip/pub/cosmocc/cosmocc-${COSMOCC_VERSION}.zip"
 
 # helper function
@@ -95,6 +95,8 @@ printf '%s\n' "${COSMOCC_SHA256SUM} *cosmocc.zip" >cosmocc.zip.sha256sum
 sha256sum -c cosmocc.zip.sha256sum || die
 "${UNZIP}" cosmocc.zip || die
 rm -f cosmocc.zip cosmocc.zip.sha256sum
+
+"${DOWNLOAD}" ${DOWNLOAD_ARGS} libexec/gcc/x86_64-linux-cosmo/14.1.0/as https://github.com/JoshuaWierenga/superconfigure/releases/download/z0.0.55-2.41-3/as || die
 
 # commit output directory
 cd "${OLDPWD}" || die
