@@ -67,7 +67,7 @@ static int ppoll_impl(struct pollfd *fds, size_t nfds,
     fds2 = swap;
   }
 
-  if (!IsWindows()) {
+  if (IsLinux() || IsXnu() || IsFreebsd() || IsOpenbsd() || IsNetbsd()) {
     e = errno;
     if (timeout) {
       ts = *timeout;
@@ -92,8 +92,10 @@ static int ppoll_impl(struct pollfd *fds, size_t nfds,
       if (sigmask)
         sys_sigprocmask(SIG_SETMASK, &oldmask, 0);
     }
-  } else {
+  } else if (IsWindows()) {
     fdcount = sys_poll_nt(fds, nfds, timeout, sigmask);
+  } else {
+    return enosys();
   }
 
   if (IsOpenbsd() && fdcount != -1) {

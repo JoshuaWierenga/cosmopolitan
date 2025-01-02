@@ -21,6 +21,7 @@
 #include "libc/dce.h"
 #include "libc/intrin/describeflags.h"
 #include "libc/intrin/strace.h"
+#include "libc/sysv/errfuns.h"
 
 /**
  * Gets scheduler policy for `pid`.
@@ -41,6 +42,8 @@ int sched_getscheduler(int pid) {
   if (IsNetbsd()) {
     struct sched_param p;
     rc = sys_sched_getscheduler_netbsd(pid, &p);
+  } else if (IsMetal()) {
+    rc = enosys();
   } else {
     rc = sys_sched_getscheduler(pid);
   }

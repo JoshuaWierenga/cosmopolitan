@@ -27,7 +27,7 @@
  */
 uint32_t geteuid(void) {
   uint32_t rc;
-  if (!IsWindows()) {
+  if (!IsMetal() && !IsWindows()) {
     rc = sys_geteuid();
   } else {
     rc = getuid();

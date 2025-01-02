@@ -38,7 +38,7 @@
  */
 unsigned umask(unsigned newmask) {
   int oldmask;
-  if (!IsWindows()) {
+  if (!IsMetal() && !IsWindows()) {
     oldmask = sys_umask(newmask);
   } else {
     oldmask = atomic_exchange(&__umask, newmask);

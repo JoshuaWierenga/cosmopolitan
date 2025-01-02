@@ -22,6 +22,7 @@
 #include "libc/dce.h"
 #include "libc/intrin/describeflags.h"
 #include "libc/intrin/strace.h"
+#include "libc/sysv/errfuns.h"
 
 /**
  * Changes signal blocking state of calling thread, e.g.:
@@ -44,7 +45,9 @@
 int sigprocmask(int how, const sigset_t *opt_set, sigset_t *opt_out_oldset) {
   int rc;
   sigset_t old = {0};
-  if (IsMetal() || IsWindows()) {
+  if (IsMetal()) {
+    return enosys();
+  } else if (IsWindows()) {
     rc = __sig_mask(how, opt_set, &old);
   } else {
     rc = sys_sigprocmask(how, opt_set, opt_out_oldset ? &old : 0);

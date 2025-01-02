@@ -28,7 +28,7 @@
  */
 uint32_t getegid(void) {
   uint32_t rc;
-  if (!IsWindows()) {
+  if (!IsMetal() && !IsWindows()) {
     rc = sys_getegid();
   } else {
     rc = getgid();

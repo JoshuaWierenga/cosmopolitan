@@ -28,7 +28,7 @@
  */
 int getpgrp(void) {
   int rc;
-  if (!IsWindows()) {
+  if (!IsMetal() && !IsWindows()) {
     rc = sys_getpgid(0);
   } else {
     rc = getpid();

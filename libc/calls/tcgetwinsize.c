@@ -34,6 +34,8 @@ int tcgetwinsize(int fd, struct winsize *ws) {
   if (fd >= 0) {
     if (fd < g_fds.n && g_fds.p[fd].kind == kFdZip) {
       rc = enotty();
+    } else if (IsMetal()) {
+      return enosys();
     } else if (IsWindows()) {
       rc = tcgetwinsize_nt(fd, ws);
     } else {

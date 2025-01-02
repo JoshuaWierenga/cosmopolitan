@@ -18,13 +18,19 @@
 ╚─────────────────────────────────────────────────────────────────────────────*/
 #include "libc/calls/calls.h"
 #include "libc/calls/syscall-sysv.internal.h"
+#include "libc/dce.h"
 #include "libc/intrin/strace.h"
 
 /**
  * Creates session and sets the process group id.
  */
 int getsid(int pid) {
-  int rc = sys_getsid(pid);
+  int rc;
+  if (!IsMetal()) {
+    rc = sys_getsid(pid);
+  } else {
+    rc = getpid();
+  }
   STRACE("%s(%d) → %d% m", "getsid", pid, rc);
   return rc;
 }

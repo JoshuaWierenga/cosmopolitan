@@ -395,7 +395,7 @@ textstartup void __printargs(const char *prologue) {
 
   PRINT("");
   PRINT("ARGUMENTS (%p)", __argv);
-  if (*__argv) {
+  if (__argv && *__argv) {
     for (i = 0; i < __argc; ++i) {
       PRINT(" ☼ %s", __argv[i]);
     }
@@ -415,7 +415,7 @@ textstartup void __printargs(const char *prologue) {
 
   PRINT("");
   PRINT("AUXILIARY (%p)", __auxv);
-  if (*__auxv) {
+  if (__auxv && *__auxv) {
     if (*__auxv) {
       for (auxp = __auxv; *auxp; auxp += 2) {
         auxinfo = 0;
@@ -455,15 +455,19 @@ textstartup void __printargs(const char *prologue) {
   PRINT(" ☼ %s = %#s", "kNtSystemDirectory", kNtSystemDirectory);
   PRINT(" ☼ %s = %#s", "kNtWindowsDirectory", kNtWindowsDirectory);
 #endif
-  PRINT(" ☼ %s = %#s", "__argv[0]", __argv[0]);
+  if (__argv) {
+    PRINT(" ☼ %s = %#s", "__argv[0]", __argv[0]);
+  }
   PRINT(" ☼ %s = %#s", "program_invocation_name", program_invocation_name);
   PRINT(" ☼ %s = %#s", "program_invocation_short_name",
         program_invocation_short_name);
   PRINT(" ☼ %s = %#s", "getenv(\"_\")", getenv("_"));
   PRINT(" ☼ %s = %#s", "getauxval(AT_EXECFN)", getauxval(AT_EXECFN));
   PRINT(" ☼ %s = %#s", "GetProgramExecutableName", GetProgramExecutableName());
-  PRINT(" ☼ %s = %#s", "GetInterpreterExecutableName",
-        GetInterpreterExecutableName(u.path, sizeof(u.path)));
+  if (!IsMetal()) {
+    PRINT(" ☼ %s = %#s", "GetInterpreterExecutableName",
+          GetInterpreterExecutableName(u.path, sizeof(u.path)));
+    }
   PRINT(" ☼ %s = %p", "__builtin_frame_address(0)", __builtin_frame_address(0));
 
   PRINT("");

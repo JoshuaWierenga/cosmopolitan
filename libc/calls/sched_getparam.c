@@ -38,6 +38,8 @@ int sched_getparam(int pid, struct sched_param *param) {
     if (!(rc = sys_sched_getscheduler_netbsd(pid, &p))) {
       *param = p;
     }
+  } else if (IsMetal()) {
+    rc = enosys();
   } else {
     rc = sys_sched_getparam(pid, param);
   }
