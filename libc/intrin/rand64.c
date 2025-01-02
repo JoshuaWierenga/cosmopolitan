@@ -28,7 +28,19 @@
 
 static int _rand64_pid;
 static unsigned __int128 _rand64_pool;
-pthread_mutex_t __rand64_lock_obj = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t __rand64_lock_obj = PTHREAD_MUTEX_INITIALIZER;
+
+void __rand64_lock(void) {
+  _pthread_mutex_lock(&__rand64_lock_obj);
+}
+
+void __rand64_unlock(void) {
+  _pthread_mutex_unlock(&__rand64_lock_obj);
+}
+
+void __rand64_wipe(void) {
+  _pthread_mutex_wipe_np(&__rand64_lock_obj);
+}
 
 
 __attribute__((__constructor__)) static void bios_rand_setup(void) {
@@ -49,7 +61,7 @@ __attribute__((__constructor__)) static void bios_rand_setup(void) {
 uint64_t _rand64(void) {
   void *p;
   uint128_t s;
-  _pthread_mutex_lock(&__rand64_lock_obj);
+  __rand64_lock();
   if (__pid == _rand64_pid) {
     s = _rand64_pool;  // normal path
   } else {
@@ -70,6 +82,6 @@ uint64_t _rand64(void) {
     _rand64_pid = __pid;
   }
   _rand64_pool = (s *= 15750249268501108917ull);  // lemur64
-  _pthread_mutex_unlock(&__rand64_lock_obj);
+  __rand64_unlock();
   return s >> 64;
 }

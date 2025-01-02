@@ -118,9 +118,10 @@ int main(int argc, char *argv[]) {
 
   GetOpts(argc, argv);
 
-  for (fd = 3; fd < 100; ++fd) {
+  int oe = errno;
+  for (fd = 3; fd < 100; ++fd)
     close(fd);
-  }
+  errno = oe;
 
 #ifndef TINY
   setenv("GDB", "", true);
@@ -169,7 +170,7 @@ int main(int argc, char *argv[]) {
 
   // make sure threads are in a good state
   if (_weaken(_pthread_decimate))
-    _weaken(_pthread_decimate)();
+    _weaken(_pthread_decimate)(kPosixThreadZombie);
   if (_weaken(pthread_orphan_np) && !_weaken(pthread_orphan_np)()) {
     tinyprint(2, "error: tests ended with threads still active\n", NULL);
     _Exit(1);
