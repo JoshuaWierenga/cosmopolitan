@@ -21,7 +21,9 @@
 #include "libc/thread/thread.h"
 #include "third_party/nsync/atomic.h"
 #include "third_party/nsync/atomic.internal.h"
-#include "third_party/nsync/futex.internal.h"
+#include "libc/cosmo.h"
+#include "libc/calls/struct/timespec.h"
+#include "libc/cosmo.h"
 #include "third_party/nsync/mu_semaphore.internal.h"
 
 /**
@@ -61,7 +63,7 @@ errno_t nsync_mu_semaphore_p_futex (nsync_semaphore *s) {
 		i = ATM_LOAD ((nsync_atomic_uint32_ *) &f->i);
 		if (i == 0) {
 			int futex_result;
-			futex_result = -nsync_futex_wait_ (
+			futex_result = -cosmo_futex_wait (
 				(atomic_int *)&f->i, i,
 				PTHREAD_PROCESS_PRIVATE, 0, 0);
 			ASSERT (futex_result == 0 ||
@@ -73,7 +75,10 @@ errno_t nsync_mu_semaphore_p_futex (nsync_semaphore *s) {
 				result = ECANCELED;
 			}
 		}
-	} while (result == 0 && (i == 0 || !ATM_CAS_ACQ ((nsync_atomic_uint32_ *) &f->i, i, i-1)));
+	} while (result == 0 && (i == 0 ||
+				 !atomic_compare_exchange_weak_explicit (
+					 (nsync_atomic_uint32_ *) &f->i, &i, i-1,
+					 memory_order_acquire, memory_order_relaxed)));
 	return result;
 }
 
@@ -97,9 +102,9 @@ errno_t nsync_mu_semaphore_p_with_deadline_futex (nsync_semaphore *s, int clock,
 				ts_buf.tv_nsec = NSYNC_TIME_NSEC (abs_deadline);
 				ts = &ts_buf;
 			}
-			futex_result = nsync_futex_wait_ ((atomic_int *)&f->i, i,
-							  PTHREAD_PROCESS_PRIVATE,
-							  clock, ts);
+			futex_result = cosmo_futex_wait ((atomic_int *)&f->i, i,
+							 PTHREAD_PROCESS_PRIVATE,
+							 clock, ts);
 			ASSERT (futex_result == 0 ||
 				futex_result == -EINTR ||
 				futex_result == -EAGAIN ||
@@ -118,16 +123,20 @@ errno_t nsync_mu_semaphore_p_with_deadline_futex (nsync_semaphore *s, int clock,
 				result = ECANCELED;
 			}
 		}
-	} while (result == 0 && (i == 0 || !ATM_CAS_ACQ ((nsync_atomic_uint32_ *) &f->i, i, i - 1)));
+	} while (result == 0 && (i == 0 ||
+				 !atomic_compare_exchange_weak_explicit (
+					 (nsync_atomic_uint32_ *) &f->i, &i, i-1,
+					 memory_order_acquire, memory_order_relaxed)));
 	return (result);
 }
 
 /* Ensure that the count of *s is at least 1. */
 void nsync_mu_semaphore_v_futex (nsync_semaphore *s) {
 	struct futex *f = (struct futex *) s;
-        uint32_t old_value;
-	do {
-		old_value = ATM_LOAD ((nsync_atomic_uint32_ *) &f->i);
-	} while (!ATM_CAS_REL ((nsync_atomic_uint32_ *) &f->i, old_value, old_value+1));
-	ASSERT (nsync_futex_wake_ ((atomic_int *)&f->i, 1, PTHREAD_PROCESS_PRIVATE) >= 0);
+        uint32_t old_value = ATM_LOAD ((nsync_atomic_uint32_ *) &f->i);
+	while (!atomic_compare_exchange_weak_explicit (
+		       (nsync_atomic_uint32_ *) &f->i, &old_value, old_value+1,
+		       memory_order_release, memory_order_relaxed)) {
+	}
+	ASSERT (cosmo_futex_wake ((atomic_int *)&f->i, 1, PTHREAD_PROCESS_PRIVATE) >= 0);
 }

@@ -19,20 +19,29 @@
 #include "libc/intrin/maps.h"
 #include "ape/sections.internal.h"
 #include "libc/calls/state.internal.h"
+#include "libc/calls/syscall-sysv.internal.h"
+#include "libc/cosmo.h"
 #include "libc/dce.h"
 #include "libc/intrin/describebacktrace.h"
 #include "libc/intrin/dll.h"
 #include "libc/intrin/kprintf.h"
 #include "libc/intrin/maps.h"
+#include "libc/macros.h"
+#include "libc/nexgen32e/rdtsc.h"
 #include "libc/runtime/runtime.h"
 #include "libc/runtime/stack.h"
-#include "libc/sysv/consts/auxv.h"
 #include "libc/sysv/consts/prot.h"
 #include "libc/thread/lock.h"
 
 #ifdef __x86_64__
 __static_yoink("_init_maps");
 #endif
+
+#define ABI privileged optimizespeed
+
+// take great care if you enable this
+// especially if you're using --ftrace too
+#define DEBUG_MAPS_LOCK 0
 
 struct Maps __maps;
 
@@ -65,12 +74,30 @@ void __maps_stack(char *stackaddr, int pagesz, int guardsize, size_t stacksize,
 void __maps_init(void) {
   int pagesz = __pagesize;
 
+  // initialize lemur64
+  __maps.rand = 2131259787901769494;
+  __maps.rand ^= kStartTsc;
+
+  // these static map objects avoid mandatory mmap() in __maps_alloc()
+  // they aren't actually needed for bootstrapping this memory manager
+  for (int i = 0; i < ARRAYLEN(__maps.spool); ++i)
+    __maps_free(&__maps.spool[i]);
+
   // record _start() stack mapping
   if (!IsWindows()) {
-    struct AddrSize stack;
-    stack = __get_main_stack();
-    __maps_stack(stack.addr, pagesz, 0, stack.size, (uintptr_t)ape_stack_prot,
-                 0);
+
+    // linux v4.12+ reserves 1mb of guard space beneath rlimit_stack
+    // https://lwn.net/Articles/725832/. if we guess too small, then
+    // slackmap will create a bunch of zombie stacks in __print_maps
+    // to coverup the undisclosed memory but no cost if we guess big
+    size_t guardsize = (__maps.rand % 8 + 1) * 1000 * 1024;
+    guardsize += __pagesize - 1;
+    guardsize &= -__pagesize;
+
+    // track the main stack region that the os gave to start earlier
+    struct AddrSize stack = __get_main_stack();
+    __maps_stack(stack.addr - guardsize, pagesz, guardsize,
+                 guardsize + stack.size, (uintptr_t)ape_stack_prot, 0);
   }
 
   // record .text and .data mappings
@@ -88,7 +115,16 @@ void __maps_init(void) {
   __maps_adder(&text, pagesz);
 }
 
-privileged bool __maps_lock(void) {
+#if DEBUG_MAPS_LOCK
+privileged static void __maps_panic(const char *msg) {
+  // it's only safe to pass a format string. if we use directives such
+  // as %s, %t etc. then kprintf() will recursively call __maps_lock()
+  kprintf(msg);
+  DebugBreak();
+}
+#endif
+
+ABI bool __maps_lock(void) {
   int me;
   uint64_t word, lock;
   struct CosmoTib *tib;
@@ -101,24 +137,35 @@ privileged bool __maps_lock(void) {
   me = atomic_load_explicit(&tib->tib_tid, memory_order_acquire);
   if (me <= 0)
     return false;
-  word = atomic_load_explicit(&__maps.lock, memory_order_relaxed);
+  word = atomic_load_explicit(&__maps.lock.word, memory_order_relaxed);
   for (;;) {
     if (MUTEX_OWNER(word) == me) {
       if (atomic_compare_exchange_weak_explicit(
-              &__maps.lock, &word, MUTEX_INC_DEPTH(word), memory_order_relaxed,
-              memory_order_relaxed))
+              &__maps.lock.word, &word, MUTEX_INC_DEPTH(word),
+              memory_order_relaxed, memory_order_relaxed))
         return true;
       continue;
     }
+#if DEBUG_MAPS_LOCK
+    if (__deadlock_tracked(&__maps.lock) == 1)
+      __maps_panic("error: maps lock already held\n");
+    if (__deadlock_check(&__maps.lock, 1))
+      __maps_panic("error: maps lock is cyclic\n");
+#endif
     word = 0;
     lock = MUTEX_LOCK(word);
     lock = MUTEX_SET_OWNER(lock, me);
-    if (atomic_compare_exchange_weak_explicit(&__maps.lock, &word, lock,
+    if (atomic_compare_exchange_weak_explicit(&__maps.lock.word, &word, lock,
                                               memory_order_acquire,
-                                              memory_order_relaxed))
+                                              memory_order_relaxed)) {
+#if DEBUG_MAPS_LOCK
+      __deadlock_track(&__maps.lock, 0);
+      __deadlock_record(&__maps.lock, 0);
+#endif
       return false;
+    }
     for (;;) {
-      word = atomic_load_explicit(&__maps.lock, memory_order_relaxed);
+      word = atomic_load_explicit(&__maps.lock.word, memory_order_relaxed);
       if (MUTEX_OWNER(word) == me)
         break;
       if (!word)
@@ -127,7 +174,7 @@ privileged bool __maps_lock(void) {
   }
 }
 
-privileged void __maps_unlock(void) {
+ABI void __maps_unlock(void) {
   int me;
   uint64_t word;
   struct CosmoTib *tib;
@@ -140,16 +187,25 @@ privileged void __maps_unlock(void) {
   me = atomic_load_explicit(&tib->tib_tid, memory_order_acquire);
   if (me <= 0)
     return;
-  word = atomic_load_explicit(&__maps.lock, memory_order_relaxed);
+  word = atomic_load_explicit(&__maps.lock.word, memory_order_relaxed);
+#if DEBUG_MAPS_LOCK
+  if (__deadlock_tracked(&__maps.lock) == 0)
+    __maps_panic("error: maps lock not owned by caller\n");
+#endif
   for (;;) {
     if (MUTEX_DEPTH(word)) {
       if (atomic_compare_exchange_weak_explicit(
-              &__maps.lock, &word, MUTEX_DEC_DEPTH(word), memory_order_relaxed,
-              memory_order_relaxed))
+              &__maps.lock.word, &word, MUTEX_DEC_DEPTH(word),
+              memory_order_relaxed, memory_order_relaxed))
         break;
     }
-    if (atomic_compare_exchange_weak_explicit(
-            &__maps.lock, &word, 0, memory_order_release, memory_order_relaxed))
+    if (atomic_compare_exchange_weak_explicit(&__maps.lock.word, &word, 0,
+                                              memory_order_release,
+                                              memory_order_relaxed)) {
+#if DEBUG_MAPS_LOCK
+      __deadlock_untrack(&__maps.lock);
+#endif
       break;
+    }
   }
 }

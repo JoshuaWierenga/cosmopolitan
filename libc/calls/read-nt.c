@@ -136,10 +136,15 @@ struct Keystrokes {
   struct Keystroke pool[512];
 };
 
-static struct Keystrokes __keystroke;
+static struct Keystrokes __keystroke = {
+    .lock = PTHREAD_MUTEX_INITIALIZER,
+};
 
-textwindows void WipeKeystrokes(void) {
+textwindows void sys_read_nt_wipe_keystrokes(void) {
+  pthread_mutex_t lock = __keystroke.lock;
   bzero(&__keystroke, sizeof(__keystroke));
+  __keystroke.lock = lock;
+  _pthread_mutex_wipe_np(&__keystroke.lock);
 }
 
 textwindows static void FreeKeystrokeImpl(struct Dll *key) {
@@ -191,11 +196,11 @@ textwindows static void InitConsole(void) {
 }
 
 textwindows static void LockKeystrokes(void) {
-  pthread_mutex_lock(&__keystroke.lock);
+  _pthread_mutex_lock(&__keystroke.lock);
 }
 
 textwindows static void UnlockKeystrokes(void) {
-  pthread_mutex_unlock(&__keystroke.lock);
+  _pthread_mutex_unlock(&__keystroke.lock);
 }
 
 textwindows int64_t GetConsoleInputHandle(void) {
@@ -320,9 +325,12 @@ textwindows static int ProcessKeyEvent(const struct NtInputRecord *r, char *p) {
   // note we define _POSIX_VDISABLE as zero
   // tcsetattr() lets anyone reconfigure these keybindings
   if (c && !(__ttyconf.magic & kTtyNoIsigs) && !__keystroke.bypass_mode) {
+    char b[] = {c};
     if (c == __ttyconf.vintr) {
+      EchoConsoleNt(b, 1, false);
       return AddSignal(SIGINT);
     } else if (c == __ttyconf.vquit) {
+      EchoConsoleNt(b, 1, false);
       return AddSignal(SIGQUIT);
     }
   }
@@ -457,7 +465,8 @@ textwindows static void WriteCtl(const char *p, size_t n, bool escape_harder) {
   }
 }
 
-textwindows static void EchoTty(const char *p, size_t n, bool escape_harder) {
+textwindows void EchoConsoleNt(const char *p, size_t n, bool escape_harder) {
+  InitConsole();
   if (!(__ttyconf.magic & kTtySilence)) {
     if (__ttyconf.magic & kTtyEchoRaw) {
       WriteTty(p, n);
@@ -517,7 +526,7 @@ textwindows static void IngestConsoleInputRecord(struct NtInputRecord *r) {
       memcpy(k->buf, buf, sizeof(k->buf));
       k->buflen = len;
       dll_make_last(&__keystroke.line, &k->elem);
-      EchoTty(buf, len, true);
+      EchoConsoleNt(buf, len, true);
       if (!__keystroke.freekeys) {
         dll_make_last(&__keystroke.list, __keystroke.line);
         __keystroke.line = 0;
@@ -616,7 +625,7 @@ textwindows static void IngestConsoleInputRecord(struct NtInputRecord *r) {
 
   // echo input if it was successfully recorded
   // assuming the win32 console isn't doing it already
-  EchoTty(buf, len, false);
+  EchoConsoleNt(buf, len, false);
 
   // save keystroke to appropriate list
   if (__ttyconf.magic & kTtyUncanon) {

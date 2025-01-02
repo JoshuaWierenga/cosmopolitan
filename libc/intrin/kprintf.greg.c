@@ -40,9 +40,11 @@
 #include "libc/nt/enum/fileflagandattributes.h"
 #include "libc/nt/enum/filesharemode.h"
 #include "libc/nt/errors.h"
+#include "libc/nt/events.h"
 #include "libc/nt/files.h"
 #include "libc/nt/process.h"
 #include "libc/nt/runtime.h"
+#include "libc/nt/struct/overlapped.h"
 #include "libc/nt/thunk/msabi.h"
 #include "libc/runtime/internal.h"
 #include "libc/runtime/memtrack.internal.h"
@@ -63,9 +65,10 @@
 #include "libc/sysv/consts/o.h"
 #include "libc/sysv/consts/prot.h"
 #include "libc/thread/tls.h"
-#include "libc/thread/tls2.internal.h"
 #include "libc/vga/vga.internal.h"
 #include "libc/wctype.h"
+
+#define ABI privileged optimizesize
 
 #define STACK_ERROR "kprintf error: stack is about to overflow\n"
 
@@ -113,10 +116,13 @@
   }
 
 // clang-format off
+__msabi extern typeof(CloseHandle) *const __imp_CloseHandle;
+__msabi extern typeof(CreateEvent) *const __imp_CreateEventW;
 __msabi extern typeof(CreateFile) *const __imp_CreateFileW;
 __msabi extern typeof(DuplicateHandle) *const __imp_DuplicateHandle;
 __msabi extern typeof(GetEnvironmentVariable) *const __imp_GetEnvironmentVariableW;
 __msabi extern typeof(GetLastError) *const __imp_GetLastError;
+__msabi extern typeof(GetOverlappedResult) *const __imp_GetOverlappedResult;
 __msabi extern typeof(GetStdHandle) *const __imp_GetStdHandle;
 __msabi extern typeof(SetLastError) *const __imp_SetLastError;
 __msabi extern typeof(WriteFile) *const __imp_WriteFile;
@@ -154,23 +160,7 @@ __funline bool kischarmisaligned(const char *p, signed char t) {
   return false;
 }
 
-privileged bool32 kisdangerous(const void *addr) {
-  bool32 res = true;
-  __maps_lock();
-  if (__maps.maps) {
-    struct Map *map;
-    if ((map = __maps_floor(addr)))
-      if ((const char *)addr >= map->addr &&
-          (const char *)addr < map->addr + map->size)
-        res = false;
-  } else {
-    res = false;
-  }
-  __maps_unlock();
-  return res;
-}
-
-privileged static void klogclose(long fd) {
+ABI static void klogclose(long fd) {
 #ifdef __x86_64__
   long ax = __NR_close;
   asm volatile("syscall"
@@ -187,7 +177,7 @@ privileged static void klogclose(long fd) {
 #endif
 }
 
-privileged static long klogfcntl(long fd, long cmd, long arg) {
+ABI static long klogfcntl(long fd, long cmd, long arg) {
 #ifdef __x86_64__
   char cf;
   long ax = __NR_fcntl;
@@ -219,7 +209,7 @@ privileged static long klogfcntl(long fd, long cmd, long arg) {
 #endif
 }
 
-privileged static long klogopen(const char *path) {
+ABI static long klogopen(const char *path) {
   long dirfd = AT_FDCWD;
   long flags = O_WRONLY | O_CREAT | O_APPEND;
   long mode = 0600;
@@ -258,7 +248,7 @@ privileged static long klogopen(const char *path) {
 }
 
 // returns log handle or -1 if logging shouldn't happen
-privileged long kloghandle(void) {
+ABI long kloghandle(void) {
   // kprintf() needs to own a file descriptor in case apps closes stderr
   // our close() and dup() implementations will trigger this initializer
   // to minimize a chance that the user accidentally closes their logger
@@ -283,7 +273,7 @@ privileged long kloghandle(void) {
         hand = __imp_CreateFileW(
             path, kNtFileAppendData,
             kNtFileShareRead | kNtFileShareWrite | kNtFileShareDelete, 0,
-            kNtOpenAlways, kNtFileAttributeNormal, 0);
+            kNtOpenAlways, kNtFileAttributeNormal | kNtFileFlagOverlapped, 0);
       } else {
         hand = -1;  // KPRINTF_LOG was empty string or too long
       }
@@ -337,7 +327,7 @@ privileged long kloghandle(void) {
 }
 
 #ifdef __x86_64__
-privileged void _klog_serial(const char *b, size_t n) {
+ABI void _klog_serial(const char *b, size_t n) {
   size_t i;
   uint16_t dx;
   unsigned char al;
@@ -357,21 +347,28 @@ privileged void _klog_serial(const char *b, size_t n) {
 }
 #endif /* __x86_64__ */
 
-privileged void klog(const char *b, size_t n) {
+ABI void klog(const char *b, size_t n) {
 #ifdef __x86_64__
-  int e;
   long h;
   uint32_t wrote;
   long rax, rdi, rsi, rdx;
-  if ((h = kloghandle()) == -1) {
+  if ((h = kloghandle()) == -1)
     return;
-  }
   if (IsWindows()) {
-    e = __imp_GetLastError();
-    if (!__imp_WriteFile(h, b, n, &wrote, 0)) {
-      __imp_SetLastError(e);
-      __klog_handle = 0;
+    bool32 ok;
+    intptr_t ev;
+    int e = __imp_GetLastError();
+    if ((ev = __imp_CreateEventW(0, 0, 0, 0))) {
+      struct NtOverlapped overlap = {.hEvent = ev};
+      ok = !!__imp_WriteFile(h, b, n, 0, &overlap);
+      if (!ok && __imp_GetLastError() == kNtErrorIoPending)
+        ok = true;
+      ok &= !!__imp_GetOverlappedResult(h, &overlap, &wrote, true);
+      if (!ok)
+        __klog_handle = 0;
+      __imp_CloseHandle(ev);
     }
+    __imp_SetLastError(e);
   } else if (IsMetal()) {
     if (_weaken(_klog_vga)) {
       _weaken(_klog_vga)(b, n);
@@ -407,14 +404,14 @@ privileged void klog(const char *b, size_t n) {
 #endif
 }
 
-privileged static size_t kformat(char *b, size_t n, const char *fmt,
-                                 va_list va) {
+ABI static size_t kformat(char *b, size_t n, const char *fmt, va_list va) {
   int si;
   wint_t t, u;
+  char *cxxbuf;
   const char *abet;
   signed char type;
   const char *s, *f;
-  char cxxbuf[3000];
+  int cxxbufsize = 0;
   struct CosmoTib *tib;
   unsigned long long x;
   unsigned i, j, m, rem, sign, hash, cols, prec;
@@ -758,13 +755,25 @@ privileged static size_t kformat(char *b, size_t n, const char *fmt,
           x = va_arg(va, intptr_t);
           if (_weaken(__symtab) && *_weaken(__symtab) &&
               (idx = _weaken(__get_symbol)(0, x)) != -1) {
-            /* if (p + 1 <= e) */
-            /*   *p++ = '&'; */
             s = (*_weaken(__symtab))->name_base +
                 (*_weaken(__symtab))->names[idx];
-            if (_weaken(__is_mangled) && _weaken(__is_mangled)(s) &&
-                _weaken(__demangle)(cxxbuf, s, sizeof(cxxbuf)) != -1)
-              s = cxxbuf;
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Walloca-larger-than="
+            // decipher c++ symbols if there's enough stack memory
+            // stack size requirement assumes max_depth's still 20
+            if (_weaken(__demangle) &&    //
+                _weaken(__is_mangled) &&  //
+                _weaken(__is_mangled)(s)) {
+              if (!cxxbufsize)
+                if ((cxxbufsize = __get_safe_size(8192, 8192)) >= 512) {
+                  cxxbuf = alloca(cxxbufsize);
+                  CheckLargeStackAllocation(cxxbuf, sizeof(cxxbufsize));
+                }
+              if (cxxbufsize >= 512)
+                if (_weaken(__demangle)(cxxbuf, s, cxxbufsize) != -1)
+                  s = cxxbuf;
+            }
+#pragma GCC pop_options
             goto FormatString;
           }
           base = 4;
@@ -1020,7 +1029,7 @@ privileged static size_t kformat(char *b, size_t n, const char *fmt,
  * @asyncsignalsafe
  * @vforksafe
  */
-privileged size_t ksnprintf(char *b, size_t n, const char *fmt, ...) {
+ABI size_t ksnprintf(char *b, size_t n, const char *fmt, ...) {
   size_t m;
   va_list v;
   va_start(v, fmt);
@@ -1039,7 +1048,7 @@ privileged size_t ksnprintf(char *b, size_t n, const char *fmt, ...) {
  * @asyncsignalsafe
  * @vforksafe
  */
-privileged size_t kvsnprintf(char *b, size_t n, const char *fmt, va_list v) {
+ABI size_t kvsnprintf(char *b, size_t n, const char *fmt, va_list v) {
   return kformat(b, n, fmt, v);
 }
 
@@ -1050,10 +1059,10 @@ privileged size_t kvsnprintf(char *b, size_t n, const char *fmt, va_list v) {
  * @asyncsignalsafe
  * @vforksafe
  */
-privileged void kvprintf(const char *fmt, va_list v) {
+ABI void kvprintf(const char *fmt, va_list v) {
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Walloca-larger-than="
-  long size = __get_safe_size(8000, 8000);
+  long size = __get_safe_size(8192, 2048);
   if (size < 80) {
     klog(STACK_ERROR, sizeof(STACK_ERROR) - 1);
     return;
@@ -1136,7 +1145,7 @@ privileged void kvprintf(const char *fmt, va_list v) {
  * @asyncsignalsafe
  * @vforksafe
  */
-privileged void kprintf(const char *fmt, ...) {
+ABI void kprintf(const char *fmt, ...) {
   // system call support runtime depends on this function
   // function tracing runtime depends on this function
   // asan runtime depends on this function

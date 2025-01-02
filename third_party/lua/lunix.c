@@ -109,8 +109,9 @@
 #include "third_party/lua/lgc.h"
 #include "third_party/lua/lua.h"
 #include "third_party/lua/luaconf.h"
-#include "third_party/nsync/futex.internal.h"
 #include "libc/sysv/consts/clock.h"
+#include "libc/cosmo.h"
+#include "libc/cosmo.h"
 #include "tool/net/luacheck.h"
 
 #define DNS_NAME_MAX  253
@@ -2855,7 +2856,7 @@ static int LuaUnixMemoryWait(lua_State *L) {
     deadline = &ts;
   }
   BEGIN_CANCELATION_POINT;
-  rc = nsync_futex_wait_((atomic_int *)GetWord(L), expect,
+  rc = cosmo_futex_wait((atomic_int *)GetWord(L), expect,
                          PTHREAD_PROCESS_SHARED, CLOCK_REALTIME, deadline);
   END_CANCELATION_POINT;
   if (rc < 0) errno = -rc, rc = -1;
@@ -2867,7 +2868,7 @@ static int LuaUnixMemoryWait(lua_State *L) {
 static int LuaUnixMemoryWake(lua_State *L) {
   int count, woken;
   count = luaL_optinteger(L, 3, INT_MAX);
-  woken = nsync_futex_wake_((atomic_int *)GetWord(L), count,
+  woken = cosmo_futex_wake((atomic_int *)GetWord(L), count,
                             PTHREAD_PROCESS_SHARED);
   npassert(woken >= 0);
   return ReturnInteger(L, woken);
@@ -2958,7 +2959,7 @@ static int LuaUnixMapshared(lua_State *L) {
   m->mapsize = c;
   m->lock = (pthread_mutex_t *)p;
   pthread_mutexattr_init(&mattr);
-  pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_NORMAL);
+  pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_DEFAULT);
   pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
   pthread_mutex_init(m->lock, &mattr);
   pthread_mutexattr_destroy(&mattr);
