@@ -46,6 +46,16 @@
 #define kAcpiMadtIoApic      1
 #define kAcpiMadtIntOverride 2
 
+/**
+ * @internal
+ * Values for AcpiSubtableHeader::Type under an AcpiTableSrat.
+ */
+#define kAcpiSratLocalApic   0
+#define kAcpiSratMemory      1
+#define kAcpiSrat2xLocalApic 2
+
+
+
 #if !(__ASSEMBLER__ + __LINKER__ + 0)
 
 COSMOPOLITAN_C_START_
@@ -122,6 +132,16 @@ typedef struct thatispacked {
   uint32_t Address;
   uint32_t GlobalIrqBase;
 } AcpiMadtIoApic;
+
+typedef struct thisispacked {
+  AcpiSubtableHeader Header;
+  uint8_t LowerProximityDomain;
+  uint8_t ApicId;
+  uint32_t Flags;
+  uint8_t SApicEId;
+  uint8_t UpperProximityDomain[3];
+  uint32_t ClockDomain;
+} AcpiSrasLocalApic;
 
 /**
  * @internal
@@ -206,12 +226,23 @@ typedef struct thatispacked {
   uint8_t Aml[];
 } AcpiTableDsdt;
 
+/**
+ * @internal
+ * ACPI System/Static Resource Affinity Table (SRAT) structure.
+ */
+typedef struct thatispacked {
+  AcpiTableHeader Header;
+  uint8_t reserved[12];
+  char Subtable[];
+} AcpiTableSrat;
+
 typedef uint32_t AcpiStatus;
 
 extern size_t _AcpiXsdtNumEntries, _AcpiNumIoApics;
 extern void **_AcpiXsdtEntries;
 extern uint16_t _AcpiBootFlags;
 extern uint32_t _AcpiMadtFlags;
+extern int _AcpiCPUCount;
 extern const AcpiMadtIoApic **_AcpiIoApics;
 
 extern void *_AcpiOsMapUncachedMemory(uintptr_t, size_t);

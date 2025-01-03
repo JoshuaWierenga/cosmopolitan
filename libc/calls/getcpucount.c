@@ -21,8 +21,10 @@
 #include "libc/calls/struct/cpuset.h"
 #include "libc/calls/syscall_support-nt.internal.h"
 #include "libc/dce.h"
+#include "libc/irq/acpi.internal.h"
 #include "libc/nt/accounting.h"
 #include "libc/runtime/runtime.h"
+#include "libc/sysv/errfuns.h"
 
 #define CTL_HW                6
 #define HW_NCPU               3
@@ -81,13 +83,16 @@ static textwindows int __get_cpu_count_nt(void) {
  * @return cpu count, or -1 w/ errno
  */
 int __get_cpu_count(void) {
-  if (!IsWindows()) {
-    if (!IsBsd()) {
-      return __get_cpu_count_linux();
-    } else {
-      return __get_cpu_count_bsd();
-    }
-  } else {
+  if (IsBsd()) {
+    return __get_cpu_count_bsd();
+  } else if (IsLinux()) {
+    return __get_cpu_count_linux();
+  // TODO: Prevent _AcpiCPUCount from causing ACPI code to being included if not used
+  } else if (IsMetal() && _AcpiCPUCount != -1) {
+    return  _AcpiCPUCount;
+  } else if (IsWindows()) {
     return __get_cpu_count_nt();
+  } else {
+    return enosys();
   }
 }
