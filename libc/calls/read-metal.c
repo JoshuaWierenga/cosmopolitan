@@ -32,7 +32,7 @@ ssize_t sys_read_metal(int fd, const struct iovec *iov, int iovlen, int64_t offs
   int i;
   size_t got, old_pos;
   ssize_t res;
-  struct MetalFile *file;
+  struct MetalOpenFile *file;
   switch (g_fds.p[fd].kind) {
     case kFdConsole:
       /*
@@ -49,7 +49,7 @@ ssize_t sys_read_metal(int fd, const struct iovec *iov, int iovlen, int64_t offs
     case kFdSerial:
       return sys_readv_serial(fd, iov, iovlen);
     case kFdFile:
-      file = (struct MetalFile *)g_fds.p[fd].handle;
+      file = (struct MetalOpenFile *)g_fds.p[fd].handle;
       if (file->type == kMetalDir) return eisdir();
       if (file->type != kMetalApe && file->type != kMetalTmp) return espipe();
       old_pos = file->pos;

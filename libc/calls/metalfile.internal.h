@@ -9,12 +9,42 @@ COSMOPOLITAN_C_START_
 #define kMetalApe  1
 #define kMetalDir  2
 #define kMetalTmp  3
+#define kMetalFile 4
 
-#define kMetalDirCount     5 // __metal_tmpfiles element count
-#define kMetalDirStaticMax 4 // __metal_tmpfiles[i].ents max element count
+#define kMetalDirCount     6 // __metal_dirs length i.e. number of hardcoded metal dirs
+#define kMetalDirStaticMax 4 // __metal_tmpfiles[i].ents length i.e. maximum child count for each metal dir
+#define kMetalFileCount    2 // __metal_files length i.e. number of hardcoded metal files
 
-#define kMetalTmpDirIno   2
-#define kMetalTmpInoStart 6
+/* metal has 3 simulated filesystems:
+/:    read only, contains /dev/null, /dev/zero and /proc/self/exe(managed seperately to __metal_files)
+/tmp: read write
+/zip: read only, zipos
+*/
+
+// Inos:
+
+// Directories:
+// 0: /
+// 1: /dev
+// 2: /proc
+// 3: /tmp
+// 4: /zip
+// 5: /proc/self
+
+// Files:
+// 6: /dev/null
+// 7: /dev/zero
+
+// Specially managed file
+// 8: /proc/self/exe
+
+// Tmp:
+// 9+: /tmp/*
+
+// Other defines are in metalfile.c
+#define kMetalTmpDirIno      3
+#define kMetalProcSelfExeIno 8
+#define kMetalTmpInoStart kMetalDirCount + kMetalFileCount + 1
 
 /* Example code to iterate over files
   for (ptrdiff_t ino = 0; ino < kMetalDirCount; ++ino) {
@@ -57,12 +87,6 @@ COSMOPOLITAN_C_START_
   }
 */
 
-/* metal has 3 simulated filesystems:
-/:    read only, contains /proc/self/exe
-/tmp: read write
-/zip: zipos
-*/
-
 // TODO(joshua): Support directories within /tmp? If so only store name here and use recursion to construct full path
 // TODO(joshua): Use or remove file_count
 struct MetalDir {
@@ -80,14 +104,16 @@ struct MetalTmpFile {
   bool32 deleted;
 };
 
-struct MetalFileInfo {
-  uint8_t type;  // the reset is only set if !kMetalBad
-  uint32_t mode;
-  ptrdiff_t idx; // ino/__metal_dirs index for kMetalDir, __metal_tmpfiles index for kMetalTmp
+struct MetalFile {
+  uint8_t type;
+  uint32_t mode;    // only set if !kMetalBad
+  ptrdiff_t idx;    // ino/__metal_dirs/__metal_files(-kMetalDirCount) index for kMetalDir/kMetalFile, __metal_tmpfiles index for kMetalTmp
+  const char *path; // only set for kMetalFile
+  int64_t size;     // only set for kMetalFile
 };
 
 // TODO(joshua): Support kFdDevNull?
-struct MetalFile {
+struct MetalOpenFile {
   uint8_t type;
   uint8_t *base; // base address of file for kMetalApe and kMetalTmp
   size_t size;   // size of file at base for kMetalApe and kMetalTmp
@@ -100,6 +126,7 @@ extern size_t __ape_com_size;
 extern uint16_t __ape_com_sectors;  // ape/ape.S
 
 extern struct MetalDir *__metal_dirs;
+extern struct MetalFile *__metal_files;
 
 extern struct MetalTmpFile *__metal_tmpfiles;
 extern ptrdiff_t __metal_tmpfiles_max;
@@ -112,14 +139,14 @@ int sys_fchdir_metal(int dirfd);
 
 char *_MetalPath(const char *filename, char *resolved);
 // This function returns static memory so don't keep the result around
-char *_MetalFullPath(int dirfd, const char *file);
+char *_MetalFullPath(int dirfd, const char *path);
 
 size_t _MetalAllocate(size_t size, void **addr);
 
 // Do not call directly, use the openat, write and close functions and their wrappers
-bool32 _OpenMetalTmpFile(const char *path, struct MetalFile *file);
-void _ExpandMetalTmpFile(struct MetalFile *file, const size_t min_size);
-bool32 _CloseMetalTmpFile(struct MetalFile *file);
+bool32 _OpenMetalTmpFile(const char *path, struct MetalOpenFile *file);
+void _ExpandMetalTmpFile(struct MetalOpenFile *file, const size_t min_size);
+bool32 _CloseMetalTmpFile(struct MetalOpenFile *file);
 
 COSMOPOLITAN_C_END_
 #endif /* !(__ASSEMBLER__ + __LINKER__ + 0) */

@@ -23,24 +23,24 @@
 #ifdef __x86_64__
 
 int sys_fchdir_metal(int dirfd) {
-  struct Fd *f;
-  struct MetalFile *m;
+  struct Fd *fds;
+  struct MetalOpenFile *file;
 
   if (dirfd < 0 || dirfd >= g_fds.n) {
     return ebadf();
   }
 
-  f = &g_fds.p[dirfd];
-  if (f->kind != kFdFile) {
+  fds = &g_fds.p[dirfd];
+  if (fds->kind != kFdFile) {
     return enotdir();
   }
 
-  m = (struct MetalFile *)f->handle;
-  if (m->type != kMetalDir) {
+  file = (struct MetalOpenFile *)fds->handle;
+  if (file->type != kMetalDir) {
     return enotdir();
   }
 
-  __metal_cwd_ino = m->idx;
+  __metal_cwd_ino = file->idx;
   return 0;
 }
 

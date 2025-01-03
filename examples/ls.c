@@ -91,6 +91,12 @@ int main(int argc, char *argv[]) {
 
       List("/");
       putchar('\n');
+      List("/dev");
+      putchar('\n');
+      List("/dev/null");
+      putchar('\n');
+      List("/dev/zero");
+      putchar('\n');
       List("/proc");
       putchar('\n');
       List("/proc/self");

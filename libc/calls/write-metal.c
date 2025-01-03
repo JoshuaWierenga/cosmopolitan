@@ -32,7 +32,7 @@ ssize_t sys_write_metal(int fd, const struct iovec *iov, int iovlen, int64_t off
   int i;
   size_t old_pos;
   ssize_t res;
-  struct MetalFile *file;
+  struct MetalOpenFile *file;
   switch (g_fds.p[fd].kind) {
     case kFdConsole:
       if (_weaken(sys_writev_vga))
@@ -41,7 +41,7 @@ ssize_t sys_write_metal(int fd, const struct iovec *iov, int iovlen, int64_t off
     case kFdSerial:
       return sys_writev_serial(g_fds.p + fd, iov, iovlen);
     case kFdFile:
-      file = (struct MetalFile *)g_fds.p[fd].handle;
+      file = (struct MetalOpenFile *)g_fds.p[fd].handle;
       if (file->type != kMetalTmp) return espipe();
       old_pos = file->pos;
       if (offset != -1) file->pos = offset;

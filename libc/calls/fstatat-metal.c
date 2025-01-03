@@ -28,6 +28,7 @@
 #ifdef __x86_64__
 
 // TODO(joshua): Support tmp files
+// TODO: Set st_dev, st_uid, st_gid and st_blocks
 int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
   if (!file) return efault();
   char *path;
@@ -39,9 +40,10 @@ int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
       return enxio();
     }
     bzero(st, sizeof(*st));
+    st->st_ino = kMetalProcSelfExeIno;
     st->st_nlink = 1;
+    st->st_mode = S_IRUSR | S_IFREG;
     st->st_size = __ape_com_size;
-    st->st_mode = S_IFREG | 0600;
     st->st_blksize = 1;
     return 0;
   }
@@ -52,7 +54,20 @@ int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
     bzero(st, sizeof(*st));
     st->st_ino = i;
     st->st_nlink = 2;
-    st->st_mode = S_IFDIR | 0600;
+    st->st_mode = S_IRUSR | S_IFDIR;
+    st->st_size = 0;
+    st->st_blksize = 1;
+    return 0;
+  }
+  for (ptrdiff_t i = 0; i < kMetalFileCount; ++i) {
+    if (!__metal_files[i].path || strcmp(path, __metal_files[i].path) != 0) {
+      continue;
+    }
+    bzero(st, sizeof(*st));
+    st->st_ino = __metal_files[i].idx;
+    st->st_nlink = 1;
+    st->st_mode = __metal_files[i].mode;
+    st->st_size = __metal_files[i].size;
     st->st_blksize = 1;
     return 0;
   }

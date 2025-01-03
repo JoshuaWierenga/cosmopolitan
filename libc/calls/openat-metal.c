@@ -31,15 +31,15 @@
 
 #ifdef __x86_64__
 
-static struct MetalFile *allocate_metal_file(void) {
+static struct MetalOpenFile *allocate_metal_file(void) {
   if (!_weaken(calloc) || !_weaken(free)) {
     struct DirectMap dm;
-    dm = sys_mmap_metal(NULL, ROUNDUP(sizeof(struct MetalFile), 4096),
+    dm = sys_mmap_metal(NULL, ROUNDUP(sizeof(struct MetalOpenFile), 4096),
                         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1,
                         0);
     return dm.addr;
   } else {
-    return _weaken(calloc)(1, sizeof(struct MetalFile));
+    return _weaken(calloc)(1, sizeof(struct MetalOpenFile));
   }
 }
 
@@ -72,8 +72,8 @@ static ptrdiff_t is_tmp_file(const char *path) {
 }
 
 // TODO(joshua): Use in fstat(at)
-static struct MetalFileInfo *find_file(const char *path) {
-  static struct MetalFileInfo file;
+static struct MetalFile *find_file(const char *path) {
+  static struct MetalFile file;
   if (strcmp(path, APE_COM_NAME) == 0) {
     file.type = kMetalApe;
     file.mode = S_IRUSR | S_IFCHR;
@@ -110,11 +110,11 @@ static struct MetalFileInfo *find_file(const char *path) {
 // O_CLOEXEC: Ignoring which breaks posix compat
 // O_NOFOLLOW, O_NONBLOCK, O_TTY_INIT: Ignored due to unsupported features, allowed by posix
 // O_CREAT|O_EXCL: O_EXCL is currently ignored when used correctly which breaks posix compat
-int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
-  char *path;
+int sys_openat_metal(int dirfd, const char *path, int flags, unsigned mode) {
+  char *fullPath;
   bool32 inTmp;
-  struct MetalFileInfo *info;
-  struct MetalFile *state;
+  struct MetalFile *fileInfo;
+  struct MetalOpenFile *file;
   int fd;
   // Not supported but required by posix
   if (flags & (O_APPEND|O_EXEC|O_TRUNC)) {
@@ -130,20 +130,20 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
       (~flags & O_CREAT && flags & O_EXCL)) {
     return einval();
   }
-  if (!(path = _MetalFullPath(dirfd, file))) {
+  if (!(fullPath = _MetalFullPath(dirfd, path))) {
     return -1;
   }
   // TODO(joshua): Find parent dir info as well?
-  info = find_file(path);
-  inTmp = is_in_tmp_folder(path);
-  if (info->type != kMetalBad) {
-    if (info->type == kMetalTmp && ((flags & O_ACCMODE) != O_RDWR ||
-                                    !(flags && O_UNLINK))) {
+  fileInfo = find_file(fullPath);
+  inTmp = is_in_tmp_folder(fullPath);
+  if (fileInfo->type != kMetalBad) {
+    if (fileInfo->type == kMetalTmp && ((flags & O_ACCMODE) != O_RDWR ||
+                                       !(flags && O_UNLINK))) {
       return enosys();
     }
-    if (((flags & O_ACCMODE) == O_RDONLY && !(info->mode & S_IRUSR)) ||
-        ((flags & O_ACCMODE) == O_WRONLY && !(info->mode & S_IWUSR)) ||
-        ((flags & O_ACCMODE) == O_RDWR   && !(info->mode & (S_IRUSR|S_IWUSR))) /*||
+    if (((flags & O_ACCMODE) == O_RDONLY && !(fileInfo->mode & S_IRUSR)) ||
+        ((flags & O_ACCMODE) == O_WRONLY && !(fileInfo->mode & S_IWUSR)) ||
+        ((flags & O_ACCMODE) == O_RDWR   && !(fileInfo->mode & (S_IRUSR|S_IWUSR))) /*||
         ((flags & O_ACCMODE) == O_EXEC   && !(info->mode & S_IXUSR)) ||
         ((flags & O_TRUNC)               && !(info->mode & S_IWUSR)*/) {
       return eacces();
@@ -151,16 +151,16 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
     if (flags & (O_CREAT|O_EXCL)) {
       return eexist();
     }
-    if (info->type == kMetalDir && (((flags & O_ACCMODE) & O_WRONLY) ||
-                                    (flags & O_CREAT &&
-                                     !(flags && O_DIRECTORY))/* ||
-                                    flags & O_EXEC*/)) {
+    if (fileInfo->type == kMetalDir && (((flags & O_ACCMODE) & O_WRONLY) ||
+                                         (flags & O_CREAT &&
+                                        !(flags && O_DIRECTORY))/* ||
+                                          flags & O_EXEC*/)) {
       return eisdir();
     }
-    if (info->type != kMetalDir && flags & O_DIRECTORY) {
+    if (fileInfo->type != kMetalDir && flags & O_DIRECTORY) {
       return enotdir();
     }
-    if (info->type == kMetalApe && !_weaken(__ape_com_sectors)) {
+    if (fileInfo->type == kMetalApe && !_weaken(__ape_com_sectors)) {
       return enxio();
     }
   } else {
@@ -171,30 +171,30 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
       return enoent();
     }
   }
-  if ((info->type != kMetalTmp && ((flags & O_ACCMODE) & O_WRONLY /*||
-                                   (flags && O_TRUNC)*/)) ||
-      (info->type == kMetalBad && !inTmp && flags & O_CREAT)) {
+  if ((fileInfo->type != kMetalTmp && ((flags & O_ACCMODE) & O_WRONLY /*||
+                                       (flags && O_TRUNC)*/)) ||
+      (fileInfo->type == kMetalBad && !inTmp && flags & O_CREAT)) {
     return erofs();
   }
-  if (info->type == kMetalApe) {
-    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
+  if (fileInfo->type == kMetalApe) {
+    if ((file = allocate_metal_file()) <= (struct MetalOpenFile *)0) {
       return enomem(); // enfile?
     }
-    state->type = kMetalApe;
-    state->base = (uint8_t *)__ape_com_base;
-    state->size = __ape_com_size;
-  } else if (info->type == kMetalDir) {
-    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
+    file->type = kMetalApe;
+    file->base = (uint8_t *)__ape_com_base;
+    file->size = __ape_com_size;
+  } else if (fileInfo->type == kMetalDir) {
+    if ((file = allocate_metal_file()) <= (struct MetalOpenFile *)0) {
       return enomem(); // enfile?
     }
-    state->type = kMetalDir;
-    state->idx = info->idx;
+    file->type = kMetalDir;
+    file->idx = fileInfo->idx;
   } else if (inTmp) {
-    if ((state = allocate_metal_file()) <= (struct MetalFile *)0) {
+    if ((file = allocate_metal_file()) <= (struct MetalOpenFile *)0) {
       return enomem(); // enfile?
     }
     // TODO(joshua): Move some of this back into this file
-    if (!_OpenMetalTmpFile(path + 5, state)) {
+    if (!_OpenMetalTmpFile(fullPath + 5, file)) {
       return eacces();
     }
   } else {
@@ -208,7 +208,7 @@ int sys_openat_metal(int dirfd, const char *file, int flags, unsigned mode) {
   g_fds.p[fd].kind = kFdFile;
   g_fds.p[fd].flags = flags;
   g_fds.p[fd].mode = mode;
-  g_fds.p[fd].handle = (intptr_t)state;
+  g_fds.p[fd].handle = (intptr_t)file;
   return fd;
 }
 

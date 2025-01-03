@@ -40,7 +40,7 @@ size_t __metal_tmpfiles_size = 0;
 // TODO: Support opening each file multiple times
 // TODO: Support reopening files
 // TODO: Reuse deleted spots in __metal_tmpfiles
-bool32 _OpenMetalTmpFile(const char *path, struct MetalFile *file) {
+bool32 _OpenMetalTmpFile(const char *path, struct MetalOpenFile *file) {
   ptrdiff_t idx = 0;
   size_t size, buf_size;
   void *buf;
@@ -77,7 +77,7 @@ bool32 _OpenMetalTmpFile(const char *path, struct MetalFile *file) {
   return true;
 }
 
-void _ExpandMetalTmpFile(struct MetalFile *file, const size_t min_size) {
+void _ExpandMetalTmpFile(struct MetalOpenFile *file, const size_t min_size) {
   size_t size, buf_size;
   void *buf;
   if (__metal_tmpfiles[file->idx].filesize < min_size) {
@@ -93,7 +93,7 @@ void _ExpandMetalTmpFile(struct MetalFile *file, const size_t min_size) {
   }
 }
 
-bool32 _CloseMetalTmpFile(struct MetalFile *file) {
+bool32 _CloseMetalTmpFile(struct MetalOpenFile *file) {
   if (file->idx >= __metal_tmpfiles_max ||
       __metal_tmpfiles[file->idx].deleted) {
     return false;

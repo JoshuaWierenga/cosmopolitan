@@ -25,7 +25,7 @@
 
 // TODO(joshua): Support tmp files
 int sys_fstat_metal(int fd, struct stat *st) {
-  struct MetalFile *file;
+  struct MetalOpenFile *file;
   if (fd < 0 || fd >= g_fds.n)
     return einval();
   switch (g_fds.p[fd].kind) {
@@ -38,7 +38,7 @@ int sys_fstat_metal(int fd, struct stat *st) {
       st->st_blksize = 1;
       return 0;
     case kFdFile:
-      file = (struct MetalFile *)g_fds.p[fd].handle;
+      file = (struct MetalOpenFile *)g_fds.p[fd].handle;
       switch (file->type) {
         case kMetalApe:
           bzero(st, sizeof(*st));

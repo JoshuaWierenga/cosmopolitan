@@ -527,12 +527,12 @@ static struct dirent *bad_readdir(void) {
 
 static struct dirent *readdir_metal(DIR *dir) {
   struct Fd *sfd;
-  struct MetalFile *file;
+  struct MetalOpenFile *file;
   struct MetalDir *dir_info;
   struct dirent *ent = 0;
   sfd = &g_fds.p[dir->fd];
   if (sfd->kind != kFdFile) return bad_readdir();
-  file = (struct MetalFile *)sfd->handle;
+  file = (struct MetalOpenFile *)sfd->handle;
   if (file->type != kMetalDir) return bad_readdir();
   dir_info = __metal_dirs + file->idx;
   if (file->pos == 0) {
@@ -545,6 +545,7 @@ static struct dirent *readdir_metal(DIR *dir) {
     ent->d_name[1] = 0;
   } else if (file->pos == 1) {
     ent = &dir->ent;
+    // TODO: Use ino of parent dir
     ent->d_ino = file->idx;
     ent->d_off = file->pos;
     ent->d_reclen = sizeof(*ent);

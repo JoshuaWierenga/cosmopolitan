@@ -24,10 +24,10 @@
 
 int64_t sys_lseek_metal(struct Fd *fd, int64_t offset, int whence) {
   size_t new_pos;
-  struct MetalFile *file;
+  struct MetalOpenFile *file;
   switch (fd->kind) {
     case kFdFile:
-      file = (struct MetalFile *)fd->handle;
+      file = (struct MetalOpenFile *)fd->handle;
       if (file->type != kMetalApe && file->type != kMetalTmp &&
           file->type != kMetalDir) {
         return ebadf();

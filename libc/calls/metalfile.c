@@ -30,16 +30,15 @@
 #include "libc/calls/internal.h"
 #include "libc/calls/metalfile.internal.h"
 #include "libc/intrin/directmap.h"
-#include "libc/intrin/kprintf.h"
 #include "libc/intrin/weaken.h"
 #include "libc/limits.h"
-#include "libc/macros.h"
 #include "libc/runtime/pc.internal.h"
 #include "libc/runtime/stack.h"
 #include "libc/str/str.h"
 #include "libc/sysv/consts/at.h"
 #include "libc/sysv/consts/dt.h"
 #include "libc/sysv/consts/prot.h"
+#include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 
 #ifdef __x86_64__
@@ -50,45 +49,29 @@
 
 // Some defines are in metalfile.internal.h
 #define ROOT_INO          0
-#define PROC_INO          1
-#define ZIP_INO           3
-#define PROC_SELF_INO     4
-#define PROC_SELF_EXE_INO 5
+#define DEV_INO           1
+#define PROC_INO          2
+#define ZIP_INO           4
+#define PROC_SELF_INO     5
+#define DEV_NULL_INO      6
+#define DEV_ZERO_INO      7
 
 __static_yoink("_init_metalfile");
 
 void *__ape_com_base;
 size_t __ape_com_size = 0;
 
-struct MetalDir *__metal_dirs;
+struct MetalDir  *__metal_dirs;
+struct MetalFile *__metal_files;
 
 ptrdiff_t __metal_cwd_ino = ZIP_INO;
 
-textstartup void InitializeMetalFile(void) {
-  size_t size;
-  if (!IsMetal()) {
-    return;
-  }
+constexpr char DEV_NULL_PATH[] = "/dev/null";
+constexpr char DEV_ZERO_PATH[] = "/dev/zero";
 
-  if ( _weaken(__ape_com_sectors)) {
-    /*
-     * Copy out a pristine image of the program — before the program might
-     * decide to modify its own .data section.
-     *
-     * This code is included if a symbol "file:/proc/self/exe" is defined
-     * (see libc/calls/metalfile.internal.h & libc/calls/metalfile_init.S).
-     * The zipos code will automatically arrange to do this.  Alternatively,
-     * user code can __static_yoink this symbol.
-     */
-    size = (size_t)__ape_com_sectors * 512;
-    __ape_com_size = _MetalAllocate(size, &__ape_com_base);
-    memcpy(__ape_com_base, (void *)(BANE + IMAGE_BASE_PHYSICAL), size);
-    // TODO(tkchia): LIBC_CALLS doesn't depend on LIBC_VGA so references
-    //               to its functions need to be weak
-    // KINFOF("%s @ %p,+%#zx", APE_COM_NAME, __ape_com_base, size);
-  }
-
-  size = kMetalDirCount * sizeof(*__metal_dirs) + sizeof("/") +
+static void InitializeDirs(void) {
+  size_t size = kMetalDirCount * sizeof(*__metal_dirs) + sizeof("/") +
+    sizeof("/dev") + sizeof("null") + sizeof("zero") +
     sizeof("/proc") + sizeof("/proc/self") + sizeof("/tmp") + sizeof("/zip");
   _MetalAllocate(size, (void **)&__metal_dirs);
 
@@ -100,10 +83,10 @@ textstartup void InitializeMetalFile(void) {
   char *proc_path = strs + 2;
   strs[2] =  '/';
   char *proc_name = strs + 3;
-  strs[3] =  'p';
-  strs[4] =  'r';
-  strs[5] =  'o';
-  strs[6] =  'c';
+  strs[3] = 'p';
+  strs[4] = 'r';
+  strs[5] = 'o';
+  strs[6] = 'c';
   strs[7] = 0;
 
   char *proc_self_path = strs + 8;
@@ -136,49 +119,125 @@ textstartup void InitializeMetalFile(void) {
   strs[27] = 'p';
   strs[28] = 0;
 
-  // / -> /proc, /tmp, /zip
+  char *dev_path = strs + 29;
+  strs[29] = '/';
+  char *dev_name = strs + 30;
+  strs[30] = 'd';
+  strs[31] = 'e';
+  strs[32] = 'v';
+  strs[33] = 0;
+
+  // / -> /dev, /proc, /tmp, /zip
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Wframe-larger-than="
-  __metal_dirs[ROOT_INO] = (struct MetalDir){root_path, 3, 3, {
-      {PROC_INO,        2, sizeof(*__metal_dirs), DT_DIR},
-      {kMetalTmpDirIno, 3, sizeof(*__metal_dirs), DT_DIR},
-      {ZIP_INO,         4, sizeof(*__metal_dirs), DT_DIR},
+  __metal_dirs[ROOT_INO] = (struct MetalDir){root_path, 4, 4, {
+      {DEV_INO,         2, sizeof(*__metal_dirs), DT_DIR},
+      {PROC_INO,        3, sizeof(*__metal_dirs), DT_DIR},
+      {kMetalTmpDirIno, 4, sizeof(*__metal_dirs), DT_DIR},
+      {ZIP_INO,         5, sizeof(*__metal_dirs), DT_DIR},
   }};
-  CheckLargeStackAllocation(__metal_dirs + ROOT_INO, sizeof(__metal_dirs[ROOT_INO]));
-  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 0, sizeof(__metal_dirs[ROOT_INO].ents[0]));
-  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 1, sizeof(__metal_dirs[ROOT_INO].ents[1]));
-  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 2, sizeof(__metal_dirs[ROOT_INO].ents[2]));
-  memcpy(__metal_dirs[ROOT_INO].ents[0].d_name, proc_name, sizeof("proc"));
-  memcpy(__metal_dirs[ROOT_INO].ents[1].d_name, tmp_name, sizeof("tmp"));
-  memcpy(__metal_dirs[ROOT_INO].ents[2].d_name, zip_name, sizeof("zip"));
+  CheckLargeStackAllocation(__metal_dirs + ROOT_INO, sizeof(*__metal_dirs));
+  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 0, sizeof(*__metal_dirs[ROOT_INO].ents));
+  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 1, sizeof(*__metal_dirs[ROOT_INO].ents));
+  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 2, sizeof(*__metal_dirs[ROOT_INO].ents));
+  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 3, sizeof(*__metal_dirs[ROOT_INO].ents));
+  memcpy(__metal_dirs[ROOT_INO].ents[0].d_name, dev_name, sizeof("dev"));
+  memcpy(__metal_dirs[ROOT_INO].ents[1].d_name, proc_name, sizeof("proc"));
+  memcpy(__metal_dirs[ROOT_INO].ents[2].d_name, tmp_name, sizeof("tmp"));
+  memcpy(__metal_dirs[ROOT_INO].ents[3].d_name, zip_name, sizeof("zip"));
+
+  // /dev -> /dev/null, /dev/zero
+  __metal_dirs[DEV_INO] = (struct MetalDir){dev_path, 2, 2, {
+    {DEV_NULL_INO, 2, sizeof(*__metal_dirs), DT_CHR},
+    {DEV_ZERO_INO, 3, sizeof(*__metal_dirs), DT_CHR},
+  }};
+  CheckLargeStackAllocation(__metal_dirs + DEV_INO, sizeof(*__metal_dirs));
+  CheckLargeStackAllocation(__metal_dirs[DEV_INO].ents + 0, sizeof(*__metal_dirs[DEV_INO].ents));
+  CheckLargeStackAllocation(__metal_dirs[DEV_INO].ents + 1, sizeof(*__metal_dirs[DEV_INO].ents));
+  __metal_dirs[DEV_INO].ents[0].d_name[0] = 'n';
+  __metal_dirs[DEV_INO].ents[0].d_name[1] = 'u';
+  __metal_dirs[DEV_INO].ents[0].d_name[2] = 'l';
+  __metal_dirs[DEV_INO].ents[0].d_name[3] = 'l';
+  __metal_dirs[DEV_INO].ents[0].d_name[4] = 0;
+  __metal_dirs[DEV_INO].ents[1].d_name[0] = 'z';
+  __metal_dirs[DEV_INO].ents[1].d_name[1] = 'e';
+  __metal_dirs[DEV_INO].ents[1].d_name[2] = 'r';
+  __metal_dirs[DEV_INO].ents[1].d_name[3] = 'o';
+  __metal_dirs[DEV_INO].ents[1].d_name[4] = 0;
 
   // /proc -> /proc/self
   __metal_dirs[PROC_INO] = (struct MetalDir){proc_path, 1, 1, {
       {PROC_SELF_INO, 2, sizeof(*__metal_dirs), DT_DIR}
   }};
-  CheckLargeStackAllocation(__metal_dirs + PROC_INO, sizeof(__metal_dirs[PROC_INO]));
-  CheckLargeStackAllocation(__metal_dirs[PROC_INO].ents + 0, sizeof(__metal_dirs[PROC_INO].ents[0]));
+  CheckLargeStackAllocation(__metal_dirs + PROC_INO, sizeof(*__metal_dirs));
+  CheckLargeStackAllocation(__metal_dirs[PROC_INO].ents + 0, sizeof(*__metal_dirs[PROC_INO].ents));
   memcpy(__metal_dirs[PROC_INO].ents[0].d_name, self_name, sizeof("self"));
 
   // /proc/self -> /proc/self/exec
   __metal_dirs[PROC_SELF_INO] = (struct MetalDir){proc_self_path, 1, 1, {
-      {PROC_SELF_EXE_INO, 2, sizeof(*__metal_dirs), DT_CHR}
+      {kMetalProcSelfExeIno, 2, sizeof(*__metal_dirs), DT_CHR}
   }};
-  CheckLargeStackAllocation(__metal_dirs + PROC_SELF_INO, sizeof(__metal_dirs[PROC_SELF_INO]));
-  CheckLargeStackAllocation(__metal_dirs[PROC_SELF_INO].ents + 0, sizeof(__metal_dirs[PROC_SELF_INO].ents[0]));
+  CheckLargeStackAllocation(__metal_dirs + PROC_SELF_INO, sizeof(*__metal_dirs));
+  CheckLargeStackAllocation(__metal_dirs[PROC_SELF_INO].ents + 0, sizeof(*__metal_dirs[PROC_SELF_INO].ents));
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[0] = 'e';
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[1] = 'x';
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[2] = 'e';
   __metal_dirs[PROC_SELF_INO].ents[0].d_name[3] = 0;
 
-  // /tmp
+  // /tmp, managed seperately in metalfile.tmp.c
   __metal_dirs[kMetalTmpDirIno] = (struct MetalDir){tmp_path, 0, 0};
-  CheckLargeStackAllocation(__metal_dirs + kMetalTmpDirIno, sizeof(__metal_dirs[kMetalTmpDirIno]));
+  CheckLargeStackAllocation(__metal_dirs + kMetalTmpDirIno, sizeof(*__metal_dirs));
 
   // /zip, managed seperately
   __metal_dirs[ZIP_INO] = (struct MetalDir){zip_path, 0, 0};
-  CheckLargeStackAllocation(__metal_dirs + ZIP_INO, sizeof(__metal_dirs[ZIP_INO]));
+  CheckLargeStackAllocation(__metal_dirs + ZIP_INO, sizeof(*__metal_dirs));
 #pragma GCC pop_options
+}
+
+// TODO: Use for /proc/self/exe
+static void InitializeFiles(void) {
+  size_t size = kMetalFileCount * sizeof(*__metal_files);
+  _MetalAllocate(size, (void **)&__metal_files);
+
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wframe-larger-than="
+  __metal_files[DEV_NULL_INO - kMetalDirCount] = (struct MetalFile){
+      kMetalFile, S_IRUSR | S_IWUSR | S_IFCHR, DEV_NULL_INO, DEV_NULL_PATH, 0
+  };
+  CheckLargeStackAllocation(__metal_files + DEV_NULL_INO - kMetalDirCount, sizeof(*__metal_files));
+
+  __metal_files[DEV_ZERO_INO - kMetalDirCount] = (struct MetalFile){
+      kMetalFile, S_IRUSR | S_IWUSR | S_IFCHR, DEV_ZERO_INO, DEV_ZERO_PATH, 0
+  };
+  CheckLargeStackAllocation(__metal_files + DEV_ZERO_INO - kMetalDirCount, sizeof(*__metal_files));
+#pragma GCC pop_options
+}
+
+textstartup void InitializeMetalFile(void) {
+  if (!IsMetal()) {
+    return;
+  }
+
+  if ( _weaken(__ape_com_sectors)) {
+    /*
+     * Copy out a pristine image of the program — before the program might
+     * decide to modify its own .data section.
+     *
+     * This code is included if a symbol "file:/proc/self/exe" is defined
+     * (see libc/calls/metalfile.internal.h & libc/calls/metalfile_init.S).
+     * The zipos code will automatically arrange to do this.  Alternatively,
+     * user code can __static_yoink this symbol.
+     */
+    size_t size = (size_t)__ape_com_sectors * 512;
+    __ape_com_size = _MetalAllocate(size, &__ape_com_base);
+    memcpy(__ape_com_base, (void *)(BANE + IMAGE_BASE_PHYSICAL), size);
+    // TODO(tkchia): LIBC_CALLS doesn't depend on LIBC_VGA so references
+    //               to its functions need to be weak
+    // KINFOF("%s @ %p,+%#zx", APE_COM_NAME, __ape_com_base, size);
+  }
+
+  InitializeDirs();
+  InitializeFiles();
 }
 
 size_t _MetalAllocate(size_t size, void **addr) {
@@ -193,41 +252,41 @@ size_t _MetalAllocate(size_t size, void **addr) {
 }
 
 // TODO(joshua): Confirm that dirfd is actually a directory
-char *_MetalFullPath(int dirfd, const char *file) {
-  struct Fd *f = 0;
-  struct MetalFile *m;
+char *_MetalFullPath(int dirfd, const char *path) {
+  struct Fd *fds = 0;
+  struct MetalOpenFile *file;
   char abs_path[PATH_MAX];
   static char full_path[PATH_MAX];
 
-  if (dirfd != AT_FDCWD && file[0] != '/') {
+  if (dirfd != AT_FDCWD && path[0] != '/') {
     if (dirfd < 0 || dirfd >= g_fds.n) {
       ebadf();
       return 0;
     }
 
-    f = &g_fds.p[dirfd];
-    if (f->kind != kFdFile) {
+    fds = &g_fds.p[dirfd];
+    if (fds->kind != kFdFile) {
       enotdir();
       return 0;
     }
 
-    m = (struct MetalFile *)f->handle;
-    if (m->type != kMetalDir) {
+    file = (struct MetalOpenFile *)fds->handle;
+    if (file->type != kMetalDir) {
       enotdir();
       return 0;
     }
 
-    if (m->idx >= kMetalDirCount || !__metal_dirs[m->idx].path) {
+    if (file->idx >= kMetalDirCount || !__metal_dirs[file->idx].path) {
       ebadf();
       return 0;
     }
 
     strlcpy(abs_path, __metal_dirs[__metal_cwd_ino].path, PATH_MAX);
     strlcat(abs_path, "/", PATH_MAX);
-    strlcat(abs_path, file, PATH_MAX);
+    strlcat(abs_path, path, PATH_MAX);
   }
 
-  if (!_MetalPath(f ? abs_path : file, full_path)) {
+  if (!_MetalPath(fds ? abs_path : path, full_path)) {
     enoent();
     return 0;
   }
