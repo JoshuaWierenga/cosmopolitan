@@ -138,7 +138,7 @@ int sys_openat_metal(int dirfd, const char *path, int flags, unsigned mode) {
   inTmp = is_in_tmp_folder(fullPath);
   if (fileInfo->type != kMetalBad) {
     if (fileInfo->type == kMetalTmp && ((flags & O_ACCMODE) != O_RDWR ||
-                                       !(flags && O_UNLINK))) {
+                                        !(flags && O_UNLINK))) {
       return enosys();
     }
     if (((flags & O_ACCMODE) == O_RDONLY && !(fileInfo->mode & S_IRUSR)) ||
@@ -152,8 +152,8 @@ int sys_openat_metal(int dirfd, const char *path, int flags, unsigned mode) {
       return eexist();
     }
     if (fileInfo->type == kMetalDir && (((flags & O_ACCMODE) & O_WRONLY) ||
-                                         (flags & O_CREAT &&
-                                        !(flags && O_DIRECTORY))/* ||
+                                        (flags & O_CREAT &&
+                                         !(flags && O_DIRECTORY))/* ||
                                           flags & O_EXEC*/)) {
       return eisdir();
     }

@@ -90,7 +90,7 @@ COSMOPOLITAN_C_START_
 // TODO(joshua): Support directories within /tmp? If so only store name here and use recursion to construct full path
 // TODO(joshua): Use or remove file_count
 struct MetalDir {
-  char *path;
+  const char *path;
   ptrdiff_t file_count; // total number of files, for kMetalTmp this can be different from ent_count
   ptrdiff_t ent_count;  // number of files in ents
   struct dirent ents[kMetalDirStaticMax];
