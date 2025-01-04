@@ -1,7 +1,7 @@
 /*-*- mode:c;indent-tabs-mode:nil;c-basic-offset:2;tab-width:8;coding:utf-8 -*-│
 │ vi: set et ft=c ts=2 sts=2 sw=2 fenc=utf-8                               :vi │
 ╞══════════════════════════════════════════════════════════════════════════════╡
-│ Copyright 2021 Justine Alexandra Roberts Tunney                              │
+│ Copyright 2024 Justine Alexandra Roberts Tunney                              │
 │                                                                              │
 │ Permission to use, copy, modify, and/or distribute this software for         │
 │ any purpose with or without fee is hereby granted, provided that the         │
@@ -16,32 +16,19 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/errno.h"
-#include "libc/thread/tls.h"
+#include "libc/calls/calls.h"
+#include "libc/cosmo.h"
+#include "libc/runtime/runtime.h"
+#include "libc/testlib/testlib.h"
 
-/**
- * Global variable for last error.
- *
- * The system call wrappers update this with WIN32 error codes.
- * Unlike traditional libraries, Cosmopolitan error codes are
- * defined as variables. By convention, system calls and other
- * functions do not update this variable when nothing's broken.
- *
- * @see libc/sysv/consts.sh
- * @see libc/sysv/errfuns.h
- * @see __errno_location() stable abi
- */
-errno_t __errno;
+void SetUpOnce(void) {
+  testlib_enable_tmp_setup_teardown();
+}
 
-/**
- * Returns address of `errno` variable.
- *
- * This function promises to not clobber argument registers.
- */
-nocallersavedregisters errno_t *__errno_location(void) {
-  if (__tls_enabled) {
-    return &__get_tls()->tib_errno;
-  } else {
-    return &__errno;
-  }
+TEST(systemvpe, test) {
+  ASSERT_SYS(0, 0, mkdir("bin", 0755));
+  ASSERT_SYS(0, 0, setenv("PATH", "bin", true));
+  testlib_extract("/zip/life", "bin/life", 0755);
+  ASSERT_SYS(0, 42 << 8,
+             systemvpe("life", (char *[]){"life", 0}, (char *[]){0}));
 }
