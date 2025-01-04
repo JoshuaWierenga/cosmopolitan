@@ -29,47 +29,50 @@
 
 // TODO(joshua): Support tmp files
 // TODO: Set st_dev, st_uid, st_gid and st_blocks
-int sys_fstatat_metal(int dirfd, const char *file, struct stat *st, int flags) {
-  if (!file) return efault();
-  char *path;
-  if (!(path = _MetalFullPath(dirfd, file))) {
-    return -1;
+int sys_fstatat_metal(int dirfd, const char *path, struct stat *st, int flags) {
+  char *fullPath;
+  struct MetalFile *fileInfo;
+  if (!path || !st) {
+    return efault();
+  };
+  if (!__metal_files) {
+    return enxio();
   }
-  if (strcmp(path, APE_COM_NAME) == 0) {
+  if (!(fullPath = _MetalFullPath(dirfd, path))) {
+    return enoent();
+  }
+  bzero(st, sizeof(*st));
+  st->st_blksize = 1;
+  if (strcmp(fullPath, APE_COM_NAME) == 0) {
     if (!_weaken(__ape_com_sectors)) {
       return enxio();
     }
-    bzero(st, sizeof(*st));
     st->st_ino = kMetalProcSelfExeIno;
     st->st_nlink = 1;
     st->st_mode = S_IRUSR | S_IFREG;
     st->st_size = __ape_com_size;
-    st->st_blksize = 1;
     return 0;
   }
-  for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
-    if (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0) {
+  for (ptrdiff_t i = 0; i < kMetalHardcodedFileCount; ++i) {
+    fileInfo = __metal_files + i;
+    if (!fileInfo->path || strcmp(fullPath, fileInfo->path) != 0) {
       continue;
     }
-    bzero(st, sizeof(*st));
-    st->st_ino = i;
-    st->st_nlink = 2;
-    st->st_mode = S_IRUSR | S_IFDIR;
-    st->st_size = 0;
-    st->st_blksize = 1;
-    return 0;
-  }
-  for (ptrdiff_t i = 0; i < kMetalFileCount; ++i) {
-    if (!__metal_files[i].path || strcmp(path, __metal_files[i].path) != 0) {
-      continue;
-    }
-    bzero(st, sizeof(*st));
     st->st_ino = __metal_files[i].idx;
-    st->st_nlink = 1;
     st->st_mode = __metal_files[i].mode;
     st->st_size = __metal_files[i].size;
-    st->st_blksize = 1;
-    return 0;
+    switch (fileInfo->type) {
+      case kMetalDir:
+        st->st_nlink = 2;
+        return 0;
+      case kMetalFile:
+        st->st_nlink = 1;
+        return 0;
+      case kMetalTmp:
+        return enosys();
+      default:
+        return enoent();
+    }
   }
   return enoent();
 }

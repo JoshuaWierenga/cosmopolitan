@@ -28,6 +28,7 @@
 #include "libc/vga/vga.internal.h"
 #ifdef __x86_64__
 
+// TODO(joshua): Support hardcoded files
 ssize_t sys_read_metal(int fd, const struct iovec *iov, int iovlen, int64_t offset) {
   int i;
   size_t got, old_pos;

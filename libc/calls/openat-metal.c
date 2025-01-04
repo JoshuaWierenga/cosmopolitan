@@ -45,15 +45,19 @@ static struct MetalOpenFile *allocate_metal_file(void) {
 
 static ptrdiff_t is_metal_dir(const char *path) {
   ptrdiff_t i = 0;
-  while (i < kMetalDirCount &&
-         (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0)) {
-    ++i;
+  struct MetalFile *fileInfo;
+  for (; i < kMetalHardcodedFileCount; ++i) {
+    fileInfo = __metal_files + i;
+    if (fileInfo->type == kMetalDir && fileInfo->path &&
+        strcmp(path, fileInfo->path) == 0) {
+      break;
+    }
   }
-  return i < kMetalDirCount ? i : -1;
+  return i < kMetalHardcodedFileCount ? i : -1;
 }
 
 static bool32 is_in_tmp_folder(const char *path) {
-  return strncmp(__metal_dirs[kMetalTmpDirIno].path, path, 4) == 0 &&
+  return strncmp(__metal_files[kMetalTmpDirIno].path, path, 4) == 0 &&
          path[4] == '/' && path[5] != 0 && strchr(path + 5, '/') == 0;
 }
 
@@ -73,25 +77,26 @@ static ptrdiff_t is_tmp_file(const char *path) {
 
 // TODO(joshua): Use in fstat(at)
 static struct MetalFile *find_file(const char *path) {
-  static struct MetalFile file;
+  static struct MetalFile fileInfo;
   if (strcmp(path, APE_COM_NAME) == 0) {
-    file.type = kMetalApe;
-    file.mode = S_IRUSR | S_IFCHR;
-  } else if ((file.idx = is_metal_dir(path)) != -1) {
-    file.type = kMetalDir;
-    file.mode = S_IRUSR | S_IXUSR | S_IFDIR;
-    if (file.idx == kMetalTmpDirIno) {
-      file.mode |= S_IWUSR;
+    fileInfo.type = kMetalApe;
+    fileInfo.mode = S_IRUSR | S_IFCHR;
+  } else if ((fileInfo.idx = is_metal_dir(path)) != -1) {
+    fileInfo.type = kMetalDir;
+    fileInfo.mode = S_IRUSR | S_IXUSR | S_IFDIR;
+    if (fileInfo.idx == kMetalTmpDirIno) {
+      fileInfo.mode |= S_IWUSR;
     }
-  } else if ((file.idx = is_tmp_file(path)) != -1) {
-    file.type = kMetalTmp;
-    file.mode = S_IRWXU | S_IFREG;
+  } else if ((fileInfo.idx = is_tmp_file(path)) != -1) {
+    fileInfo.type = kMetalTmp;
+    fileInfo.mode = S_IRWXU | S_IFREG;
   } else {
-    file.type = kMetalBad;
+    fileInfo.type = kMetalBad;
   }
-  return &file;
+  return &fileInfo;
 }
 
+// TODO(joshua): Support hardcoded files
 // TODO(joshua): Support O_APPEND, need to add to sys_write_metal
 // TODO(joshua): Support O_CLOEXEC properly? Its useless on metal but posix requires it
 // TODO(joshua): Support O_CREAT|O_EXCL? Its useless on metal but posix requires it
@@ -116,6 +121,9 @@ int sys_openat_metal(int dirfd, const char *path, int flags, unsigned mode) {
   struct MetalFile *fileInfo;
   struct MetalOpenFile *file;
   int fd;
+  if (!__metal_files) {
+    return enxio();
+  }
   // Not supported but required by posix
   if (flags & (O_APPEND|O_EXEC|O_TRUNC)) {
     return enosys();
@@ -131,7 +139,7 @@ int sys_openat_metal(int dirfd, const char *path, int flags, unsigned mode) {
     return einval();
   }
   if (!(fullPath = _MetalFullPath(dirfd, path))) {
-    return -1;
+    return enoent();
   }
   // TODO(joshua): Find parent dir info as well?
   fileInfo = find_file(fullPath);

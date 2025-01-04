@@ -69,19 +69,25 @@ static int sys_getcwd_xnu(char *res, size_t size) {
 
 static int sys_getcwd_metal(char *buf, size_t size) {
   size_t len;
-  if (__metal_cwd_ino >= kMetalDirCount ||
-      !__metal_dirs[__metal_cwd_ino].path) {
+  if (!buf) {
+    return efault();
+  }
+  if (!__metal_files) {
+    return enxio();
+  }
+  if (__metal_cwd_ino >= kMetalHardcodedFileCount ||
+      !__metal_files[__metal_cwd_ino].path) {
     eacces();
     return 0;
   }
 
-  len = strlen(__metal_dirs[__metal_cwd_ino].path);
+  len = strlen(__metal_files[__metal_cwd_ino].path);
   if (size < len) {
     erange();
     return 0;
   }
 
-  strcpy(buf, __metal_dirs[__metal_cwd_ino].path);
+  strcpy(buf, __metal_files[__metal_cwd_ino].path);
   return len;
 }
 

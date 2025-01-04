@@ -5,15 +5,15 @@
 
 COSMOPOLITAN_C_START_
 
+// TODO(joshua): Use S consts for Ape, Dir and File instead? Doing it for Tmp would need an easy way to get the parent.
 #define kMetalBad  0 // used if file does not exist
 #define kMetalApe  1
 #define kMetalDir  2
 #define kMetalTmp  3
 #define kMetalFile 4
 
-#define kMetalDirCount     6 // __metal_dirs length i.e. number of hardcoded metal dirs
-#define kMetalDirStaticMax 4 // __metal_tmpfiles[i].ents length i.e. maximum child count for each metal dir
-#define kMetalFileCount    2 // __metal_files length i.e. number of hardcoded metal files
+#define kMetalHardcodedFileCount      8 // __metal_fileInfos length
+#define kMetalHardcodedDirMaxChildren 4 // __metal_fileInfos[i].ents length, not all are used for each directory
 
 /* metal has 3 simulated filesystems:
 /:    read only, contains /dev/null, /dev/zero and /proc/self/exe(managed seperately to __metal_files)
@@ -44,8 +44,8 @@ COSMOPOLITAN_C_START_
 // Other defines are in metalfile.c
 #define kMetalTmpDirIno      3
 #define kMetalProcSelfExeIno 8
-#define kMetalTmpInoStart kMetalDirCount + kMetalFileCount + 1
 
+// Outdated, needs to be modified to handle hardcoded files and directories being merged
 /* Example code to iterate over files
   for (ptrdiff_t ino = 0; ino < kMetalDirCount; ++ino) {
     if (!__metal_dirs[ino].path) continue;
@@ -87,29 +87,27 @@ COSMOPOLITAN_C_START_
   }
 */
 
-// TODO(joshua): Support directories within /tmp? If so only store name here and use recursion to construct full path
-// TODO(joshua): Use or remove file_count
-struct MetalDir {
-  const char *path;
-  ptrdiff_t file_count; // total number of files, for kMetalTmp this can be different from ent_count
-  ptrdiff_t ent_count;  // number of files in ents
-  struct dirent ents[kMetalDirStaticMax];
-};
-
 // TODO(joshua): Store copies of MetalFile's base and size
 struct MetalTmpFile {
   char *name;
   int64_t namesize; // allocated size of name
-  int64_t filesize; // allocated size of file, can be larger than MetalFile's size
+  int64_t filesize; // allocated size of file, can be larger than the matching MetalFile's size
   bool32 deleted;
 };
 
+// TODO(joshua): Support directories within /tmp? If so only store name here and use recursion to construct full path
+// TODO(joshua): Use or remove file_count
+// TODO(joshua): Remove dirent and construct when needed? This would allow removing the broken memcpy
 struct MetalFile {
-  uint8_t type;
-  uint32_t mode;    // only set if !kMetalBad
-  ptrdiff_t idx;    // ino/__metal_dirs/__metal_files(-kMetalDirCount) index for kMetalDir/kMetalFile, __metal_tmpfiles index for kMetalTmp
-  const char *path; // only set for kMetalFile
-  int64_t size;     // only set for kMetalFile
+  uint8_t type;         // other fields are only set if !kMetalBad
+  uint32_t mode;
+  // TODO: Remove?
+  ptrdiff_t idx;        // ino/__metal_dirs/__metal_files(-kMetalDirCount) index for kMetalDir/kMetalFile, __metal_tmpfiles index for kMetalTmp
+  const char *path;     // only set for kMetalDir and kMetalFile
+  int64_t size;         // only set for kMetalDir and kMetalFile
+  ptrdiff_t file_count; // only set for kMetalDir, total number of files, for tmp dir this can be different from ent_count
+  ptrdiff_t ent_count;  // only set for kMetalDir, number of files in ents
+  struct dirent ents[kMetalHardcodedDirMaxChildren]; // only set for kMetalDir
 };
 
 // TODO(joshua): Support kFdDevNull?
@@ -125,7 +123,6 @@ extern void *__ape_com_base;
 extern size_t __ape_com_size;
 extern uint16_t __ape_com_sectors;  // ape/ape.S
 
-extern struct MetalDir *__metal_dirs;
 extern struct MetalFile *__metal_files;
 
 extern struct MetalTmpFile *__metal_tmpfiles;

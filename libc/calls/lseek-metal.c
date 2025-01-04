@@ -22,6 +22,7 @@
 #include "libc/intrin/fds.h"
 #include "libc/sysv/errfuns.h"
 
+// TODO(joshua): Support hardcoded files
 int64_t sys_lseek_metal(struct Fd *fd, int64_t offset, int whence) {
   size_t new_pos;
   struct MetalOpenFile *file;

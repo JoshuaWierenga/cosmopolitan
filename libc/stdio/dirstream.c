@@ -527,14 +527,14 @@ static struct dirent *bad_readdir(void) {
 
 static struct dirent *readdir_metal(DIR *dir) {
   struct Fd *sfd;
+  struct MetalFile *fileInfo;
   struct MetalOpenFile *file;
-  struct MetalDir *dir_info;
   struct dirent *ent = 0;
   sfd = &g_fds.p[dir->fd];
   if (sfd->kind != kFdFile) return bad_readdir();
   file = (struct MetalOpenFile *)sfd->handle;
   if (file->type != kMetalDir) return bad_readdir();
-  dir_info = __metal_dirs + file->idx;
+  fileInfo = __metal_files + file->idx;
   if (file->pos == 0) {
     ent = &dir->ent;
     ent->d_ino = file->idx;
@@ -560,14 +560,14 @@ static struct dirent *readdir_metal(DIR *dir) {
     }
     if (file->pos - 2 < __metal_tmpfiles_max) {
       ent = &dir->ent;
-      ent->d_ino = kMetalTmpInoStart + file->pos - 2;
+      ent->d_ino = kMetalHardcodedFileCount + file->pos - 1;
       ent->d_off = file->pos;
       ent->d_reclen = sizeof(*ent);
       ent->d_type = DT_REG;
       strcpy(ent->d_name, __metal_tmpfiles[file->pos - 2].name);
     }
-  } else if (file->pos - 2 < dir_info->ent_count) {
-    ent = dir_info->ents + file->pos - 2;
+  } else if (file->pos - 2 < fileInfo->ent_count) {
+    ent = fileInfo->ents + file->pos - 2;
   }
   dir->tell = ++file->pos;
   return ent;

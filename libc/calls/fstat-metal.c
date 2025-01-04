@@ -23,7 +23,7 @@
 #include "libc/sysv/consts/s.h"
 #include "libc/sysv/errfuns.h"
 
-// TODO(joshua): Support tmp files
+// TODO(joshua): Support tmp and hardcoded files
 int sys_fstat_metal(int fd, struct stat *st) {
   struct MetalOpenFile *file;
   if (fd < 0 || fd >= g_fds.n)
@@ -55,6 +55,7 @@ int sys_fstat_metal(int fd, struct stat *st) {
           st->st_blksize = 1;
           return 0;
         case kMetalTmp:
+        case kMetalFile:
           return enosys();
         default:
           return ebadf();

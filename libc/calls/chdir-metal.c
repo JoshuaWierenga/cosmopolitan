@@ -25,27 +25,36 @@
 
 #ifdef __x86_64__
 
-int sys_chdir_metal(const char *file) {
-  char path[PATH_MAX];
-  if (!_MetalPath(file, path)) {
+// TODO(joshua): Check exec permission
+int sys_chdir_metal(const char *path) {
+  char fullPath[PATH_MAX];
+  struct MetalFile *fileInfo;
+  if (!__metal_files) {
+    return enxio();
+  }
+  if (!_MetalPath(path, fullPath)) {
     return enoent();
   }
-  for (ptrdiff_t i = 0; i < kMetalDirCount; ++i) {
-    if (!__metal_dirs[i].path || strcmp(path, __metal_dirs[i].path) != 0) {
+  if (strcmp(fullPath, APE_COM_NAME) == 0) {
+    return enotdir();
+  }
+  for (ptrdiff_t i = 0; i < kMetalHardcodedFileCount; ++i) {
+    fileInfo = __metal_files + i;
+    if (!fileInfo->path || strcmp(fullPath, fileInfo->path) != 0) {
       continue;
+    }
+    if (fileInfo->type != kMetalDir) {
+      return enotdir();
     }
     __metal_cwd_ino = i;
     return 0;
   }
-  if (strcmp(path, APE_COM_NAME) == 0) {
-    return enotdir();
-  }
   if (__metal_tmpfiles &&
-      strncmp(__metal_dirs[kMetalTmpDirIno].path, path, 4) == 0 &&
-      path[4] == '/' && path[5] != 0 && strchr(path + 5, '/') == NULL) {
+      strncmp(__metal_files[kMetalTmpDirIno].path, fullPath, 4) == 0 &&
+      fullPath[4] == '/' && fullPath[5] != 0 && strchr(fullPath + 5, '/') == NULL) {
     for (ptrdiff_t i = 0; i < __metal_tmpfiles_max; ++i) {
       if (!__metal_tmpfiles[i].deleted &&
-          strcmp(path + 5, __metal_tmpfiles[i].name) == 0) {
+          strcmp(fullPath + 5, __metal_tmpfiles[i].name) == 0) {
         return enotdir();
       }
     }

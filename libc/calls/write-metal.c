@@ -28,6 +28,7 @@
 
 #ifdef __x86_64__
 
+// TODO(joshua): Support hardcoded files
 ssize_t sys_write_metal(int fd, const struct iovec *iov, int iovlen, int64_t offset) {
   int i;
   size_t old_pos;

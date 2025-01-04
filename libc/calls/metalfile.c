@@ -61,7 +61,6 @@ __static_yoink("_init_metalfile");
 void *__ape_com_base;
 size_t __ape_com_size = 0;
 
-struct MetalDir  *__metal_dirs;
 struct MetalFile *__metal_files;
 
 ptrdiff_t __metal_cwd_ino = ZIP_INO;
@@ -86,89 +85,87 @@ static void CopyChildPath(ptrdiff_t ino, size_t idx, size_t parentLen, const cha
   // For some reason memcpy(__metal_dirs[ino].ents[idx].d_name, newPath, newPathLen) does nothing,
   // it is fine with a literal e.g. memcpy(__metal_dirs[ino].ents[idx].d_name, newPath, 5) though.
   for (size_t i = 0; i < newPathLen; ++i) {
-    __metal_dirs[ino].ents[idx].d_name[i] = newPath[i];
+    __metal_files[ino].ents[idx].d_name[i] = newPath[i];
   }
 }
 
 #define CopyChildPath(parent, idx, child) \
   CopyChildPath(parent##_INO, idx, sizeof(parent##_PATH), child##_PATH, sizeof(child##_PATH))
 
+#define NUMARGS(type, ...)  (sizeof((type[]){(type){0}, ##__VA_ARGS__})/sizeof(type)-1)
+#define AddRootFsDir(ino, mode, path, ...) \
+  __metal_files[ino] = (struct MetalFile){ \
+    kMetalDir, mode, ino, path, 0, NUMARGS(struct dirent, __VA_ARGS__), \
+    NUMARGS(struct dirent, __VA_ARGS__), {__VA_ARGS__} \
+  }; \
+  CheckLargeStackAllocation(__metal_files + ino, sizeof(*__metal_files))
+
 static void InitializeDirs(void) {
-  size_t size = kMetalDirCount * sizeof(*__metal_dirs);
-  _MetalAllocate(size, (void **)&__metal_dirs);
+  uint32_t rootFsDirMode = S_IRUSR | S_IXUSR | S_IFDIR;
 
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Wframe-larger-than="
   // / -> /dev, /proc, /tmp, /zip
-  __metal_dirs[ROOT_INO] = (struct MetalDir){ROOT_PATH, 4, 4, {
-      {DEV_INO,         2, sizeof(*__metal_dirs[ROOT_INO].ents), DT_DIR},
-      {PROC_INO,        3, sizeof(*__metal_dirs[ROOT_INO].ents), DT_DIR},
-      {kMetalTmpDirIno, 4, sizeof(*__metal_dirs[ROOT_INO].ents), DT_DIR},
-      {ZIP_INO,         5, sizeof(*__metal_dirs[ROOT_INO].ents), DT_DIR},
-  }};
-  CheckLargeStackAllocation(__metal_dirs + ROOT_INO, sizeof(*__metal_dirs));
-  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 0, sizeof(*__metal_dirs[ROOT_INO].ents));
-  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 1, sizeof(*__metal_dirs[ROOT_INO].ents));
-  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 2, sizeof(*__metal_dirs[ROOT_INO].ents));
-  CheckLargeStackAllocation(__metal_dirs[ROOT_INO].ents + 3, sizeof(*__metal_dirs[ROOT_INO].ents));
+  AddRootFsDir(ROOT_INO, rootFsDirMode, ROOT_PATH,
+    {DEV_INO,         2, sizeof(*__metal_files[ROOT_INO].ents), DT_DIR},
+    {PROC_INO,        3, sizeof(*__metal_files[ROOT_INO].ents), DT_DIR},
+    {kMetalTmpDirIno, 4, sizeof(*__metal_files[ROOT_INO].ents), DT_DIR},
+    {ZIP_INO,         5, sizeof(*__metal_files[ROOT_INO].ents), DT_DIR},
+  );
+  CheckLargeStackAllocation(__metal_files[ROOT_INO].ents + 0, sizeof(*__metal_files[ROOT_INO].ents));
+  CheckLargeStackAllocation(__metal_files[ROOT_INO].ents + 1, sizeof(*__metal_files[ROOT_INO].ents));
+  CheckLargeStackAllocation(__metal_files[ROOT_INO].ents + 2, sizeof(*__metal_files[ROOT_INO].ents));
+  CheckLargeStackAllocation(__metal_files[ROOT_INO].ents + 3, sizeof(*__metal_files[ROOT_INO].ents));
   CopyChildPath(ROOT, 0, DEV);
   CopyChildPath(ROOT, 1, PROC);
   CopyChildPath(ROOT, 2, TMP);
   CopyChildPath(ROOT, 3, ZIP);
 
   // /dev -> /dev/null, /dev/zero
-  __metal_dirs[DEV_INO] = (struct MetalDir){DEV_PATH, 2, 2, {
-    {DEV_NULL_INO, 2, sizeof(*__metal_dirs[DEV_INO].ents), DT_CHR},
-    {DEV_ZERO_INO, 3, sizeof(*__metal_dirs[DEV_INO].ents), DT_CHR},
-  }};
-  CheckLargeStackAllocation(__metal_dirs + DEV_INO, sizeof(*__metal_dirs));
-  CheckLargeStackAllocation(__metal_dirs[DEV_INO].ents + 0, sizeof(*__metal_dirs[DEV_INO].ents));
-  CheckLargeStackAllocation(__metal_dirs[DEV_INO].ents + 1, sizeof(*__metal_dirs[DEV_INO].ents));
+  AddRootFsDir(DEV_INO, rootFsDirMode, DEV_PATH,
+    {DEV_NULL_INO, 2, sizeof(*__metal_files[DEV_INO].ents), DT_CHR},
+    {DEV_ZERO_INO, 3, sizeof(*__metal_files[DEV_INO].ents), DT_CHR},
+  );
+  CheckLargeStackAllocation(__metal_files[DEV_INO].ents + 0, sizeof(*__metal_files[DEV_INO].ents));
+  CheckLargeStackAllocation(__metal_files[DEV_INO].ents + 1, sizeof(*__metal_files[DEV_INO].ents));
   CopyChildPath(DEV, 0, DEV_NULL);
   CopyChildPath(DEV, 1, DEV_ZERO);
 
   // /proc -> /proc/self
-  __metal_dirs[PROC_INO] = (struct MetalDir){PROC_PATH, 1, 1, {
-      {PROC_SELF_INO, 2, sizeof(*__metal_dirs[PROC_INO].ents), DT_DIR}
-  }};
-  CheckLargeStackAllocation(__metal_dirs + PROC_INO, sizeof(*__metal_dirs));
-  CheckLargeStackAllocation(__metal_dirs[PROC_INO].ents + 0, sizeof(*__metal_dirs[PROC_INO].ents));
+  AddRootFsDir(PROC_INO, rootFsDirMode, PROC_PATH,
+    {PROC_SELF_INO, 2, sizeof(*__metal_files[PROC_INO].ents), DT_DIR}
+  );
+  CheckLargeStackAllocation(__metal_files[PROC_INO].ents + 0, sizeof(*__metal_files[PROC_INO].ents));
   CopyChildPath(PROC, 0, PROC_SELF);
 
   // /proc/self -> /proc/self/exec
-  __metal_dirs[PROC_SELF_INO] = (struct MetalDir){PROC_SELF_PATH, 1, 1, {
-      {kMetalProcSelfExeIno, 2, sizeof(*__metal_dirs[PROC_SELF_INO].ents), DT_CHR}
-  }};
-  CheckLargeStackAllocation(__metal_dirs + PROC_SELF_INO, sizeof(*__metal_dirs));
-  CheckLargeStackAllocation(__metal_dirs[PROC_SELF_INO].ents + 0, sizeof(*__metal_dirs[PROC_SELF_INO].ents));
+  AddRootFsDir(PROC_SELF_INO, rootFsDirMode, PROC_SELF_PATH,
+    {kMetalProcSelfExeIno, 2, sizeof(*__metal_files[PROC_SELF_INO].ents), DT_CHR}
+  );
+  CheckLargeStackAllocation(__metal_files[PROC_SELF_INO].ents + 0, sizeof(*__metal_files[PROC_SELF_INO].ents));
   (CopyChildPath)(PROC_SELF_INO, 0, sizeof(PROC_SELF_PATH), APE_COM_NAME, sizeof(APE_COM_NAME));
 
   // /tmp, managed seperately in metalfile.tmp.c
-  __metal_dirs[kMetalTmpDirIno] = (struct MetalDir){TMP_PATH, 0, 0};
-  CheckLargeStackAllocation(__metal_dirs + kMetalTmpDirIno, sizeof(*__metal_dirs));
+  AddRootFsDir(kMetalTmpDirIno, S_IWUSR | rootFsDirMode, TMP_PATH);
 
   // /zip, managed seperately
-  __metal_dirs[ZIP_INO] = (struct MetalDir){ZIP_PATH, 0, 0};
-  CheckLargeStackAllocation(__metal_dirs + ZIP_INO, sizeof(*__metal_dirs));
+  AddRootFsDir(ZIP_INO, rootFsDirMode, ZIP_PATH);
 #pragma GCC pop_options
 }
 
 // TODO: Use for /proc/self/exe
 static void InitializeFiles(void) {
-  size_t size = kMetalFileCount * sizeof(*__metal_files);
-  _MetalAllocate(size, (void **)&__metal_files);
-
 #pragma GCC push_options
 #pragma GCC diagnostic ignored "-Wframe-larger-than="
-  __metal_files[DEV_NULL_INO - kMetalDirCount] = (struct MetalFile){
+  __metal_files[DEV_NULL_INO] = (struct MetalFile){
       kMetalFile, S_IRUSR | S_IWUSR | S_IFCHR, DEV_NULL_INO, DEV_NULL_PATH, 0
   };
-  CheckLargeStackAllocation(__metal_files + DEV_NULL_INO - kMetalDirCount, sizeof(*__metal_files));
+  CheckLargeStackAllocation(__metal_files + DEV_NULL_INO, sizeof(*__metal_files));
 
-  __metal_files[DEV_ZERO_INO - kMetalDirCount] = (struct MetalFile){
+  __metal_files[DEV_ZERO_INO] = (struct MetalFile){
       kMetalFile, S_IRUSR | S_IWUSR | S_IFCHR, DEV_ZERO_INO, DEV_ZERO_PATH, 0
   };
-  CheckLargeStackAllocation(__metal_files + DEV_ZERO_INO - kMetalDirCount, sizeof(*__metal_files));
+  CheckLargeStackAllocation(__metal_files + DEV_ZERO_INO, sizeof(*__metal_files));
 #pragma GCC pop_options
 }
 
@@ -195,6 +192,9 @@ textstartup void InitializeMetalFile(void) {
     // KINFOF("%s @ %p,+%#zx", APE_COM_NAME, __ape_com_base, size);
   }
 
+  size_t size = kMetalHardcodedFileCount * sizeof(*__metal_files);
+  _MetalAllocate(size, (void **)&__metal_files);
+
   InitializeDirs();
   InitializeFiles();
 }
@@ -210,10 +210,9 @@ size_t _MetalAllocate(size_t size, void **addr) {
   return full_size;
 }
 
-// TODO(joshua): Confirm that dirfd is actually a directory
 char *_MetalFullPath(int dirfd, const char *path) {
   struct Fd *fds = 0;
-  struct MetalOpenFile *file;
+  struct MetalFile *file;
   char abs_path[PATH_MAX];
   static char full_path[PATH_MAX];
 
@@ -229,18 +228,19 @@ char *_MetalFullPath(int dirfd, const char *path) {
       return 0;
     }
 
-    file = (struct MetalOpenFile *)fds->handle;
+    file = (struct MetalFile *)fds->handle;
     if (file->type != kMetalDir) {
       enotdir();
       return 0;
     }
 
-    if (file->idx >= kMetalDirCount || !__metal_dirs[file->idx].path) {
+    if (file->idx >= kMetalHardcodedFileCount || !__metal_files[file->idx].path) {
       ebadf();
       return 0;
     }
 
-    strlcpy(abs_path, __metal_dirs[__metal_cwd_ino].path, PATH_MAX);
+    // TODO(joshua): Check if this should be file->idx
+    strlcpy(abs_path, __metal_files[__metal_cwd_ino].path, PATH_MAX);
     strlcat(abs_path, "/", PATH_MAX);
     strlcat(abs_path, path, PATH_MAX);
   }

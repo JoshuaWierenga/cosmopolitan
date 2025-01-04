@@ -73,7 +73,7 @@ bool32 _OpenMetalTmpFile(const char *path, struct MetalOpenFile *file) {
   file->type = kMetalTmp;
   file->idx = idx;
   __metal_tmpfiles_max = MAX(__metal_tmpfiles_max, idx + 1);
-  ++__metal_dirs[kMetalTmpDirIno].file_count;
+  ++__metal_files[kMetalTmpDirIno].file_count;
   return true;
 }
 
@@ -110,7 +110,7 @@ bool32 _CloseMetalTmpFile(struct MetalOpenFile *file) {
       --__metal_tmpfiles_max;
     }
   }
-  --__metal_dirs[kMetalTmpDirIno].file_count;
+  --__metal_files[kMetalTmpDirIno].file_count;
   return true;
 }
 
