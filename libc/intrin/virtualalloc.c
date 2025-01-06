@@ -16,7 +16,14 @@
 │ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR             │
 │ PERFORMANCE OF THIS SOFTWARE.                                                │
 ╚─────────────────────────────────────────────────────────────────────────────*/
-#include "libc/thread/thread.h"
+#include "libc/nt/memory.h"
+#include "libc/nt/runtime.h"
 
-// this mutex is needed so execve() can shut down the signal worker
-pthread_mutex_t __sig_worker_lock = PTHREAD_MUTEX_INITIALIZER;
+/**
+ * Allocates memory on The New Technology.
+ */
+textwindows void *VirtualAlloc(void *lpAddress, uint64_t dwSize,
+                               uint32_t flAllocationType, uint32_t flProtect) {
+  return VirtualAllocEx(GetCurrentProcess(), lpAddress, dwSize,
+                        flAllocationType, flProtect);
+}

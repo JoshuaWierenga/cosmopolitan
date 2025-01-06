@@ -201,11 +201,9 @@ textstartup void InitializeMetalFile(void) {
 
 size_t _MetalAllocate(size_t size, void **addr) {
   size_t full_size;
-  struct DirectMap dm;
   full_size = ROUNDUP(size, 4096);
-  dm = sys_mmap_metal(NULL, full_size, PROT_READ | PROT_WRITE,
-                      MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
-  *addr = dm.addr;
+  *addr = sys_mmap_metal(NULL, full_size, PROT_READ | PROT_WRITE,
+                         MAP_SHARED_linux | MAP_ANONYMOUS_linux, -1, 0);
   npassert(*addr != (void *)-1);
   return full_size;
 }

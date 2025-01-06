@@ -31,13 +31,12 @@
 
 #ifdef __x86_64__
 
+// TODO: Merge with _MetalAllocate in metalfile.c?
 static struct MetalOpenFile *allocate_metal_file(void) {
   if (!_weaken(calloc) || !_weaken(free)) {
-    struct DirectMap dm;
-    dm = sys_mmap_metal(NULL, ROUNDUP(sizeof(struct MetalOpenFile), 4096),
-                        PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1,
-                        0);
-    return dm.addr;
+    return sys_mmap_metal(NULL, ROUNDUP(sizeof(struct MetalOpenFile), 4096),
+                          PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1,
+                          0);
   } else {
     return _weaken(calloc)(1, sizeof(struct MetalOpenFile));
   }

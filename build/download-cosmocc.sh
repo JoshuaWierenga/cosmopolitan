@@ -101,3 +101,8 @@ rm -f cosmocc.zip cosmocc.zip.sha256sum
 # commit output directory
 cd "${OLDPWD}" || die
 mv "${OUTPUT_TMP}" "${OUTPUT_DIR}" || die
+
+# update current symlink
+BASE=$(basename "${OUTPUT_DIR}")
+DIR=$(dirname "${OUTPUT_DIR}")
+ln -sfn "$BASE" "$DIR/current"
