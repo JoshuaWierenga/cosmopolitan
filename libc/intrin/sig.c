@@ -131,7 +131,8 @@ textwindows static int __sig_getter(atomic_ulong *sigs, sigset_t masked) {
 
 textwindows int __sig_get(sigset_t masked) {
   int sig;
-  if (!(sig = __sig_getter(&__get_tls()->tib_sigpending, masked)))
+  // TODO: Figure out why breaks zipos on metal
+  if (!(sig = __sig_getter(&__get_tls()->tib_sigpending, masked)) && !IsMetal())
     sig = __sig_getter(__sig.process, masked);
   return sig;
 }

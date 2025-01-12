@@ -115,7 +115,7 @@ _EfiPostboot:
 	xor	%r15d,%r15d
 	push	$GDT_LONG_CODE
 	.weak	_start
-	pushq	$_start
+	push	$_start
 	lretq
 	.endfn	_EfiPostboot,globl,hidden
 	.rodata

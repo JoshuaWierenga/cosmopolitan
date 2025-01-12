@@ -883,8 +883,7 @@ static void *__mmap(char *addr, size_t size, int prot, int flags, int fd,
     return (void *)enomem();
 
   // test for signal handler reentry
-  // TODO: Figure out why this crashes on bios
-  if (!IsMetal() && __maps_reentrant())
+  if (__maps_reentrant())
     return (void *)edeadlk();
 
   // create memory mappping

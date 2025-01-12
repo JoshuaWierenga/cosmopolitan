@@ -118,7 +118,8 @@ bool __maps_held(void) {
 }
 
 bool __maps_reentrant(void) {
-  return __tls_enabled && !(__get_tls()->tib_flags & TIB_FLAG_VFORKED) &&
+  // TODO: Figure out why breaks zipos on metal
+  return !IsMetal() && __tls_enabled && !(__get_tls()->tib_flags & TIB_FLAG_VFORKED) &&
          MUTEX_OWNER(
              atomic_load_explicit(&__maps.lock.word, memory_order_relaxed)) ==
              atomic_load_explicit(&__get_tls()->tib_ptid, memory_order_relaxed);

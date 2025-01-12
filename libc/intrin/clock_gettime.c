@@ -34,6 +34,10 @@
 
 typedef int clock_gettime_f(int, struct timespec *);
 
+int sys_clock_gettime_metal(int clock, struct timespec *ts) {
+  return -ENOSYS;
+}
+
 static clock_gettime_f *__clock_gettime_get(void) {
   clock_gettime_f *cgt;
   if (IsLinux() && (cgt = CGT_VDSO)) {
@@ -46,6 +50,8 @@ static clock_gettime_f *__clock_gettime_get(void) {
   } else if (IsXnu()) {
     return sys_clock_gettime_xnu;
 #endif
+  } else if (IsMetal()) {
+    return sys_clock_gettime_metal;
   } else {
     return sys_clock_gettime;
   }

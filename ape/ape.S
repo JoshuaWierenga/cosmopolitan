@@ -505,7 +505,9 @@ sinit:	test	%dx,%dx
 	jz	2f
 	push	%dx
 	push	%si
-	add	$UART_LCR,%dx
+	xor	%cx,%cx
+	mov	$UART_LCR,%cl
+	add	%cx,%dx
 	lodsb	%ds:(%si),%al
 	pop	%si
 	or	$UART_DLAB,%al
@@ -703,7 +705,7 @@ apesh:	.ascii	"\n@\n#'\"\n"			// sixth edition shebang
 #endif /* APE_NO_MODIFY_SELF */
 	.ascii	  "exit $?\n"
 	.ascii	"fi\n"				// x86_64
-	.ascii	"echo \"error: this ape binary only supports x86_64\" >&2\n"
+	.ascii	"echo error: this ape binary only supports x86_64 >&2\n"
 	.ascii	"exit 1\n"
 	.endobj	apesh
 

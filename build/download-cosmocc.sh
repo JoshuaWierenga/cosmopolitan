@@ -96,8 +96,6 @@ sha256sum -c cosmocc.zip.sha256sum || die
 "${UNZIP}" cosmocc.zip || die
 rm -f cosmocc.zip cosmocc.zip.sha256sum
 
-"${DOWNLOAD}" ${DOWNLOAD_ARGS} libexec/gcc/x86_64-linux-cosmo/14.1.0/as https://github.com/JoshuaWierenga/superconfigure/releases/download/z0.0.55-2.41-3/as || die
-
 # commit output directory
 cd "${OLDPWD}" || die
 mv "${OUTPUT_TMP}" "${OUTPUT_DIR}" || die
