@@ -167,6 +167,14 @@ o/$(MODE)/usr/share/dict/words.zip.o: private ZIPOBJ_FLAGS += -C2
 
 o/$(MODE)/examples/blas.o: private COPTS += -O3 -fopenmp
 
+o/$(MODE)/examples/ls.dbg:				\
+		$(EXAMPLES_DEPS)				\
+		o/$(MODE)/examples/ls.o				\
+		o/$(MODE)/examples/lszipfile.txt.zip.o				\
+		o/$(MODE)/examples/examples.pkg			\
+		$(EXAMPLES_BOOTLOADER)
+	@$(APELINK)
+
 $(EXAMPLES_OBJS): examples/BUILD.mk
 
 o/$(MODE)/usr/share/dict/words:					\

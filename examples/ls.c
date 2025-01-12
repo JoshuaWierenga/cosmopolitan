@@ -117,11 +117,13 @@ int main(int argc, char *argv[]) {
       putchar('\n');
       List("/zip");
       putchar('\n');
+      List("/zip/examples");
+      putchar('\n');
 
-      char file[] = "/zip/test.txt";
-      if (access(file, F_OK) == 0) {
-        List("/zip/test.txt");
-        FILE *file = fopen("/zip/test.txt", "rb");
+      char path[] = "/zip/examples/lszipfile.txt";
+      if (access(path, F_OK) == 0) {
+        List(path);
+        FILE *file = fopen(path, "rb");
         char ch;
         while ((ch = fgetc(file)) != EOF) {
           putchar(ch);
