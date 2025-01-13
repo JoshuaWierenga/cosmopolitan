@@ -163,6 +163,7 @@ static void MetalZipFix(unsigned long cdest, unsigned long length) {
     SysDie(outpath, "secHead pwrite");
   }
 }
+
 static void CopyZip(void) {
   char *secstrs;
   int rela, recs;
