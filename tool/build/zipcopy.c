@@ -27,6 +27,8 @@
 #include "libc/limits.h"
 #include "libc/macros.h"
 #include "libc/nt/struct/imagedosheader.internal.h"
+#include "libc/nt/struct/imagentheaders.internal.h"
+#include "libc/nt/struct/imagesectionheader.internal.h"
 #include "libc/runtime/pc.internal.h"
 #include "libc/runtime/runtime.h"
 #include "libc/serialize.h"
@@ -117,23 +119,50 @@ static void GetOpts(int argc, char *argv[]) {
   outpath = argv[optind + 1];
 }
 
-static void BiosZipFix(unsigned long cdest) {
-  struct NtImageDosHeader head;
-  size_t hd_sz = sizeof(head);
-  if (outsize < hd_sz) return;
-  if (pread(outfd, &head, hd_sz, 0) != hd_sz) return;
-  if (READ64LE((uint8_t *)&head) != READ64LE("MZqFpD='") &&
-      READ64LE((uint8_t *)&head) != READ64LE("jartsr='")) return;
-  if (le16toh(head.e_oemid) != READ16LE("JT") ||
-      le16toh(head.e_oeminfo) != 1) return;
+static void MetalZipFix(unsigned long cdest, unsigned long length) {
+  struct NtImageDosHeader dosHead;
+  struct NtImageNtHeaders ntHead;
+  struct NtImageSectionHeader secHead;
+  size_t dos_hd_sz = sizeof(dosHead);
+  size_t nt_hd_sz = sizeof(ntHead);
+  size_t nt_dd_sz = sizeof(struct NtImageDataDirectory);
+  size_t nt_shd_sz = sizeof(secHead);
+  uint32_t nt_hd_off;
+  uint32_t nt_dd_num;
+  uint16_t nt_shd_num;
+  ptrdiff_t first_shd_off;
+  size_t cur_shd;
+  if (outsize < dos_hd_sz) return;
+  if (pread(outfd, &dosHead, dos_hd_sz, 0) != dos_hd_sz) return;
+  if (READ64LE((uint8_t *)&dosHead) != READ64LE("MZqFpD='") &&
+      READ64LE((uint8_t *)&dosHead) != READ64LE("jartsr='")) return;
+  if (le16toh(dosHead.e_oemid) != READ16LE("JT") ||
+      le16toh(dosHead.e_oeminfo) != 1) return;
+  nt_hd_off = le32toh(dosHead.e_lfanew);
+  if (outsize < nt_hd_off + nt_hd_sz) return;
+  if (pread(outfd, &ntHead, nt_hd_sz, nt_hd_off) != nt_hd_sz) return;
+  nt_dd_num = le32toh(ntHead.OptionalHeader.NumberOfRvaAndSizes);
+  nt_shd_num = le16toh(ntHead.FileHeader.NumberOfSections);
+  first_shd_off = nt_hd_off + nt_hd_sz + nt_dd_num * nt_dd_sz;
+  for (cur_shd = 0; cur_shd < nt_shd_num; ++cur_shd) {
+    if (outsize < first_shd_off + (cur_shd + 1) * nt_shd_sz) return;
+    if (pread(outfd, &secHead, nt_shd_sz, first_shd_off + cur_shd * nt_shd_sz) != nt_shd_sz) return;
+    if (READ64LE((uint8_t *)&secHead) == READ64LE(".data\0\0\0")) break;
+  }
+  if (cur_shd >= nt_shd_num) return;
   // patch executable head so that it will load the right count of sectors
   // when run as a legacy BIOS disk image
-  head.e_res2[0] = htole16(ROUNDUP(cdest, 0x200) / 0x200);
-  if (pwrite(outfd, &head, hd_sz, 0) != hd_sz) {
-    SysDie(outpath, "head pwrite");
+  dosHead.e_res2[0] = htole16(ROUNDUP(cdest, 0x200) / 0x200);
+  if (pwrite(outfd, &dosHead, dos_hd_sz, 0) != dos_hd_sz) {
+    SysDie(outpath, "dosHead pwrite");
+  }
+  // patch data sector header so that uefi will load the full binary instead
+  // of skipping the zip archive at the end
+  secHead.SizeOfRawData = htole32(cdest + length - le32toh(secHead.PointerToRawData));
+  if (pwrite(outfd, &secHead, nt_shd_sz, first_shd_off + cur_shd * nt_shd_sz) != nt_shd_sz) {
+    SysDie(outpath, "secHead pwrite");
   }
 }
-
 static void CopyZip(void) {
   char *secstrs;
   int rela, recs;
@@ -231,7 +260,7 @@ static void CopyZip(void) {
   if (pwrite(outfd, eocd, length, cdest) != length) {
     SysDie(outpath, "eocd pwrite");
   }
-  BiosZipFix(cdest);
+  MetalZipFix(cdest, length);
   if (close(outfd)) {
     SysDie(outpath, "close");
   }
